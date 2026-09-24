@@ -1,0 +1,44 @@
+---
+description: Git worktree workflow — never edit the main worktree on main
+alwaysApply: true
+---
+
+# Git worktrees
+
+This repo uses **git worktrees**. The root checkout is the **main worktree** and must stay clean on `main`. All code changes happen in a **feature worktree**.
+
+## Main worktree (read-only for code changes)
+
+- Path: `/home/cedano/projects/fraudebot/backend/main`
+- Branch: `main`
+- **Do not** create, edit, or delete source files here.
+- Allowed: read files, inspect git state, run read-only commands.
+
+## Feature worktrees (where work happens)
+
+- Path pattern: `/home/cedano/projects/fraudebot/backend/<feature-name>/`
+- Example: `support-tab` → branch `feature/support-tab` or `fix/support-tab` or `wip/support-tab`
+- Before editing, confirm you are **not** in the main worktree:
+
+```bash
+git branch --show-current   # must NOT be `main`
+```
+
+## Starting new work
+
+1. Check for an existing worktree: `git worktree list`
+2. If a worktree exists ask to the user to use it or recreate it.
+3. Otherwise create one from the repo root:
+
+```bash
+git worktree add <feature-name> -b feature/<feature-name>
+cd <feature-name>/
+```
+
+Use kebab-case for `<feature-name>` (e.g. `support-tab` → `feature/support-tab`).
+
+## Agent behavior
+
+- If the active path is the main worktree on `main`, **stop** and switch to an existing feature worktree or create a new one before making changes.
+- Never commit from the main worktree.
+- When suggesting git commands, run them from the relevant feature worktree directory.
