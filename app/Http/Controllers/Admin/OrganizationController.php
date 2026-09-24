@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Application\Admin\AttachPaymentMethodAction;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PaymentMethodRequest;
 use App\Http\Requests\Admin\StoreOrganizationRequest;
@@ -11,7 +11,10 @@ use App\Http\Resources\Admin\BasicOrganizationResource;
 use App\Http\Resources\Admin\BasicPaymentMethodResource;
 use App\Http\Resources\Admin\BasicScammerResource;
 use App\Models\Organization;
+use App\Models\PaymentMethod;
 use App\Models\Scammer;
+use App\Repositories\Search\SearchCache;
+use Illuminate\Support\Facades\DB;
 
 class OrganizationController extends Controller
 {
@@ -95,7 +98,6 @@ class OrganizationController extends Controller
     public function createPaymentMethod(
         PaymentMethodRequest $request,
         Organization $organization,
-        AttachPaymentMethodAction $action,
     ) {
         $data = $request->validated();
         if ($organization->paymentMethods()->where([
@@ -105,7 +107,24 @@ class OrganizationController extends Controller
             return response()->json(['error' => 'Payment method already exists for this organization'], 422);
         }
 
-        $paymentMethod = $action->execute($organization, $data);
+        $paymentMethod = DB::transaction(function () use ($organization, $data): PaymentMethod {
+            $identity = [
+                'type' => PaymentMethodType::from((int) $data['type']),
+                'reference' => trim($data['reference']),
+            ];
+            $paymentMethod = PaymentMethod::withTrashed()->firstOrCreate(
+                $identity,
+                ['is_active' => $data['is_active'] ?? true],
+            );
+            if ($paymentMethod->trashed()) {
+                $paymentMethod->restore();
+            }
+
+            $organization->paymentMethods()->syncWithoutDetaching([$paymentMethod->id]);
+            SearchCache::invalidate();
+
+            return $paymentMethod;
+        });
 
         $resource = new BasicPaymentMethodResource($paymentMethod);
 
