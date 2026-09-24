@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CONTAINER_ROOT="/var/www/backend"
-COMPOSE_FILE="${BACKEND_ROOT}/../docker/docker-compose.yml"
+COMPOSE_FILE="${BACKEND_ROOT}/../../docker/docker-compose.yml"
 
 args=()
 for arg in "$@"; do
