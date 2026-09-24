@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Application\Admin\AttachContactAction;
-use App\Application\Admin\AttachPaymentMethodAction;
-use App\Application\Admin\CreateScammerAction;
 use App\Domain\Contact\ContactEntity;
 use App\Domain\Contact\Enums\PlatformType;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ContactRequest;
 use App\Http\Requests\Admin\PaymentMethodRequest;
 use App\Http\Requests\Admin\StoreScammerRequest;
 use App\Http\Requests\Admin\UpdateScammerRequest;
 use App\Models\Contact;
+use App\Models\PaymentMethod;
 use App\Models\Scammer;
+use App\Repositories\Search\SearchCache;
+use Illuminate\Support\Facades\DB;
 
 class ScammerController extends Controller
 {
@@ -28,9 +29,58 @@ class ScammerController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreScammerRequest $request, CreateScammerAction $action)
+    public function store(StoreScammerRequest $request)
     {
-        return response()->json($action->execute($request->validated()), 201);
+        $data = $request->validated();
+
+        $scammer = DB::transaction(function () use ($data): Scammer {
+            $scammer = Scammer::create([
+                'name' => trim($data['name']),
+                'country' => $data['country'] ?? null,
+                'is_active' => $data['is_active'] ?? true,
+            ]);
+
+            foreach ($data['contacts'] ?? [] as $contactData) {
+                $entity = new ContactEntity(
+                    id: null,
+                    name: $contactData['name'],
+                    platformType: PlatformType::from((int) $contactData['platform']),
+                    reference: $contactData['reference'],
+                    isActive: $contactData['is_active'] ?? true,
+                );
+                $values = $entity->toArray();
+                unset($values['id']);
+
+                $contact = Contact::withTrashed()->firstOrCreate(
+                    ['platform' => $values['platform'], 'reference' => $values['reference']],
+                    ['name' => $values['name'], 'is_active' => $values['is_active']],
+                );
+                if ($contact->trashed()) {
+                    $contact->restore();
+                }
+                $scammer->contacts()->syncWithoutDetaching([$contact->id]);
+            }
+
+            foreach ($data['paymentMethods'] ?? [] as $paymentMethodData) {
+                $paymentMethod = PaymentMethod::withTrashed()->firstOrCreate(
+                    [
+                        'type' => PaymentMethodType::from((int) $paymentMethodData['type']),
+                        'reference' => trim($paymentMethodData['reference']),
+                    ],
+                    ['is_active' => $paymentMethodData['is_active'] ?? true],
+                );
+                if ($paymentMethod->trashed()) {
+                    $paymentMethod->restore();
+                }
+                $scammer->paymentMethods()->syncWithoutDetaching([$paymentMethod->id]);
+            }
+
+            SearchCache::invalidate();
+
+            return $scammer->load(['contacts', 'paymentMethods']);
+        });
+
+        return response()->json($scammer, 201);
     }
 
     /**
@@ -107,9 +157,34 @@ class ScammerController extends Controller
     }
 
     // Create contact of a scammer
-    public function createContact(ContactRequest $request, Scammer $scammer, AttachContactAction $action)
+    public function createContact(ContactRequest $request, Scammer $scammer)
     {
-        $contactModel = $action->execute($scammer, $request->validated());
+        $data = $request->validated();
+
+        $contactModel = DB::transaction(function () use ($scammer, $data): Contact {
+            $entity = new ContactEntity(
+                id: null,
+                name: $data['name'],
+                platformType: PlatformType::from((int) $data['platform']),
+                reference: $data['reference'],
+                isActive: $data['is_active'] ?? true,
+            );
+            $values = $entity->toArray();
+            unset($values['id']);
+
+            $contact = Contact::withTrashed()->firstOrCreate(
+                ['platform' => $values['platform'], 'reference' => $values['reference']],
+                ['name' => $values['name'], 'is_active' => $values['is_active']],
+            );
+            if ($contact->trashed()) {
+                $contact->restore();
+            }
+
+            $scammer->contacts()->syncWithoutDetaching([$contact->id]);
+            SearchCache::invalidate();
+
+            return $contact;
+        });
 
         return response()->json([
             'id' => $contactModel->id,
@@ -125,14 +200,31 @@ class ScammerController extends Controller
     /**
      * Add a payment method to a scammer
      */
-    public function createPaymentMethod(PaymentMethodRequest $request, Scammer $scammer, AttachPaymentMethodAction $action)
+    public function createPaymentMethod(PaymentMethodRequest $request, Scammer $scammer)
     {
         $data = $request->validated();
         if ($scammer->paymentMethods()->where(['reference' => $data['reference'], 'type' => $data['type']])->exists()) {
             return response()->json(['error' => 'Payment method with the same reference already exists for this scammer'], 422);
         }
 
-        $paymentMethodModel = $action->execute($scammer, $data);
+        $paymentMethodModel = DB::transaction(function () use ($scammer, $data): PaymentMethod {
+            $identity = [
+                'type' => PaymentMethodType::from((int) $data['type']),
+                'reference' => trim($data['reference']),
+            ];
+            $paymentMethod = PaymentMethod::withTrashed()->firstOrCreate(
+                $identity,
+                ['is_active' => $data['is_active'] ?? true],
+            );
+            if ($paymentMethod->trashed()) {
+                $paymentMethod->restore();
+            }
+
+            $scammer->paymentMethods()->syncWithoutDetaching([$paymentMethod->id]);
+            SearchCache::invalidate();
+
+            return $paymentMethod;
+        });
 
         $response = $paymentMethodModel->only(['id', 'reference', 'type_name', 'is_active', 'created_at']);
         $response['updated_at'] = $paymentMethodModel->modified_at;
