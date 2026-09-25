@@ -31,10 +31,10 @@ class PublicReportControllerTest extends TestCase
     public function test_stores_jpg_and_png_profile_pictures_for_scammers_and_organizations(): void
     {
         foreach ([
-            ['scammer', 'profile.jpg', self::jpegBytes()],
-            ['organization', 'profile.png', self::pngBytes()],
-        ] as [$subject, $filename, $contents]) {
-            $response = $this->post("/api/public/reports/{$subject}/picture/profile", [
+            ['profile.jpg', self::jpegBytes()],
+            ['profile.png', self::pngBytes()],
+        ] as [$filename, $contents]) {
+            $response = $this->post("/api/public/reports/picture/profile", [
                 'image' => UploadedFile::fake()->createWithContent($filename, $contents),
             ]);
 
@@ -42,7 +42,7 @@ class PublicReportControllerTest extends TestCase
 
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
             $url = $response->json('path');
-            $prefix = config('filesystems.disks.public.url')."/tmp/reports/{$subject}/picture/profile/";
+            $prefix = config('filesystems.disks.public.url')."/tmp/pictures/reports/profile/";
 
             $this->assertStringStartsWith($prefix, $url);
             $this->assertStringEndsWith('.'.$extension, $url);
@@ -58,13 +58,35 @@ class PublicReportControllerTest extends TestCase
 
     public function test_rejects_a_non_image(): void
     {
-        $this->post('/api/public/reports/scammer/picture/profile', [
+        $this->post('/api/public/reports/picture/profile', [
             'image' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
         ])
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'validation_failed');
 
         $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_stores_the_profile_picture_again_when_the_cached_file_is_missing(): void
+    {
+        $contents = self::jpegBytes();
+        $upload = fn () => $this->post('/api/public/reports/picture/profile', [
+            'image' => UploadedFile::fake()->createWithContent('profile.jpg', $contents),
+        ]);
+
+        $first = $upload();
+        $first->assertCreated();
+
+        $prefix = config('filesystems.disks.public.url').'/';
+        $firstRelative = substr($first->json('path'), strlen($prefix));
+        Storage::disk('public')->delete($firstRelative);
+
+        $second = $upload();
+        $second->assertCreated();
+
+        $secondRelative = substr($second->json('path'), strlen($prefix));
+        $this->assertNotSame($firstRelative, $secondRelative);
+        $this->assertTrue(Storage::disk('public')->exists($secondRelative));
     }
 
     private static function jpegBytes(): string

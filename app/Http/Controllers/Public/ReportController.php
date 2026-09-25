@@ -35,7 +35,7 @@ class ReportController extends Controller
         ]);
     }
 
-    public function storeTemporaryProfilePicture(StoreProfilePictureRequest $request, string $subject): JsonResponse
+    public function storeTemporaryProfilePicture(StoreProfilePictureRequest $request): JsonResponse
     {
         $image = $request->file('image');
 
@@ -43,7 +43,7 @@ class ReportController extends Controller
             abort(422, 'The request data is invalid.');
         }
 
-        $path = $this->storage->upload($image, "tmp/reports/{$subject}/picture/profile");
+        $path = $this->storage->uploadProfilePicture($image);
 
         return response()->json(['path' => $path], 201);
     }
