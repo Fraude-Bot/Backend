@@ -80,8 +80,6 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withSchedule(function (Schedule $schedule): void {
-        # $schedule->call(DeleteTemporaryMediaTask::class)->weekly(); Original Implementation
-
-        $schedule->call(DeleteTemporaryMediaTask::class)->everyMinute();
+        $schedule->call(DeleteTemporaryMediaTask::class)->weekly();
     })
     ->create();
