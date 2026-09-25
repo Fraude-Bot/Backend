@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Http\Controllers\Public;
 use App\Infrastructure\Facebook\FacebookService;
 use App\Infrastructure\Facebook\FacebookServiceInterface;
 use App\Infrastructure\Instagram\InstagramService;
 use App\Infrastructure\Instagram\InstagramServiceInterface;
+use App\Infrastructure\Storage\PublicDiskTemporaryImageStorage;
 use App\Infrastructure\TikTok\TikTokService;
 use App\Infrastructure\TikTok\TikTokServiceInterface;
 use App\Infrastructure\Youtube\YoutubeService;
@@ -45,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(YoutubeServiceInterface::class, YoutubeService::class);
         $this->app->singleton(InstagramServiceInterface::class, InstagramService::class);
         $this->app->singleton(TikTokServiceInterface::class, TikTokService::class);
+
+        $this->app->bind(TemporaryImageStorageInterface::class, PublicDiskTemporaryImageStorage::class);
 
         $this->app->bind(OrganizationCardRepositoryInterface::class, OrganizationCardRepository::class);
         $this->app->bind(ScammerCardRepositoryInterface::class, ScammerCardRepository::class);

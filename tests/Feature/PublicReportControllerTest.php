@@ -14,10 +14,64 @@ use App\Models\Scammer;
 use App\Repositories\Organization\OrganizationCardRepositoryInterface;
 use App\Repositories\Scammer\ScammerCardRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class PublicReportControllerTest extends TestCase
 {
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('public');
+    }
+
+    public function test_stores_jpg_and_png_profile_pictures_for_scammers_and_organizations(): void
+    {
+        foreach ([
+            ['scammer', 'profile.jpg', self::jpegBytes()],
+            ['organization', 'profile.png', self::pngBytes()],
+        ] as [$subject, $filename, $contents]) {
+            $response = $this->post("/api/public/reports/{$subject}/picture/profile", [
+                'image' => UploadedFile::fake()->createWithContent($filename, $contents),
+            ]);
+
+            $response->assertCreated();
+
+            $path = $response->json('path');
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+
+            $this->assertMatchesRegularExpression(
+                '#^reports/'.$subject.'/picture/profile/.+\.'.$extension.'$#',
+                $path,
+            );
+            $this->assertTrue(Storage::disk('public')->exists($path));
+        } 
+    }
+
+    public function test_rejects_a_non_image(): void
+    {
+        $this->post('/api/public/reports/scammer/picture/profile', [
+            'image' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'validation_failed');
+
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    private static function jpegBytes(): string
+    {
+        return (string) base64_decode('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAALCAABAAEBAREA/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGf/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPwD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/AH//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/AH//2Q==');
+    }
+
+    private static function pngBytes(): string
+    {
+        return (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    }
+    
     public function test_report_search_by_clabe(): void
     {
         $fixtures = $this->seedDefaultSearchFixtures();

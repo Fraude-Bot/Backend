@@ -20,6 +20,8 @@ tags:
     description: Public scammer profiles, contacts, reports, and report calendars.
   - name: Organizations
     description: Public organization profiles, contacts, reports, and report calendars.
+  - name: Reports
+    description: Public report uploads.
   - name: Health
     description: Liveness and readiness checks.
 paths:
@@ -299,6 +301,72 @@ paths:
                 message: Organization not found
         "429":
           $ref: "#/components/responses/RateLimited"
+  /public/reports/scammer/picture/profile:
+    post:
+      tags: [Reports]
+      operationId: storeScammerProfilePicture
+      summary: Upload a scammer profile picture
+      description: |
+        Accepts a JPG or PNG image up to 5 MB and stores it on the public disk.
+        The response path is relative to `storage/app/public`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPG or PNG image, 5 MB maximum.
+      responses:
+        "201":
+          description: The image was stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoredImagePath"
+              example:
+                path: reports/scammer/picture/profile/8f3c1a.jpg
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/reports/organization/picture/profile:
+    post:
+      tags: [Reports]
+      operationId: storeOrganizationProfilePicture
+      summary: Upload an organization profile picture
+      description: |
+        Accepts a JPG or PNG image up to 5 MB and stores it on the public disk.
+        The response path is relative to `storage/app/public`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPG or PNG image, 5 MB maximum.
+      responses:
+        "201":
+          description: The image was stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoredImagePath"
+              example:
+                path: reports/organization/picture/profile/8f3c1a.png
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/healthcheck:
     get:
       tags: [Health]
@@ -427,6 +495,19 @@ components:
           - other
       example: instagram
   responses:
+    ValidationFailed:
+      description: The request data is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/HttpError"
+          example:
+            error:
+              code: validation_failed
+              message: The request data is invalid.
+              details:
+                image:
+                  - The image field must be a file of type: jpg, jpeg, png.
     RateLimited:
       description: Too many requests. Public routes allow 120 requests per minute per IP.
       content:
@@ -438,6 +519,14 @@ components:
               code: rate_limited
               message: Too Many Attempts.
   schemas:
+    StoredImagePath:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Path of the stored image, relative to `storage/app/public`.
+          example: reports/scammer/picture/profile/8f3c1a.jpg
     ErrorMessage:
       $ref: ./schemas/ErrorMessage.yaml
     HttpError:

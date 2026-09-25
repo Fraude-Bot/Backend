@@ -25,6 +25,9 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
         ->middleware(['throttle:public-search', AuditApiRequest::class])
         ->name('public.reports.search');
 
+    Route::post('reports/{subject}/picture/profile', [ReportController::class, 'storeTemporaryProfilePicture'])
+        ->whereIn('subject', ['scammer', 'organization']);
+
     Route::get('healthcheck', function () {
         return response()->json(['status' => 'ok']);
     });
