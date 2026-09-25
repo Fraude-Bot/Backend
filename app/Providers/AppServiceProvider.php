@@ -32,6 +32,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Scalar\Facades\Scalar;
 
 class AppServiceProvider extends ServiceProvider
@@ -43,11 +45,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::preventLazyLoading(true);
 
+        $this->app->singleton(ImageManager::class, fn () => ImageManager::usingDriver(GdDriver::class));
+
         $this->app->singleton(FacebookServiceInterface::class, FacebookService::class);
         $this->app->singleton(YoutubeServiceInterface::class, YoutubeService::class);
         $this->app->singleton(InstagramServiceInterface::class, InstagramService::class);
         $this->app->singleton(TikTokServiceInterface::class, TikTokService::class);
-
+        
         $this->app->bind(TemporaryImageStorageInterface::class, PublicDiskTemporaryImageStorage::class);
 
         $this->app->bind(OrganizationCardRepositoryInterface::class, OrganizationCardRepository::class);

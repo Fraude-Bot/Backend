@@ -40,14 +40,19 @@ class PublicReportControllerTest extends TestCase
 
             $response->assertCreated();
 
-            $path = $response->json('path');
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $url = $response->json('path');
+            $prefix = config('filesystems.disks.public.url')."/tmp/reports/{$subject}/picture/profile/";
 
-            $this->assertMatchesRegularExpression(
-                '#^reports/'.$subject.'/picture/profile/.+\.'.$extension.'$#',
-                $path,
-            );
-            $this->assertTrue(Storage::disk('public')->exists($path));
+            $this->assertStringStartsWith($prefix, $url);
+            $this->assertStringEndsWith('.'.$extension, $url);
+
+            $relative = substr($url, strlen(config('filesystems.disks.public.url').'/'));
+            $this->assertTrue(Storage::disk('public')->exists($relative));
+
+            $size = getimagesizefromstring(Storage::disk('public')->get($relative));
+            $this->assertSame(640, $size[0]);
+            $this->assertSame(640, $size[1]);
         } 
     }
 
@@ -64,12 +69,24 @@ class PublicReportControllerTest extends TestCase
 
     private static function jpegBytes(): string
     {
-        return (string) base64_decode('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAALCAABAAEBAREA/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGf/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPwD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/AH//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/AH//2Q==');
+        return self::imageBytes(1200, 800, 'jpeg');
     }
 
     private static function pngBytes(): string
     {
-        return (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        return self::imageBytes(400, 900, 'png');
+    }
+
+    private static function imageBytes(int $width, int $height, string $format): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, imagecolorallocate($image, 180, 40, 40));
+
+        ob_start();
+        $format === 'png' ? imagepng($image) : imagejpeg($image);
+        imagedestroy($image);
+
+        return (string) ob_get_clean();
     }
     
     public function test_report_search_by_clabe(): void
