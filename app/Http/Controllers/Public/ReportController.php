@@ -6,6 +6,7 @@ use App\Application\Media\TemporaryImageStorageInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreProfilePictureRequest;
+use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Resources\Public\ReportCardResource;
 use App\Repositories\Search\SearchRepositoryInterface;
 use Illuminate\Http\JsonResponse;
@@ -46,5 +47,26 @@ class ReportController extends Controller
         $path = $this->storage->uploadProfilePicture($image);
 
         return response()->json(['path' => $path], 201);
+    }
+
+    public function storeTemporaryProof(StoreProofRequest $request): JsonResponse
+    {
+        $images = $request->file('images');
+
+        if (! is_array($images) || $images === []) {
+            abort(422, 'The request data is invalid.');
+        }
+
+        $paths = [];
+
+        foreach ($images as $image) {
+            if (! $image instanceof UploadedFile) {
+                abort(422, 'The request data is invalid.');
+            }
+
+            $paths[] = $this->storage->uploadProof($image);
+        }
+
+        return response()->json(['paths' => $paths], 201);
     }
 }

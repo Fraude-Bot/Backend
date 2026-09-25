@@ -16,8 +16,10 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Storage::fake('public');
 
         $directory = TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY;
+        $proofs = TemporaryImageStorageInterface::PROOF_DIRECTORY;
         Storage::disk('public')->put($directory.'/one.jpg', 'one');
         Storage::disk('public')->put($directory.'/two.png', 'two');
+        Storage::disk('public')->put($proofs.'/proof.jpg', 'proof');
         Storage::disk('public')->put('tmp/pictures/reports/other.jpg', 'keep');
 
         $prefix = TemporaryImageStorageInterface::CACHE_KEY_PREFIX;
@@ -29,6 +31,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
 
         Storage::disk('public')->assertMissing($directory.'/one.jpg');
         Storage::disk('public')->assertMissing($directory.'/two.png');
+        Storage::disk('public')->assertMissing($proofs.'/proof.jpg');
         Storage::disk('public')->assertExists('tmp/pictures/reports/other.jpg');
         $this->assertNull(Cache::get($prefix.'one'));
         $this->assertNull(Cache::get($prefix.'two'));

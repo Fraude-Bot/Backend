@@ -301,14 +301,16 @@ paths:
                 message: Organization not found
         "429":
           $ref: "#/components/responses/RateLimited"
-  /public/reports/scammer/picture/profile:
+  /public/reports/pictures/profiles:
     post:
       tags: [Reports]
-      operationId: storeScammerProfilePicture
-      summary: Upload a scammer profile picture
+      operationId: storeTemporaryProfilePicture
+      summary: Upload a temporary profile picture
       description: |
-        Accepts a JPG or PNG image up to 5 MB and stores it on the public disk.
-        The response path is relative to `storage/app/public`.
+        Accepts a JPG or PNG image up to 5 MB, covers it to 640×640, and stores it
+        on the public disk under `tmp/pictures/reports/profile`. The response path
+        is the public URL of that file. Uploading the same image again returns the
+        existing URL while the file is still present.
       requestBody:
         required: true
         content:
@@ -329,40 +331,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/StoredImagePath"
               example:
-                path: reports/scammer/picture/profile/8f3c1a.jpg
+                path: http://localhost:9000/storage/tmp/pictures/reports/profile/8f3c1a.jpg
         "422":
           $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /public/reports/organization/picture/profile:
+  /public/reports/proofs:
     post:
       tags: [Reports]
-      operationId: storeOrganizationProfilePicture
-      summary: Upload an organization profile picture
+      operationId: storeTemporaryProof
+      summary: Upload temporary proof images
       description: |
-        Accepts a JPG or PNG image up to 5 MB and stores it on the public disk.
-        The response path is relative to `storage/app/public`.
+        Accepts one or more JPG or PNG images, up to 5 MB each, and stores them at
+        their original size on the public disk under `tmp/pictures/reports/proofs`.
+        Each response path is the public URL of that file. Uploading the same image
+        again returns the existing URL while that file is still present.
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required: [image]
+              required: [images]
               properties:
-                image:
-                  type: string
-                  format: binary
-                  description: JPG or PNG image, 5 MB maximum.
+                images:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    format: binary
+                  description: JPG or PNG images, 5 MB maximum each.
       responses:
         "201":
-          description: The image was stored.
+          description: The images were stored.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StoredImagePath"
+                $ref: "#/components/schemas/StoredImagePaths"
               example:
-                path: reports/organization/picture/profile/8f3c1a.png
+                paths:
+                  - http://localhost:9000/storage/tmp/pictures/reports/proofs/8f3c1a.jpg
+                  - http://localhost:9000/storage/tmp/pictures/reports/proofs/9a4d2b.png
         "422":
           $ref: "#/components/responses/ValidationFailed"
         "429":
@@ -525,8 +534,23 @@ components:
       properties:
         path:
           type: string
-          description: Path of the stored image, relative to `storage/app/public`.
-          example: reports/scammer/picture/profile/8f3c1a.jpg
+          format: uri
+          description: Public URL of the stored image.
+          example: http://localhost:9000/storage/tmp/pictures/reports/profile/8f3c1a.jpg
+    StoredImagePaths:
+      type: object
+      required: [paths]
+      properties:
+        paths:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uri
+          description: Public URLs of the stored images, in request order.
+          example:
+            - http://localhost:9000/storage/tmp/pictures/reports/proofs/8f3c1a.jpg
+            - http://localhost:9000/storage/tmp/pictures/reports/proofs/9a4d2b.png
     ErrorMessage:
       $ref: ./schemas/ErrorMessage.yaml
     HttpError:

@@ -22,16 +22,20 @@ class DeleteTemporaryMediaTask
     private function deleteTemporaryFiles(): void
     {
         $disk = Storage::disk('public');
-        $files = $disk->allFiles(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY);
 
-        echo json_encode($files);
+        foreach ([
+            TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
+            TemporaryImageStorageInterface::PROOF_DIRECTORY,
+        ] as $directory) {
+            $files = $disk->allFiles($directory);
 
-        if ($files === []) {
-            return;
-        }
+            if ($files === []) {
+                continue;
+            }
 
-        if ($disk->delete($files) === false) {
-            throw new RuntimeException('The temporary profile pictures could not be deleted.');
+            if ($disk->delete($files) === false) {
+                throw new RuntimeException('The temporary media could not be deleted.');
+            }
         }
     }
 
