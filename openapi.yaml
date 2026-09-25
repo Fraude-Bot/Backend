@@ -22,6 +22,8 @@ tags:
     description: Public organization profiles, contacts, reports, and report calendars.
   - name: Health
     description: Liveness and readiness checks.
+  - name: Documentation
+    description: The public OpenAPI contract.
 paths:
   /public/scammers/{id}:
     get:
@@ -356,6 +358,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HttpError"
+  /public/openapi:
+    get:
+      tags: [Documentation]
+      operationId: getOpenApiDocument
+      summary: OpenAPI document
+      description: Returns the public API contract with schema file references resolved.
+      responses:
+        "200":
+          description: Bundled OpenAPI document.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                properties:
+                  openapi:
+                    type: string
+                    example: "3.1.0"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 components:
   parameters:
     ScammerId:

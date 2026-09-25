@@ -4,6 +4,7 @@ use App\Http\Controllers\Public\OrganizationController;
 use App\Http\Controllers\Public\ReportController;
 use App\Http\Controllers\Public\ScammerController;
 use App\Http\Middleware\AuditApiRequest;
+use App\OpenApi\OpenApiDocument;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -38,4 +39,10 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
             'checks' => ['database' => 'ok', 'cache' => 'ok'],
         ]);
     });
+
+    Route::get('openapi', function (OpenApiDocument $document) {
+        return response($document->bundledJson(), 200, [
+            'Content-Type' => 'application/json',
+        ]);
+    })->name('public.openapi');
 });
