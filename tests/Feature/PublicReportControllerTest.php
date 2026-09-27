@@ -14,10 +14,152 @@ use App\Models\Scammer;
 use App\Repositories\Organization\OrganizationCardRepositoryInterface;
 use App\Repositories\Scammer\ScammerCardRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class PublicReportControllerTest extends TestCase
 {
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('public');
+    }
+
+    public function test_stores_jpg_and_png_profile_pictures_for_scammers_and_organizations(): void
+    {
+        foreach ([
+            ['profile.jpg', self::jpegBytes()],
+            ['profile.png', self::pngBytes()],
+        ] as [$filename, $contents]) {
+            $response = $this->post("/api/public/reports/pictures/profiles", [
+                'image' => UploadedFile::fake()->createWithContent($filename, $contents),
+            ]);
+
+            $response->assertCreated();
+
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $url = $response->json('path');
+            $prefix = config('filesystems.disks.public.url')."/tmp/pictures/reports/profile/";
+
+            $this->assertStringStartsWith($prefix, $url);
+            $this->assertStringEndsWith('.'.$extension, $url);
+
+            $relative = substr($url, strlen(config('filesystems.disks.public.url').'/'));
+            $this->assertTrue(Storage::disk('public')->exists($relative));
+
+            $size = getimagesizefromstring(Storage::disk('public')->get($relative));
+            $this->assertSame(640, $size[0]);
+            $this->assertSame(640, $size[1]);
+        } 
+    }
+
+    public function test_rejects_a_non_image(): void
+    {
+        $this->post('/api/public/reports/pictures/profiles', [
+            'image' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'validation_failed');
+
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    public function test_stores_the_profile_picture_again_when_the_cached_file_is_missing(): void
+    {
+        $contents = self::jpegBytes();
+        $upload = fn () => $this->post('/api/public/reports/pictures/profiles', [
+            'image' => UploadedFile::fake()->createWithContent('profile.jpg', $contents),
+        ]);
+
+        $first = $upload();
+        $first->assertCreated();
+
+        $prefix = config('filesystems.disks.public.url').'/';
+        $firstRelative = substr($first->json('path'), strlen($prefix));
+        Storage::disk('public')->delete($firstRelative);
+
+        $second = $upload();
+        $second->assertCreated();
+
+        $secondRelative = substr($second->json('path'), strlen($prefix));
+        $this->assertNotSame($firstRelative, $secondRelative);
+        $this->assertTrue(Storage::disk('public')->exists($secondRelative));
+    }
+
+    public function test_stores_jpg_and_png_proofs_at_their_original_size(): void
+    {
+        $response = $this->post('/api/public/reports/pictures/proofs', [
+            'images' => [
+                UploadedFile::fake()->createWithContent('proof.jpg', self::jpegBytes()),
+                UploadedFile::fake()->createWithContent('proof.png', self::pngBytes()),
+            ],
+        ]);
+
+        $response->assertCreated();
+
+        $paths = $response->json('paths');
+        $prefix = config('filesystems.disks.public.url').'/tmp/pictures/reports/proofs/';
+        $expected = [
+            ['jpg', 1200, 800],
+            ['png', 400, 900],
+        ];
+
+        $this->assertCount(2, $paths);
+
+        foreach ($paths as $index => $url) {
+            [$extension, $width, $height] = $expected[$index];
+
+            $this->assertStringStartsWith($prefix, $url);
+            $this->assertStringEndsWith('.'.$extension, $url);
+
+            $relative = substr($url, strlen(config('filesystems.disks.public.url').'/'));
+            $this->assertTrue(Storage::disk('public')->exists($relative));
+
+            $size = getimagesizefromstring(Storage::disk('public')->get($relative));
+            $this->assertSame($width, $size[0]);
+            $this->assertSame($height, $size[1]);
+        }
+    }
+
+    public function test_rejects_a_non_image_proof(): void
+    {
+        $this->post('/api/public/reports/pictures/proofs', [
+            'images' => [
+                UploadedFile::fake()->createWithContent('proof.jpg', self::jpegBytes()),
+                UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
+            ],
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'validation_failed');
+
+        $this->assertSame([], Storage::disk('public')->allFiles());
+    }
+
+    private static function jpegBytes(): string
+    {
+        return self::imageBytes(1200, 800, 'jpeg');
+    }
+
+    private static function pngBytes(): string
+    {
+        return self::imageBytes(400, 900, 'png');
+    }
+
+    private static function imageBytes(int $width, int $height, string $format): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, imagecolorallocate($image, 180, 40, 40));
+
+        ob_start();
+        $format === 'png' ? imagepng($image) : imagejpeg($image);
+        imagedestroy($image);
+
+        return (string) ob_get_clean();
+    }
+    
     public function test_report_search_by_clabe(): void
     {
         $fixtures = $this->seedDefaultSearchFixtures();

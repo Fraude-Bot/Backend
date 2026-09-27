@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreProfilePictureRequest;
+use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Resources\Public\ReportCardResource;
 use App\Repositories\Search\SearchRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 
 class ReportController extends Controller
 {
-    public function __construct(private SearchRepositoryInterface $searchRepository) {}
+    public function __construct(
+        private SearchRepositoryInterface $searchRepository,
+        private TemporaryImageStorageInterface $storage,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -27,5 +34,39 @@ class ReportController extends Controller
             'page' => $page,
             'count' => $count,
         ]);
+    }
+
+    public function storeTemporaryProfilePicture(StoreProfilePictureRequest $request): JsonResponse
+    {
+        $image = $request->file('image');
+
+        if (! $image instanceof UploadedFile) {
+            abort(422, 'The request data is invalid.');
+        }
+
+        $path = $this->storage->uploadProfilePicture($image);
+
+        return response()->json(['path' => $path], 201);
+    }
+
+    public function storeTemporaryProof(StoreProofRequest $request): JsonResponse
+    {
+        $images = $request->file('images');
+
+        if (! is_array($images) || $images === []) {
+            abort(422, 'The request data is invalid.');
+        }
+
+        $paths = [];
+
+        foreach ($images as $image) {
+            if (! $image instanceof UploadedFile) {
+                abort(422, 'The request data is invalid.');
+            }
+
+            $paths[] = $this->storage->uploadProof($image);
+        }
+
+        return response()->json(['paths' => $paths], 201);
     }
 }
