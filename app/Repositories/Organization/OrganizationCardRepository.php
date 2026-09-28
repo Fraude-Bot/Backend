@@ -38,7 +38,7 @@ class OrganizationCardRepository implements ClueSearchInterface, OrganizationCar
         $organizations = Organization::query()
             ->whereIn('id', $ids)
             ->where('is_active', true)
-            ->select(['id', 'name', 'country', 'is_active', 'created_at', 'updated_at'])
+            ->select(['id', 'name', 'is_active', 'created_at', 'updated_at'])
             ->withCount(['reports' => fn ($query) => $query->where('is_active', true)])
             ->get()
             ->keyBy('id');

@@ -3,9 +3,8 @@ description: Public profile shared by scammers and organizations.
 required:
   - id
   - name
-  - country
   - reports
-  - avatar_path
+  - profile_picture_path
   - products
   - status
   - created_at
@@ -19,20 +18,16 @@ properties:
     type: string
     description: Display name.
     example: Jane Doe
-  country:
-    type: string
-    description: Localized country name derived from the stored country code.
-    example: Mexico
   reports:
     type: integer
     minimum: 0
     description: Number of active reports.
     example: 4
-  avatar_path:
+  profile_picture_path:
     type:
       - string
       - "null"
-    description: Public URL of the avatar image, or null when none is set.
+    description: Public URL of the profile picture, or null when none is set.
     example: https://cdn.example.com/avatars/1.png
   products:
     type: array

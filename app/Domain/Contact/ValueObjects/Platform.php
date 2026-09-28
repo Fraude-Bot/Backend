@@ -15,11 +15,16 @@ class Platform
     public function extractURL(string $url): string
     {
         return match ($this->type) {
-            PlatformType::FACEBOOK => app(FacebookServiceInterface::class)->getProfile($url),
-            PlatformType::TIKTOK => app(TikTokServiceInterface::class)->getProfile($url),
-            PlatformType::INSTAGRAM => app(InstagramServiceInterface::class)->getProfile($url),
-            PlatformType::YOUTUBE => app(YoutubeServiceInterface::class)->getChannel($url),
-            default => throw new \InvalidArgumentException('Unsupported PlatformType type'),
+            PlatformType::FACEBOOK   => app(FacebookServiceInterface::class)->getProfile($url),
+            PlatformType::TIKTOK     => app(TikTokServiceInterface::class)->getProfile($url),
+            PlatformType::INSTAGRAM  => app(InstagramServiceInterface::class)->getProfile($url),
+            PlatformType::YOUTUBE    => app(YoutubeServiceInterface::class)->getChannel($url),
+            PlatformType::WHATSAPP   => $url,
+            PlatformType::EMAIL      => $url,
+            PlatformType::CELLPHONE  => $url,
+            PlatformType::TELEGRAM   => $url,
+            PlatformType::URL        => $url,
+            PlatformType::OTHER      => $url,
         };
     }
 }

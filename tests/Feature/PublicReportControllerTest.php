@@ -441,13 +441,11 @@ class PublicReportControllerTest extends TestCase
     {
         $organization = Organization::factory()->create([
             'name' => 'Ecohuertas',
-            'country' => 'MX',
             'updated_at' => now()->subDay(),
         ]);
 
         $scammer = Scammer::factory()->create([
             'name' => 'John Doe',
-            'country' => 'MX',
         ]);
 
         $scammer->organizations()->attach($organization);

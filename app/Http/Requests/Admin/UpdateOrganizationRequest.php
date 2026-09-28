@@ -8,8 +8,6 @@ class UpdateOrganizationRequest extends AdminRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'country' => ['sometimes', 'nullable', 'string', 'size:2'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

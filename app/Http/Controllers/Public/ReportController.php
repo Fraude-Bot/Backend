@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Public;
 
 use App\Application\Media\TemporaryImageStorageInterface;
+use App\Application\Report\StoreOrganizationReport;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreOrganizationReportRequest;
 use App\Http\Requests\Public\StoreProfilePictureRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Resources\Public\ReportCardResource;
@@ -68,5 +70,10 @@ class ReportController extends Controller
         }
 
         return response()->json(['paths' => $paths], 201);
+    }
+
+    public function storeOrganization(StoreOrganizationReportRequest $request, StoreOrganizationReport $store): JsonResponse
+    {
+        return response()->json($store->store($request->validated()), 201);
     }
 }

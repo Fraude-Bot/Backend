@@ -43,7 +43,6 @@ class StoreScammerRequest extends AdminRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'country' => ['nullable', 'string', 'size:2'],
             'is_active' => ['sometimes', 'boolean'],
             'contacts' => ['sometimes', 'array'],
             'contacts.*.name' => ['required', 'string', 'max:50'],

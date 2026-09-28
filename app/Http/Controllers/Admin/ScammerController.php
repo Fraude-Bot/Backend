@@ -36,7 +36,6 @@ class ScammerController extends Controller
         $scammer = DB::transaction(function () use ($data): Scammer {
             $scammer = Scammer::create([
                 'name' => trim($data['name']),
-                'country' => $data['country'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
             ]);
 

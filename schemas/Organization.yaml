@@ -1,3 +1,58 @@
 description: A reported organization. Public reads return active records only.
-allOf:
-  - $ref: ./ReportedEntity.yaml
+type: object
+required:
+  - id
+  - name
+  - reports
+  - profile_picture_path
+  - products
+  - status
+  - created_at
+properties:
+  id:
+    type: integer
+    minimum: 1
+    description: Numeric entity ID.
+    example: 1
+  name:
+    type: string
+    description: Display name.
+    example: Jane Doe
+  reports:
+    type: integer
+    minimum: 0
+    description: Number of active reports.
+    example: 4
+  profile_picture_path:
+    type:
+      - string
+      - "null"
+    description: Public URL of the profile picture, or null when none is set.
+    example: https://cdn.example.com/avatars/1.png
+  products:
+    type: array
+    description: Distinct product categories from active reports.
+    items:
+      type: string
+      enum:
+        - Crypto
+        - Scamming
+        - Money Laundering
+        - Billing
+        - Banking
+        - Insurance
+        - Real Estate
+        - Legal
+        - Other
+    example:
+      - Crypto
+      - Banking
+  status:
+    type: boolean
+    description: Whether the entity is active. Public reads return active records only.
+    example: true
+  created_at:
+    type: string
+    format: date
+    description: Date the entity was created (`YYYY-MM-DD`).
+    example: "2026-08-24"
