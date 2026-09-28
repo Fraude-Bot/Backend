@@ -32,15 +32,29 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
+            'root' => storage_path('private'),
             'serve' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'raw' => [
+            'driver' => 'local',
+            'root' => storage_path('raw'),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'quarantine' => [
+            'driver' => 'local',
+            'root' => storage_path('quarantine'),
             'throw' => false,
             'report' => false,
         ],
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            'root' => storage_path('public'),
             'url' => rtrim(
                 env('APP_ENV', 'production') === 'production'
                 ? (env('APP_CDN') ?: env('APP_URL', 'http://localhost'))
@@ -48,6 +62,20 @@ return [
                 '/'
             ).'/storage',
             'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('private'),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'system' => [
+            'driver' => 'local',
+            'root' => storage_path('system'),
             'throw' => false,
             'report' => false,
         ],
@@ -79,7 +107,7 @@ return [
     */
 
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        public_path('storage') => storage_path('public'),
     ],
 
 ];

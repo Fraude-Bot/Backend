@@ -14,6 +14,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
     public function test_deletes_only_temporary_profile_pictures_and_their_cache_keys(): void
     {
         Storage::fake('public');
+        Storage::fake('raw');
 
         $directory = TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY;
         $proofs = TemporaryImageStorageInterface::PROOF_DIRECTORY;
@@ -21,6 +22,8 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Storage::disk('public')->put($directory.'/two.png', 'two');
         Storage::disk('public')->put($proofs.'/proof.jpg', 'proof');
         Storage::disk('public')->put('tmp/pictures/reports/other.jpg', 'keep');
+        Storage::disk('raw')->put($directory.'/pending.jpg', 'pending');
+        Storage::disk('raw')->put('tmp/pictures/reports/other.jpg', 'keep');
 
         $prefix = TemporaryImageStorageInterface::CACHE_KEY_PREFIX;
         Cache::forever($prefix.'one', 'http://localhost/one.jpg');
@@ -33,6 +36,8 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Storage::disk('public')->assertMissing($directory.'/two.png');
         Storage::disk('public')->assertMissing($proofs.'/proof.jpg');
         Storage::disk('public')->assertExists('tmp/pictures/reports/other.jpg');
+        Storage::disk('raw')->assertMissing($directory.'/pending.jpg');
+        Storage::disk('raw')->assertExists('tmp/pictures/reports/other.jpg');
         $this->assertNull(Cache::get($prefix.'one'));
         $this->assertNull(Cache::get($prefix.'two'));
         $this->assertSame('keep', Cache::get('unrelated-cache-key'));
@@ -41,10 +46,12 @@ class DeleteTemporaryMediaTaskTest extends TestCase
     public function test_succeeds_when_there_is_nothing_to_delete(): void
     {
         Storage::fake('public');
+        Storage::fake('raw');
 
         app(DeleteTemporaryMediaTask::class)();
 
         $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('raw')->allFiles());
     }
 
     public function test_is_scheduled_every_sunday(): void

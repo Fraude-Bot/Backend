@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Resources\Public\ReportCardResource;
+use App\Infrastructure\Media\AntiNSFWAnalyzer;
 use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\PaymentMethod;
@@ -13,19 +14,20 @@ use App\Models\Report;
 use App\Models\Scammer;
 use App\Repositories\Organization\OrganizationCardRepositoryInterface;
 use App\Repositories\Scammer\ScammerCardRepositoryInterface;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class PublicReportControllerTest extends TestCase
 {
-
     protected function setUp(): void
     {
         parent::setUp();
 
         Storage::fake('public');
+        Storage::fake('raw');
+        Storage::fake('quarantine');
     }
 
     public function test_stores_jpg_and_png_profile_pictures_for_scammers_and_organizations(): void
@@ -34,7 +36,7 @@ class PublicReportControllerTest extends TestCase
             ['profile.jpg', self::jpegBytes()],
             ['profile.png', self::pngBytes()],
         ] as [$filename, $contents]) {
-            $response = $this->post("/api/public/reports/pictures/profiles", [
+            $response = $this->post('/api/public/reports/media/profiles', [
                 'image' => UploadedFile::fake()->createWithContent($filename, $contents),
             ]);
 
@@ -42,7 +44,7 @@ class PublicReportControllerTest extends TestCase
 
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
             $url = $response->json('path');
-            $prefix = config('filesystems.disks.public.url')."/tmp/pictures/reports/profile/";
+            $prefix = config('filesystems.disks.public.url').'/tmp/reports/profile/';
 
             $this->assertStringStartsWith($prefix, $url);
             $this->assertStringEndsWith('.'.$extension, $url);
@@ -53,24 +55,55 @@ class PublicReportControllerTest extends TestCase
             $size = getimagesizefromstring(Storage::disk('public')->get($relative));
             $this->assertSame(640, $size[0]);
             $this->assertSame(640, $size[1]);
-        } 
+        }
+
+        $this->assertSame([], Storage::disk('raw')->allFiles());
     }
 
     public function test_rejects_a_non_image(): void
     {
-        $this->post('/api/public/reports/pictures/profiles', [
+        $this->post('/api/public/reports/media/profiles', [
             'image' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
         ])
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'validation_failed');
 
         $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('raw')->allFiles());
+    }
+
+    public function test_rejects_a_profile_picture_when_moderation_fails(): void
+    {
+        $this->app->instance(AntiNSFWAnalyzer::class, new class extends AntiNSFWAnalyzer
+        {
+            public function passes(string $contents): bool
+            {
+                return false;
+            }
+        });
+
+        $contents = self::jpegBytes();
+
+        $this->post('/api/public/reports/media/profiles', [
+            'image' => UploadedFile::fake()->createWithContent('profile.jpg', $contents),
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'image_rejected')
+            ->assertJsonMissingPath('path');
+
+        $quarantined = Storage::disk('quarantine')->allFiles();
+
+        $this->assertCount(1, $quarantined);
+        $this->assertStringStartsWith('tmp/reports/profile/', $quarantined[0]);
+        $this->assertSame($contents, Storage::disk('quarantine')->get($quarantined[0]));
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('raw')->allFiles());
     }
 
     public function test_stores_the_profile_picture_again_when_the_cached_file_is_missing(): void
     {
         $contents = self::jpegBytes();
-        $upload = fn () => $this->post('/api/public/reports/pictures/profiles', [
+        $upload = fn () => $this->post('/api/public/reports/media/profiles', [
             'image' => UploadedFile::fake()->createWithContent('profile.jpg', $contents),
         ]);
 
@@ -87,11 +120,12 @@ class PublicReportControllerTest extends TestCase
         $secondRelative = substr($second->json('path'), strlen($prefix));
         $this->assertNotSame($firstRelative, $secondRelative);
         $this->assertTrue(Storage::disk('public')->exists($secondRelative));
+        $this->assertSame([], Storage::disk('raw')->allFiles());
     }
 
     public function test_stores_jpg_and_png_proofs_at_their_original_size(): void
     {
-        $response = $this->post('/api/public/reports/pictures/proofs', [
+        $response = $this->post('/api/public/reports/media/proofs', [
             'images' => [
                 UploadedFile::fake()->createWithContent('proof.jpg', self::jpegBytes()),
                 UploadedFile::fake()->createWithContent('proof.png', self::pngBytes()),
@@ -101,7 +135,7 @@ class PublicReportControllerTest extends TestCase
         $response->assertCreated();
 
         $paths = $response->json('paths');
-        $prefix = config('filesystems.disks.public.url').'/tmp/pictures/reports/proofs/';
+        $prefix = config('filesystems.disks.public.url').'/tmp/reports/proofs/';
         $expected = [
             ['jpg', 1200, 800],
             ['png', 400, 900],
@@ -122,11 +156,13 @@ class PublicReportControllerTest extends TestCase
             $this->assertSame($width, $size[0]);
             $this->assertSame($height, $size[1]);
         }
+
+        $this->assertSame([], Storage::disk('raw')->allFiles());
     }
 
     public function test_rejects_a_non_image_proof(): void
     {
-        $this->post('/api/public/reports/pictures/proofs', [
+        $this->post('/api/public/reports/media/proofs', [
             'images' => [
                 UploadedFile::fake()->createWithContent('proof.jpg', self::jpegBytes()),
                 UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
@@ -136,6 +172,7 @@ class PublicReportControllerTest extends TestCase
             ->assertJsonPath('error.code', 'validation_failed');
 
         $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], Storage::disk('raw')->allFiles());
     }
 
     private static function jpegBytes(): string
@@ -159,7 +196,7 @@ class PublicReportControllerTest extends TestCase
 
         return (string) ob_get_clean();
     }
-    
+
     public function test_report_search_by_clabe(): void
     {
         $fixtures = $this->seedDefaultSearchFixtures();

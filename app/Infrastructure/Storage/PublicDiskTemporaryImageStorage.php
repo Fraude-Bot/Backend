@@ -2,7 +2,9 @@
 
 namespace App\Infrastructure\Storage;
 
+use App\Application\Media\ImageRejectedException;
 use App\Application\Media\TemporaryImageStorageInterface;
+use App\Infrastructure\Media\AntiNSFWAnalyzer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +14,8 @@ use RuntimeException;
 
 class PublicDiskTemporaryImageStorage implements TemporaryImageStorageInterface
 {
+    public function __construct(private AntiNSFWAnalyzer $antiNsfwAnalyzer) {}
+
     public function upload(UploadedFile $file, string $directory, ?int $width = null, ?int $height = null): string
     {
         if (($width === null) !== ($height === null)) {
@@ -27,17 +31,35 @@ class PublicDiskTemporaryImageStorage implements TemporaryImageStorageInterface
 
         $filename = $file->hashName();
         $path = trim($directory, '/').'/'.$filename;
-        $contents = $width === null
-            ? $file->getContent()
-            : (string) app(ImageManager::class)
-                ->decodePath($file->getPathname())
-                ->cover($width, $height)
-                ->encodeUsingFileExtension(pathinfo($filename, PATHINFO_EXTENSION));
+        $original = $file->getContent();
 
-        $stored = Storage::disk('public')->put($path, $contents);
-
-        if ($stored === false) {
+        if (Storage::disk('raw')->put($path, $original) === false) {
             throw new RuntimeException('The image could not be stored.');
+        }
+
+        if (! $this->antiNsfwAnalyzer->passes($original)) {
+            if (Storage::disk('quarantine')->put($path, $original) === false) {
+                throw new RuntimeException('The image could not be stored.');
+            }
+
+            Storage::disk('raw')->delete($path);
+
+            throw new ImageRejectedException;
+        }
+
+        try {
+            $contents = $width === null
+                ? $original
+                : (string) app(ImageManager::class)
+                    ->decodePath($file->getPathname())
+                    ->cover($width, $height)
+                    ->encodeUsingFileExtension(pathinfo($filename, PATHINFO_EXTENSION));
+
+            if (Storage::disk('public')->put($path, $contents) === false) {
+                throw new RuntimeException('The image could not be stored.');
+            }
+        } finally {
+            Storage::disk('raw')->delete($path);
         }
 
         $url = config('filesystems.disks.public.url').'/'.$path;
