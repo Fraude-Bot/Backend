@@ -9,8 +9,6 @@ class OrganizationEntity extends Entity
     public function __construct(
         public readonly ?int $id,
         public string $name,
-        public ?string $description,
-        public ?string $country,
         public bool $isActive,
     ) {
         parent::__construct();
@@ -31,8 +29,6 @@ class OrganizationEntity extends Entity
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'description' => $this->description,
-            'country' => $this->country,
             'is_active' => $this->isActive,
         ];
     }

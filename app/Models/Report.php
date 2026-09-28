@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Report extends Model
@@ -18,12 +19,10 @@ class Report extends Model
         'user_id',
         'title',
         'description',
-        'was_sucessful',
         'is_active',
     ];
 
     protected $casts = [
-        'was_sucessful' => 'boolean',
         'is_active' => 'boolean',
     ];
 
@@ -36,6 +35,11 @@ class Report extends Model
         static::restoring(function (Report $report) {
             ReportProduct::onlyTrashed()->where('report_id', $report->id)->restore();
         });
+    }
+
+    public function proofs(): HasMany
+    {
+        return $this->hasMany(ReportProof::class);
     }
 
     /**
@@ -86,7 +90,6 @@ class Report extends Model
             userId: $this->user_id,
             title: $this->title,
             description: $this->description,
-            wasSucessful: $this->was_sucessful,
             isActive: $this->is_active,
         );
     }

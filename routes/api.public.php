@@ -28,6 +28,8 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
 
     Route::post('reports/media/profiles', [ReportController::class, 'storeTemporaryProfilePicture']);
     Route::post('reports/media/proofs', [ReportController::class, 'storeTemporaryProof']);
+    
+    Route::post('reports/organizations', [ReportController::class, 'storeOrganization']);
 
     Route::get('healthcheck', function () {
         return response()->json(['status' => 'ok']);

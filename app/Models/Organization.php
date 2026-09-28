@@ -16,9 +16,7 @@ class Organization extends Model
 
     protected $fillable = [
         'name',
-        'description',
-        'country',
-        'avatar_path',
+        'profile_picture_path',
         'is_active',
     ];
 
@@ -101,8 +99,6 @@ class Organization extends Model
         return new OrganizationEntity(
             id: $this->id,
             name: $this->name,
-            description: $this->description,
-            country: $this->country,
             isActive: $this->is_active,
         );
     }

@@ -8,8 +8,6 @@ class StoreOrganizationRequest extends AdminRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'country' => ['nullable', 'string', 'size:2'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

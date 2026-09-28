@@ -11,12 +11,11 @@ use Illuminate\Support\Facades\Storage;
 /**
  * @property int $id
  * @property string $name
- * @property string $country
  * @property int $report_count
  * @property Collection $reports
  * @property bool $is_active
  * @property Carbon $created_at
- * @property string $avatar_path
+ * @property string|null $profile_picture_path
  */
 class ScammerResource extends JsonResource
 {
@@ -28,9 +27,8 @@ class ScammerResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'country' => config('countries')[$this->country] ?? 'Unknown',
             'reports' => $this->report_count,
-            'avatar_path' => $this->avatar_path === null ? null : $publicDisk->url($this->avatar_path),
+            'profile_picture_path' => $this->profile_picture_path === null ? null : $publicDisk->url($this->profile_picture_path),
             'products' => $this->reports->flatMap(fn ($report) => $report->products->pluck('name'))->filter()->unique()->values()->all(),
             'status' => $this->is_active,
             'created_at' => $this->created_at->format('Y-m-d'),

@@ -76,6 +76,10 @@ YAML);
         $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['Report']);
         $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['PaginatedReports']['properties']['data']['items']);
         $this->assertArrayNotHasKey('/public/reports', $document['paths']);
+        $this->assertSame(
+            'storeOrganizationReport',
+            $document['paths']['/public/reports/organizations']['post']['operationId'],
+        );
     }
 
     public function test_rejects_refs_outside_the_allowed_root(): void

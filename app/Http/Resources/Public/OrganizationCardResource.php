@@ -10,7 +10,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * @property int $id
  * @property string $name
- * @property string $country
  * @property bool $is_active
  * @property int $report_count
  * @property Carbon $created_at
@@ -25,7 +24,6 @@ class OrganizationCardResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'country' => $this->country,
             'is_active' => $this->is_active,
             'reports' => $this->report_count,
             'products' => $this->previewProductNames(),

@@ -14,8 +14,6 @@ class OrganizationFactory extends Factory
     {
         return [
             'name' => fake()->unique()->randomElement(ScamEnterprisePool::companyNames()),
-            'description' => $this->faker->sentence(),
-            'country' => $this->faker->countryCode(),
             'is_active' => true,
         ];
     }

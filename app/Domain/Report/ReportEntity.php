@@ -11,7 +11,6 @@ class ReportEntity extends Entity
         public readonly int $userId,
         public string $title,
         public string $description,
-        public bool $wasSucessful,
         public bool $isActive,
     ) {
         parent::__construct();
@@ -34,7 +33,6 @@ class ReportEntity extends Entity
             'user_id' => $this->userId,
             'title' => $this->title,
             'description' => $this->description,
-            'was_sucessful' => $this->wasSucessful,
             'is_active' => $this->isActive,
         ];
     }
