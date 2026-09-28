@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Media\ImageRejectedException;
 use App\Application\Tasks\DeleteTemporaryMediaTask;
 use App\Http\Middleware\EnsureResponseIsJSON;
 use App\Http\Middleware\RequestContext;
@@ -45,6 +46,14 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return true;
+        });
+        $exceptions->render(function (ImageRejectedException $exception) {
+            return response()->json([
+                'error' => [
+                    'code' => 'image_rejected',
+                    'message' => $exception->getMessage(),
+                ],
+            ], 422);
         });
         $exceptions->render(function (ValidationException $exception) {
             return response()->json([

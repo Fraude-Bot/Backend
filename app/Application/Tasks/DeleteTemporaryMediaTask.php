@@ -5,6 +5,7 @@ namespace App\Application\Tasks;
 use App\Application\Media\TemporaryImageStorageInterface;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\RedisStore;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Facades\Cache;
@@ -21,8 +22,13 @@ class DeleteTemporaryMediaTask
 
     private function deleteTemporaryFiles(): void
     {
-        $disk = Storage::disk('public');
+        foreach (['raw', 'public'] as $name) {
+            $this->deleteTemporaryDirectories(Storage::disk($name));
+        }
+    }
 
+    private function deleteTemporaryDirectories(Filesystem $disk): void
+    {
         foreach ([
             TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
             TemporaryImageStorageInterface::PROOF_DIRECTORY,

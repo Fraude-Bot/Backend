@@ -303,16 +303,19 @@ paths:
                 message: Organization not found
         "429":
           $ref: "#/components/responses/RateLimited"
-  /public/reports/pictures/profiles:
+  /public/reports/media/profiles:
     post:
       tags: [Reports]
       operationId: storeTemporaryProfilePicture
       summary: Upload a temporary profile picture
       description: |
-        Accepts a JPG or PNG image up to 5 MB, covers it to 640×640, and stores it
-        on the public disk under `tmp/pictures/reports/profile`. The response path
-        is the public URL of that file. Uploading the same image again returns the
-        existing URL while the file is still present.
+        Accepts a JPG or PNG image up to 5 MB. The original is stored on the raw
+        disk and must pass image moderation before a 640×640 cover is published on
+        the public disk under `tmp/reports/profile`. The response path is
+        the public URL of that file. Uploading the same image again returns the
+        existing URL while the file is still present. A rejected image is moved
+        to quarantine and the response does not include its path; it responds
+        with 422 and error code `image_rejected`.
       requestBody:
         required: true
         content:
@@ -333,21 +336,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/StoredImagePath"
               example:
-                path: http://localhost:9000/storage/tmp/pictures/reports/profile/8f3c1a.jpg
+                path: http://localhost:9000/storage/tmp/reports/profile/8f3c1a.jpg
         "422":
           $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /public/reports/proofs:
+  /public/reports/media/proofs:
     post:
       tags: [Reports]
       operationId: storeTemporaryProof
       summary: Upload temporary proof images
       description: |
-        Accepts one or more JPG or PNG images, up to 5 MB each, and stores them at
-        their original size on the public disk under `tmp/pictures/reports/proofs`.
+        Accepts one or more JPG or PNG images, up to 5 MB each. Each original is
+        stored on the raw disk and must pass image moderation before it is published
+        at its original size on the public disk under `tmp/reports/proofs`.
         Each response path is the public URL of that file. Uploading the same image
-        again returns the existing URL while that file is still present.
+        again returns the existing URL while that file is still present. A rejected
+        image is moved to quarantine and the response does not include its path;
+        it responds with 422 and error code `image_rejected`.
       requestBody:
         required: true
         content:
@@ -372,8 +378,8 @@ paths:
                 $ref: "#/components/schemas/StoredImagePaths"
               example:
                 paths:
-                  - http://localhost:9000/storage/tmp/pictures/reports/proofs/8f3c1a.jpg
-                  - http://localhost:9000/storage/tmp/pictures/reports/proofs/9a4d2b.png
+                  - http://localhost:9000/storage/tmp/reports/proofs/8f3c1a.jpg
+                  - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
         "422":
           $ref: "#/components/responses/ValidationFailed"
         "429":
@@ -558,7 +564,7 @@ components:
           type: string
           format: uri
           description: Public URL of the stored image.
-          example: http://localhost:9000/storage/tmp/pictures/reports/profile/8f3c1a.jpg
+          example: http://localhost:9000/storage/tmp/reports/profile/8f3c1a.jpg
     StoredImagePaths:
       type: object
       required: [paths]
@@ -571,8 +577,8 @@ components:
             format: uri
           description: Public URLs of the stored images, in request order.
           example:
-            - http://localhost:9000/storage/tmp/pictures/reports/proofs/8f3c1a.jpg
-            - http://localhost:9000/storage/tmp/pictures/reports/proofs/9a4d2b.png
+            - http://localhost:9000/storage/tmp/reports/proofs/8f3c1a.jpg
+            - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
     ErrorMessage:
       $ref: ./schemas/ErrorMessage.yaml
     HttpError:
