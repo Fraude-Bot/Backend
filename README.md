@@ -27,11 +27,12 @@ Then call `POST /api/admin/token`. This route is not registered outside the loca
 cd ../docker
 docker compose exec -T -w /var/www/backend backend composer format:check
 docker compose exec -T -w /var/www/backend backend composer analyse
+docker compose exec -T -w /var/www/backend backend composer check:architecture
 docker compose exec -T -w /var/www/backend backend composer test
 docker compose exec -T -w /var/www/backend backend composer audit
 ```
 
-Tests use in-memory SQLite. CI also performs a fresh MySQL migration to catch engine-specific schema failures.
+Tests use in-memory SQLite. The Code checks workflow runs PHPStan (`composer analyse`) and PHPArkitect (`composer check:architecture`) on every push and pull request.
 
 ## API overview
 
