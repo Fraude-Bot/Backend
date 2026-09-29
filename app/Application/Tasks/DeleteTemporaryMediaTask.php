@@ -3,6 +3,7 @@
 namespace App\Application\Tasks;
 
 use App\Application\Media\TemporaryImageStorageInterface;
+use Closure;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\RedisStore;
 use Illuminate\Contracts\Filesystem\Filesystem;
@@ -77,27 +78,66 @@ class DeleteTemporaryMediaTask
     private function redisCacheKeys(RedisStore $store): array
     {
         $connection = $store->connection();
+        $match = TemporaryImageStorageInterface::CACHE_KEY_PREFIX.'*';
 
-        $connectionPrefix = match (true) {
-            $connection instanceof PhpRedisConnection => $connection->_prefix(''),
-            $connection instanceof PredisConnection => (string) ($connection->getOptions()->prefix ?: ''),
-            default => '',
-        };
+        if ($connection instanceof PhpRedisConnection) {
+            $prefix = $connection->_prefix('').$store->getPrefix();
+            $cursor = version_compare((string) phpversion('redis'), '6.1.0', '>=') ? null : '0';
 
-        $prefix = $connectionPrefix.$store->getPrefix();
+            return $this->scanPrefixedKeys(
+                $prefix,
+                $cursor,
+                fn (mixed $cursor): mixed => $connection->scan($cursor, [
+                    'match' => $prefix.$match,
+                    'count' => 1000,
+                ]),
+            );
+        }
 
-        $defaultCursorValue = $connection instanceof PhpRedisConnection && version_compare((string) phpversion('redis'), '6.1.0', '>=')
-            ? null
-            : '0';
+        if ($connection instanceof PredisConnection) {
+            $prefix = $this->predisConnectionPrefix($connection).$store->getPrefix();
 
+            return $this->scanPrefixedKeys(
+                $prefix,
+                '0',
+                fn (mixed $cursor): mixed => $connection->__call('scan', [$cursor, [
+                    'match' => $prefix.$match,
+                    'count' => 1000,
+                ]]),
+            );
+        }
+
+        throw new RuntimeException('The cache store cannot list temporary image keys.');
+    }
+
+    private function predisConnectionPrefix(PredisConnection $connection): string
+    {
+        $client = $connection->client();
+
+        if (! is_object($client) || ! method_exists($client, 'getOptions')) {
+            return '';
+        }
+
+        $options = $client->getOptions();
+
+        if (! is_object($options) || ! isset($options->prefix)) {
+            return '';
+        }
+
+        return (string) $options->prefix;
+    }
+
+    /**
+     * @param  Closure(mixed): mixed  $scan
+     * @return list<string>
+     */
+    private function scanPrefixedKeys(string $prefix, mixed $initialCursor, Closure $scan): array
+    {
         $keys = [];
-        $cursor = $defaultCursorValue;
+        $cursor = $initialCursor;
 
         do {
-            $scanResult = $connection->scan($cursor, [
-                'match' => $prefix.TemporaryImageStorageInterface::CACHE_KEY_PREFIX.'*',
-                'count' => 1000,
-            ]);
+            $scanResult = $scan($cursor);
 
             if (! is_array($scanResult)) {
                 break;
@@ -112,7 +152,7 @@ class DeleteTemporaryMediaTask
             foreach ($found as $key) {
                 $keys[] = substr((string) $key, strlen($prefix));
             }
-        } while (((string) $cursor) !== (string) $defaultCursorValue);
+        } while (((string) $cursor) !== (string) $initialCursor);
 
         return $keys;
     }

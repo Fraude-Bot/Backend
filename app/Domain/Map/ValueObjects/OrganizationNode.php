@@ -24,9 +24,9 @@ final class OrganizationNode extends Node {
         }
 
         return new self(
-            $model->id,
+            (string) $model->id,
             NodeTypes::PARTY,
-            $model->id,
+            (string) $model->id,
             $model->name,
             KindTypes::ORGANIZATION,
         );

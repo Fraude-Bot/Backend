@@ -62,10 +62,6 @@ class ReportController extends Controller
         $paths = [];
 
         foreach ($images as $image) {
-            if (! $image instanceof UploadedFile) {
-                abort(422, 'The request data is invalid.');
-            }
-
             $paths[] = $this->storage->uploadProof($image);
         }
 

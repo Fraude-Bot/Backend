@@ -28,9 +28,9 @@ final class ContactNode extends Node {
         }
 
         return new self(
-            $model->id,
+            (string) $model->id,
             NodeTypes::CONTACT,
-            $model->id,
+            (string) $model->id,
             ucfirst(strtolower($model->platform->name)),
             $model->reference,
             $model->platform,
