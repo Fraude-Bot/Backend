@@ -21,6 +21,7 @@
         "laravel/sail": "^1.41",
         "mockery/mockery": "^1.6.10",
         "nunomaduro/collision": "^8.6 || ^9.0",
+        "phparkitect/phparkitect": "^1.3",
         "phpunit/phpunit": "^12.0"
     },
     "autoload": {
@@ -53,10 +54,12 @@
             "@php artisan test"
         ],
         "analyse": "@php vendor/bin/phpstan analyse --memory-limit=1G",
+        "check:architecture": "@php vendor/bin/phparkitect check",
         "format:check": "@php vendor/bin/pint --test",
         "quality": [
             "@format:check",
             "@analyse",
+            "@check:architecture",
             "@test",
             "composer audit"
         ],
