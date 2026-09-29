@@ -7,12 +7,6 @@ parameters:
 			path: app/Http/Controllers/Admin/ScammerController.php
 
 		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Admin\\BasicOrganizationResource\:\:\$country\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Admin/BasicOrganizationResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Admin\\BasicOrganizationResource\:\:\$created_at\.$#'
 			identifier: property.notFound
 			count: 1
@@ -20,12 +14,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Admin\\BasicOrganizationResource\:\:\$deleted_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Admin/BasicOrganizationResource.php
-
-		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Admin\\BasicOrganizationResource\:\:\$description\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Admin/BasicOrganizationResource.php
@@ -97,12 +85,6 @@ parameters:
 			path: app/Http/Resources/Admin/BasicPaymentMethodResource.php
 
 		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Admin\\BasicScammerResource\:\:\$country\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Admin/BasicScammerResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Admin\\BasicScammerResource\:\:\$created_at\.$#'
 			identifier: property.notFound
 			count: 1
@@ -139,18 +121,6 @@ parameters:
 			path: app/Http/Resources/Admin/BasicScammerResource.php
 
 		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Public\\BasicOrganizationResource\:\:\$country\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Public/BasicOrganizationResource.php
-
-		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Public\\BasicOrganizationResource\:\:\$description\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Public/BasicOrganizationResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Public\\BasicOrganizationResource\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -167,24 +137,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Public/BasicOrganizationResource.php
-
-		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Public\\ContactResource\:\:\$platform\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Public/ContactResource.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Resources/Public/OrganizationResource.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Resources/Public/ScammerResource.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'

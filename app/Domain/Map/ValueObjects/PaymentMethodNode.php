@@ -22,10 +22,10 @@ final class PaymentMethodNode extends Node{
         }
 
         return new self(
-            $model->id,
+            (string) $model->id,
             NodeTypes::PAYMENT_METHOD,
-            $model->id,
-            $model->type->value,
+            (string) $model->id,
+            (string) $model->type->value,
             $model->reference,
         );
     }

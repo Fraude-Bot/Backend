@@ -10,7 +10,10 @@ use App\Domain\Map\ValueObjects\OrganizationNode;
 use App\Domain\Map\ValueObjects\PaymentMethodNode;
 use App\Domain\Map\ValueObjects\ScammerNode;
 use App\Domain\Search\ValueObjects\PaginatedResult;
+use App\Models\Contact;
 use App\Models\Organization;
+use App\Models\PaymentMethod;
+use App\Models\Scammer;
 use App\Repositories\Search\SearchCache;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -137,9 +140,9 @@ class PublicOrganizationRepository implements OrganizationRepositoryInterface
             return null;
         }
 
-        $contacts = $organization->contacts->unique('id')->values();
-        $paymentMethods = $organization->paymentMethods->unique('id')->values();
-        $scammers = $organization->scammers->unique('id')->values();
+        $contacts = $organization->contacts->unique('id')->values()->ensure(Contact::class);
+        $paymentMethods = $organization->paymentMethods->unique('id')->values()->ensure(PaymentMethod::class);
+        $scammers = $organization->scammers->unique('id')->values()->ensure(Scammer::class);
 
         $centerNode = OrganizationNode::from($organization)->centered();
         $scammerNodes = ScammerNode::fromCollection($scammers);

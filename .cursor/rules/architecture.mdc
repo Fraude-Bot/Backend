@@ -18,7 +18,7 @@ alwaysApply: true
 These are under `app/` directory, which follow `Clean Architecture` guidelines.
 
 - `Console/`:  Folders/Files related to the creation of custom Laravel commands.
-- `Application/`: Folders/Files related to use cases and application logic. Contains interfaces, and event listeners. This layer depends only on the Domain.
+- `Application/`: Folders/Files related to use cases and application logic. Contains interfaces, and event listeners. This layer depends on the Domain and on vendor classes.
 - `Domain/`: Folders/Files related to the core of the business logic. Contains Entities, Value Objects, Domain Exceptions, and Repository Interfaces. This layer depends on *nothing*.
 - `Http/`: Folders/Files related to the HTTP service. Controllers, Middleware, Requests and Resources are managed here.
 - `Infrastructure/`: Folders/Files related to external services, such as Media Storage (S3, Mega, Cloud Storage), APIs, etc.
