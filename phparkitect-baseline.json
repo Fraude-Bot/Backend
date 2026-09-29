@@ -1,136 +1,34 @@
 {
     "violations": [
         {
-            "fqcn": "App\\Application\\Media\\TemporaryImageStorageInterface",
-            "line": 15,
-            "filePath": "Application\/Media\/TemporaryImageStorageInterface.php",
-            "error": "depends on Illuminate\\Http\\UploadedFile, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Media\\TemporaryImageStorageInterface",
-            "line": 17,
-            "filePath": "Application\/Media\/TemporaryImageStorageInterface.php",
-            "error": "depends on Illuminate\\Http\\UploadedFile, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Media\\TemporaryImageStorageInterface",
-            "line": 19,
-            "filePath": "Application\/Media\/TemporaryImageStorageInterface.php",
-            "error": "depends on Illuminate\\Http\\UploadedFile, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
-            "line": 73,
-            "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on Illuminate\\Support\\Facades\\DB, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
             "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
             "line": 82,
             "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on App\\Models\\Organization, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
+            "error": "depends on App\\Models\\Organization, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application, or on vendor classes because Application depends on the Domain and on vendor classes"
         },
         {
             "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
             "line": 88,
             "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on App\\Models\\Report, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
+            "error": "depends on App\\Models\\Report, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application, or on vendor classes because Application depends on the Domain and on vendor classes"
         },
         {
             "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
             "line": 100,
             "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on App\\Models\\ReportProof, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
+            "error": "depends on App\\Models\\ReportProof, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application, or on vendor classes because Application depends on the Domain and on vendor classes"
         },
         {
             "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
             "line": 109,
             "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on App\\Models\\Contact, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
+            "error": "depends on App\\Models\\Contact, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application, or on vendor classes because Application depends on the Domain and on vendor classes"
         },
         {
             "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
             "line": 125,
             "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on App\\Models\\PaymentMethod, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
-            "line": 160,
-            "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on Illuminate\\Validation\\ValidationException, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
-            "line": 186,
-            "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on Illuminate\\Validation\\ValidationException, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Report\\StoreOrganizationReport",
-            "line": 215,
-            "filePath": "Application\/Report\/StoreOrganizationReport.php",
-            "error": "depends on Illuminate\\Validation\\ValidationException, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 26,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Support\\Facades\\Storage, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 30,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Contracts\\Filesystem\\Filesystem, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 51,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Support\\Facades\\Cache, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 60,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Support\\Facades\\Cache, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 63,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Cache\\ArrayStore, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 64,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Cache\\RedisStore, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 77,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Cache\\RedisStore, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 82,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Redis\\Connections\\PhpRedisConnection, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 83,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Redis\\Connections\\PredisConnection, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
-        },
-        {
-            "fqcn": "App\\Application\\Tasks\\DeleteTemporaryMediaTask",
-            "line": 89,
-            "filePath": "Application\/Tasks\/DeleteTemporaryMediaTask.php",
-            "error": "depends on Illuminate\\Redis\\Connections\\PhpRedisConnection, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application because Application depends only on the Domain"
+            "error": "depends on App\\Models\\PaymentMethod, but should depend only on classes in one of these namespaces: App\\Domain, App\\Application, or on vendor classes because Application depends on the Domain and on vendor classes"
         },
         {
             "fqcn": "App\\Domain\\Contact\\ValueObjects\\Platform",
