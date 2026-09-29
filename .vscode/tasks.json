@@ -15,6 +15,19 @@
       "problemMatcher": []
     },
     {
+      "label": "[Backend] Start Service",
+      "type": "shell",
+      "command": "bash \"${workspaceFolder}/../../docker/scripts/start-backend.sh\"",
+      "options": {
+        "cwd": "${workspaceFolder}/../../docker/"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "[ALL] Stop Services",
       "type": "shell",
       "command": "docker compose down",
