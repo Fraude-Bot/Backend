@@ -13,6 +13,8 @@ use App\Application\Report\ReportUsecase;
 use App\Application\Report\ReportUsecaseInterface;
 use App\Application\Scammer\ScammerUsecase;
 use App\Application\Scammer\ScammerUsecaseInterface;
+use App\Domain\Contact\PlatformProfileExtractorInterface;
+use App\Infrastructure\Contact\PlatformProfileExtractor;
 use App\Infrastructure\Facebook\FacebookService;
 use App\Infrastructure\Facebook\FacebookServiceInterface;
 use App\Infrastructure\Instagram\InstagramService;
@@ -65,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ImageManager::class, fn () => ImageManager::usingDriver(GdDriver::class));
 
         $this->app->singleton(FacebookServiceInterface::class, FacebookService::class);
+        $this->app->singleton(PlatformProfileExtractorInterface::class, PlatformProfileExtractor::class);
         $this->app->singleton(YoutubeServiceInterface::class, YoutubeService::class);
         $this->app->singleton(InstagramServiceInterface::class, InstagramService::class);
         $this->app->singleton(TikTokServiceInterface::class, TikTokService::class);

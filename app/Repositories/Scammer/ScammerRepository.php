@@ -8,7 +8,6 @@ use App\Domain\Map\ValueObjects\Edge;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Map\ValueObjects\OrganizationNode;
 use App\Domain\Map\ValueObjects\PaymentMethodNode;
-use App\Domain\Map\ValueObjects\ScammerNode;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
 use App\Models\Organization;
@@ -144,10 +143,10 @@ class ScammerRepository implements ScammerRepositoryInterface
         $paymentMethods = $scammer->paymentMethods->unique('id')->values()->ensure(PaymentMethod::class);
         $organizations = $scammer->organizations->unique('id')->values()->ensure(Organization::class);
 
-        $centerNode = ScammerNode::from($scammer)->center();
-        $organizationNodes = OrganizationNode::fromCollection($organizations);
-        $contactNodes = ContactNode::fromCollection($contacts);
-        $paymentMethodNodes = PaymentMethodNode::fromCollection($paymentMethods);
+        $centerNode = $scammer->toNode()->center();
+        $organizationNodes = $organizations->map(fn (Organization $organization): OrganizationNode => $organization->toNode());
+        $contactNodes = $contacts->map(fn (Contact $contact): ContactNode => $contact->toNode());
+        $paymentMethodNodes = $paymentMethods->map(fn (PaymentMethod $paymentMethod): PaymentMethodNode => $paymentMethod->toNode());
 
         $nodes = Collection::mergeAll(
             collect([$centerNode]),

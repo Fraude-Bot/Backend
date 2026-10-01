@@ -8,12 +8,47 @@ use Arkitect\ClassSet;
 use Arkitect\CLI\Config;
 use Arkitect\Expression\Description;
 use Arkitect\Expression\Expression;
-use Arkitect\Expression\ForClasses\NotHaveDependencyOutsideNamespace;
 use Arkitect\Expression\ForClasses\ResideInOneOfTheseNamespaces;
 use Arkitect\Rules\Rule;
 use Arkitect\Rules\Violation;
 use Arkitect\Rules\ViolationMessage;
 use Arkitect\Rules\Violations;
+
+/**
+ * Domain may use itself and any class outside App (vendor and PHP).
+ * Other App layers stay forbidden.
+ */
+final class DomainDependsOnItselfOrVendor implements Expression
+{
+    public function describe(ClassDescription $theClass, string $because): Description
+    {
+        return new Description(
+            'should depend only on classes in App\Domain, or on vendor classes',
+            $because,
+        );
+    }
+
+    public function evaluate(ClassDescription $theClass, Violations $violations, string $because): void
+    {
+        foreach ($theClass->getDependencies() as $dependency) {
+            $fqcn = $dependency->getFQCN()->toString();
+
+            if (! str_starts_with($fqcn, 'App\\') || str_starts_with($fqcn, 'App\\Domain\\')) {
+                continue;
+            }
+
+            $violations->add(Violation::createWithErrorLine(
+                $theClass->getFQCN(),
+                ViolationMessage::withDescription(
+                    $this->describe($theClass, $because),
+                    "depends on {$fqcn}",
+                ),
+                $dependency->getLine(),
+                $theClass->getFilePath(),
+            ));
+        }
+    }
+}
 
 /**
  * Application may use the Domain, itself, repository interfaces, Eloquent models,
@@ -47,57 +82,6 @@ final class ApplicationDependsOnDomainRepositoriesOrModels implements Expression
             if (str_starts_with($fqcn, 'App\\Repositories\\') && ! str_ends_with($fqcn, 'Interface')) {
                 $violations->add($this->violation($theClass, $dependency, $because, "depends on concrete repository {$fqcn}"));
 
-                continue;
-            }
-
-            if ($dependency->matchesOneOf(...$this->namespaces)) {
-                continue;
-            }
-
-            $violations->add($this->violation($theClass, $dependency, $because, "depends on {$fqcn}"));
-        }
-    }
-
-    private function violation(ClassDescription $theClass, ClassDependency $dependency, string $because, string $detail): Violation
-    {
-        return Violation::createWithErrorLine(
-            $theClass->getFQCN(),
-            ViolationMessage::withDescription($this->describe($theClass, $because), $detail),
-            $dependency->getLine(),
-            $theClass->getFilePath(),
-        );
-    }
-}
-
-/**
- * Models may use the Domain, themselves, SearchCache, and any class outside App
- * (vendor and PHP). Other App layers stay forbidden.
- */
-final class ModelsDependOnDomainOrVendor implements Expression
-{
-    /** @var list<string> */
-    private array $namespaces = ['App\Domain', 'App\Models'];
-
-    public function describe(ClassDescription $theClass, string $because): Description
-    {
-        $namespaces = implode(', ', $this->namespaces);
-
-        return new Description(
-            "should depend only on classes in one of these namespaces: {$namespaces}, on SearchCache, or on vendor classes",
-            $because,
-        );
-    }
-
-    public function evaluate(ClassDescription $theClass, Violations $violations, string $because): void
-    {
-        foreach ($theClass->getDependencies() as $dependency) {
-            $fqcn = $dependency->getFQCN()->toString();
-
-            if (! str_starts_with($fqcn, 'App\\')) {
-                continue;
-            }
-
-            if ($fqcn === 'App\\Repositories\\Search\\SearchCache') {
                 continue;
             }
 
@@ -166,13 +150,8 @@ return static function (Config $config): void {
 
     $rules[] = Rule::allClasses()
         ->that(new ResideInOneOfTheseNamespaces('App\Domain'))
-        ->should(new NotHaveDependencyOutsideNamespace('App\Domain'))
-        ->because('Domain depends on nothing outside itself');
-
-    $rules[] = Rule::allClasses()
-        ->that(new ResideInOneOfTheseNamespaces('App\Models'))
-        ->should(new ModelsDependOnDomainOrVendor)
-        ->because('Models depend on the Domain, themselves, SearchCache, and vendor classes');
+        ->should(new DomainDependsOnItselfOrVendor)
+        ->because('Domain depends on itself and on vendor classes');
 
     $rules[] = Rule::allClasses()
         ->that(new ResideInOneOfTheseNamespaces('App\Application'))

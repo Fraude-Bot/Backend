@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Contact\ContactEntity;
 use App\Domain\Contact\Enums\PlatformType;
+use App\Domain\Map\ValueObjects\ContactNode;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -57,6 +58,11 @@ class Contact extends Model
             ->withTimestamps()
             ->withPivot('deleted_at')
             ->wherePivotNull('deleted_at');
+    }
+
+    public function toNode(): ContactNode
+    {
+        return ContactNode::fromContact((string) $this->id, $this->reference, $this->platform);
     }
 
     public function toEntity(): ContactEntity

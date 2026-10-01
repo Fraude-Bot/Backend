@@ -2,13 +2,11 @@
 
 namespace App\Domain\Map\ValueObjects;
 
-use App\Domain\Map\Enums\NodeTypes;
 use App\Domain\Map\Enums\KindTypes;
-use App\Models\Organization;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
+use App\Domain\Map\Enums\NodeTypes;
 
-final class OrganizationNode extends Node {
+final class OrganizationNode extends Node
+{
     private function __construct(
         public readonly string $id,
         public readonly NodeTypes $type,
@@ -18,23 +16,15 @@ final class OrganizationNode extends Node {
         public readonly bool $isCenter = false,
     ) {}
 
-    public static function from(Model $model): self {
-        if (!$model instanceof Organization) {
-            throw new \InvalidArgumentException('Model must be an instance of Organization');
-        }
-
+    public static function fromOrganization(string $id, string $name): self
+    {
         return new self(
-            (string) $model->id,
+            $id,
             NodeTypes::PARTY,
-            (string) $model->id,
-            $model->name,
+            $id,
+            $name,
             KindTypes::ORGANIZATION,
         );
-    }
-
-    public static function fromCollection(Collection $organizations): Collection
-    {
-        return $organizations->map(fn (Organization $organization) => self::from($organization));
     }
 
     public function centered(): self
@@ -51,7 +41,7 @@ final class OrganizationNode extends Node {
 
     public function graphId(): string
     {
-        return $this->type->value . ':' . $this->kind->value . ':' . $this->id;
+        return $this->type->value.':'.$this->kind->value.':'.$this->id;
     }
 
     public function toArray(): array

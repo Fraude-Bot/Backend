@@ -4,5 +4,5 @@ namespace App\Infrastructure\TikTok;
 
 interface TikTokServiceInterface
 {
-    public function getProfile($url);
+    public function getProfile(string $url): string;
 }

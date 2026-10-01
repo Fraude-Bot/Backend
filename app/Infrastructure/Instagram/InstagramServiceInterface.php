@@ -4,5 +4,5 @@ namespace App\Infrastructure\Instagram;
 
 interface InstagramServiceInterface
 {
-    public function getProfile($url);
+    public function getProfile(string $url): string;
 }

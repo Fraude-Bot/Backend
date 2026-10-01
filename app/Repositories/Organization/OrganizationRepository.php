@@ -6,7 +6,6 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\ContactNode;
 use App\Domain\Map\ValueObjects\Edge;
 use App\Domain\Map\ValueObjects\MapResult;
-use App\Domain\Map\ValueObjects\OrganizationNode;
 use App\Domain\Map\ValueObjects\PaymentMethodNode;
 use App\Domain\Map\ValueObjects\ScammerNode;
 use App\Domain\Search\ValueObjects\PaginatedResult;
@@ -144,10 +143,10 @@ class OrganizationRepository implements OrganizationRepositoryInterface
         $paymentMethods = $organization->paymentMethods->unique('id')->values()->ensure(PaymentMethod::class);
         $scammers = $organization->scammers->unique('id')->values()->ensure(Scammer::class);
 
-        $centerNode = OrganizationNode::from($organization)->centered();
-        $scammerNodes = ScammerNode::fromCollection($scammers);
-        $contactNodes = ContactNode::fromCollection($contacts);
-        $paymentMethodNodes = PaymentMethodNode::fromCollection($paymentMethods);
+        $centerNode = $organization->toNode()->centered();
+        $scammerNodes = $scammers->map(fn (Scammer $scammer): ScammerNode => $scammer->toNode());
+        $contactNodes = $contacts->map(fn (Contact $contact): ContactNode => $contact->toNode());
+        $paymentMethodNodes = $paymentMethods->map(fn (PaymentMethod $paymentMethod): PaymentMethodNode => $paymentMethod->toNode());
 
         $nodes = Collection::mergeAll(
             collect([$centerNode]),

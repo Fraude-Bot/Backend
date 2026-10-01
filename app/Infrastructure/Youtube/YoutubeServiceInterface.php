@@ -4,5 +4,5 @@ namespace App\Infrastructure\Youtube;
 
 interface YoutubeServiceInterface
 {
-    public function getChannel($url);
+    public function getChannel(string $url): string;
 }

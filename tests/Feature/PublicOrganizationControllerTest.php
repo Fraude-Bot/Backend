@@ -3,11 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Contact\Enums\PlatformType;
-use App\Domain\Map\ValueObjects\ContactNode;
 use App\Domain\Map\ValueObjects\Edge;
-use App\Domain\Map\ValueObjects\OrganizationNode;
-use App\Domain\Map\ValueObjects\PaymentMethodNode;
-use App\Domain\Map\ValueObjects\ScammerNode;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
 use App\Http\Resources\Public\ReportResource;
@@ -64,7 +60,7 @@ class PublicOrganizationControllerTest extends TestCase
         $organization->reports()->attach($reports->pluck('id'));
 
         $calendar = collect(range(1, 12))
-            ->mapWithKeys(fn(int $month) => [$month => $month === 1 ? 3 : 0]);
+            ->mapWithKeys(fn (int $month) => [$month => $month === 1 ? 3 : 0]);
 
         $response = $this->getJson("/api/public/organizations/{$organization->id}/calendar/2026");
 
@@ -342,10 +338,10 @@ class PublicOrganizationControllerTest extends TestCase
         $organization->contacts()->attach($contact);
         $organization->paymentMethods()->attach($paymentMethod);
 
-        $centerNode = OrganizationNode::from($organization)->centered();
-        $scammerNode = ScammerNode::from($scammer);
-        $contactNode = ContactNode::from($contact);
-        $paymentMethodNode = PaymentMethodNode::from($paymentMethod);
+        $centerNode = $organization->toNode()->centered();
+        $scammerNode = $scammer->toNode();
+        $contactNode = $contact->toNode();
+        $paymentMethodNode = $paymentMethod->toNode();
 
         $expected = [
             'nodes' => [

@@ -6,10 +6,10 @@ use Illuminate\Support\Facades\Http;
 
 class FacebookService implements FacebookServiceInterface
 {
-    public function getProfile($url)
+    public function getProfile(string $url): string
     {
         if (str_contains($url, 'facebook.com/share/')) {
-            $url = Http::withHeaders([
+            $resolved = Http::withHeaders([
                 'User-Agent' => 'curl/7.68.0'
             ])->withOptions([
                         'allow_redirects' => [
@@ -18,7 +18,9 @@ class FacebookService implements FacebookServiceInterface
                             'track_redirects' => true,
                         ],
                         'connect_timeout' => 5,
-                    ])->get($url)->effectiveUri() ?? $url;
+                    ])->get($url)->effectiveUri();
+
+            $url = $resolved === null ? $url : (string) $resolved;
         }
 
         $path = parse_url($url, PHP_URL_PATH);

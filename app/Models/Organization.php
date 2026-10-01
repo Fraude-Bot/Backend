@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Map\ValueObjects\OrganizationNode;
 use App\Domain\Organization\OrganizationEntity;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -94,6 +95,11 @@ class Organization extends Model
     /**
      * Convert the model to a domain entity.
      */
+    public function toNode(): OrganizationNode
+    {
+        return OrganizationNode::fromOrganization((string) $this->id, $this->name);
+    }
+
     public function toEntity(): OrganizationEntity
     {
         return new OrganizationEntity(

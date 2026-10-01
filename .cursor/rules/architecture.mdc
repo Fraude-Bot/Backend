@@ -19,10 +19,10 @@ These are under `app/` directory, which follow `Clean Architecture` guidelines.
 
 - `Console/`:  Folders/Files related to the creation of custom Laravel commands.
 - `Application/`: Use cases and application ports. One `{Name}UsecaseInterface` and `{Name}Usecase` per domain, under `Application/{Domain}/`. This layer may depend on `App\Domain`, itself, `App\Repositories`, `App\Models`, and vendor classes. It must not depend on `App\Http` or `App\Infrastructure`.
-- `Domain/`: Entities, value objects, enums, and domain exceptions. This layer depends on nothing outside `App\Domain`.
+- `Domain/`: Entities, value objects, enums, and domain exceptions. This layer may depend on itself and vendor classes. It must not depend on other `App` layers.
 - `Http/`: Folders/Files related to the HTTP service. Controllers, Middleware, Requests and Resources are managed here.
 - `Infrastructure/`: Folders/Files related to external services, such as Media Storage (S3, Mega, Cloud Storage), APIs, etc.
-- `Models/`: Eloquent models and persistence hooks. This layer may depend on `App\Domain`, itself, `App\Repositories\Search\SearchCache`, and vendor classes. It must not depend on other `App` layers.
+- `Models/`: Folders/Files related to the creation of Eloquent Models
 - `OpenApi/`: Files related to OpenAPI specification in the project.
 - `Providers/`: Files related to Laravel Providers.
 - `Repositories/`: One repository interface and one implementation per domain. Implementations use Eloquent models. Search card repositories stay separate from the aggregate repositories.
