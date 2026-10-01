@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers\Public;
 
-use App\Application\Media\TemporaryImageStorageInterface;
-use App\Application\Report\StoreOrganizationReport;
+use App\Application\Report\ReportUsecaseInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationReportRequest;
 use App\Http\Requests\Public\StoreProfilePictureRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Resources\Public\ReportCardResource;
-use App\Repositories\Search\SearchRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -18,8 +16,7 @@ use Illuminate\Http\UploadedFile;
 class ReportController extends Controller
 {
     public function __construct(
-        private SearchRepositoryInterface $searchRepository,
-        private TemporaryImageStorageInterface $storage,
+        private ReportUsecaseInterface $reports,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -28,7 +25,7 @@ class ReportController extends Controller
         $page = max(1, min(100000, (int) $request->input('p', 1)));
         $count = max(1, min(100, (int) $request->input('c', 10)));
 
-        $result = $this->searchRepository->find($clue, $page, $count);
+        $result = $this->reports->search($clue, $page, $count);
 
         return response()->json([
             'data' => ReportCardResource::collection($result->items)->resolve(),
@@ -46,7 +43,7 @@ class ReportController extends Controller
             abort(422, 'The request data is invalid.');
         }
 
-        $path = $this->storage->uploadProfilePicture($image);
+        $path = $this->reports->storeTemporaryProfilePicture($image);
 
         return response()->json(['path' => $path], 201);
     }
@@ -59,17 +56,13 @@ class ReportController extends Controller
             abort(422, 'The request data is invalid.');
         }
 
-        $paths = [];
-
-        foreach ($images as $image) {
-            $paths[] = $this->storage->uploadProof($image);
-        }
+        $paths = $this->reports->storeTemporaryProofs($images);
 
         return response()->json(['paths' => $paths], 201);
     }
 
-    public function storeOrganization(StoreOrganizationReportRequest $request, StoreOrganizationReport $store): JsonResponse
+    public function storeOrganization(StoreOrganizationReportRequest $request): JsonResponse
     {
-        return response()->json($store->store($request->validated()), 201);
+        return response()->json($this->reports->storeOrganization($request->validated()), 201);
     }
 }

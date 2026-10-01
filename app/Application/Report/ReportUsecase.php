@@ -10,29 +10,56 @@ use App\Domain\PaymentMethod\ValueObjects\AccountNumber;
 use App\Domain\PaymentMethod\ValueObjects\CardNumber;
 use App\Domain\PaymentMethod\ValueObjects\Clabe;
 use App\Domain\PaymentMethod\ValueObjects\Reference;
-use App\Models\Contact;
-use App\Models\Organization;
-use App\Models\PaymentMethod;
-use App\Models\Report;
-use App\Models\ReportProof;
+use App\Domain\Scammer\ValueObjects\Clue;
+use App\Domain\Search\ValueObjects\CardSearchResult;
+use App\Repositories\Contact\ContactRepositoryInterface;
+use App\Repositories\Organization\OrganizationRepositoryInterface;
+use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
+use App\Repositories\Report\ReportRepositoryInterface;
+use App\Repositories\Search\SearchRepositoryInterface;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Throwable;
 
-class StoreOrganizationReport
+class ReportUsecase implements ReportUsecaseInterface
 {
     public const string AVATAR_DIRECTORY = 'reports/organizations/avatars';
 
     public const string PROOF_DIRECTORY = 'reports/proofs';
 
-    public function __construct(private TemporaryImageStorageInterface $images) {}
+    public function __construct(
+        private SearchRepositoryInterface $search,
+        private TemporaryImageStorageInterface $images,
+        private OrganizationRepositoryInterface $organizations,
+        private ReportRepositoryInterface $reports,
+        private ContactRepositoryInterface $contacts,
+        private PaymentMethodRepositoryInterface $paymentMethods,
+    ) {}
 
-    /**
-     * @param  array<string, mixed>  $input
-     * @return array{id: int, organization_id: int, contact_ids: list<int>, payment_method_ids: list<int>, report_proof_ids: list<int>}
-     */
-    public function store(array $input): array
+    public function search(Clue $clue, int $page, int $count): CardSearchResult
+    {
+        return $this->search->find($clue, $page, $count);
+    }
+
+    public function storeTemporaryProfilePicture(UploadedFile $file): string
+    {
+        return $this->images->uploadProfilePicture($file);
+    }
+
+    public function storeTemporaryProofs(array $files): array
+    {
+        $paths = [];
+
+        foreach ($files as $image) {
+            $paths[] = $this->images->uploadProof($image);
+        }
+
+        return $paths;
+    }
+
+    public function storeOrganization(array $input): array
     {
         $contacts = $this->normalizeContacts($input['contacts'] ?? []);
         $paymentMethods = $this->normalizePaymentMethods($input['payment_methods'] ?? []);
@@ -79,59 +106,43 @@ class StoreOrganizationReport
                 $title,
                 $description,
             ): array {
-                $organization = Organization::create([
+                $organization = $this->organizations->create([
                     'name' => $organizationName,
                     'profile_picture_path' => $avatarPath,
                     'is_active' => true,
                 ]);
 
-                $report = Report::create([
-                    'user_id' => null,
-                    'title' => $title,
-                    'description' => $description,
-                    'is_active' => true,
-                ]);
-
-                $organization->reports()->syncWithoutDetaching([$report->id]);
+                $report = $this->reports->create($title, $description);
+                $this->reports->attachToOrganization($organization, $report);
 
                 $proofIds = [];
 
                 foreach ($proofPaths as $path) {
-                    $proofIds[] = ReportProof::query()->create([
-                        'report_id' => $report->id,
-                        'path' => $path,
-                    ])->id;
+                    $proofIds[] = $this->reports->addProof($report, $path);
                 }
 
                 $contactIds = [];
 
                 foreach ($contacts as $contact) {
-                    $model = Contact::withTrashed()->firstOrCreate(
-                        ['platform' => $contact['platform'], 'reference' => $contact['reference']],
-                        ['name' => $contact['name'], 'is_active' => true],
+                    $model = $this->contacts->firstOrCreate(
+                        $contact['platform'],
+                        $contact['reference'],
+                        $contact['name'],
+                        true,
                     );
-
-                    if ($model->trashed()) {
-                        $model->restore();
-                    }
-
-                    $organization->contacts()->syncWithoutDetaching([$model->id]);
+                    $this->organizations->attachContact($organization, $model->id);
                     $contactIds[] = $model->id;
                 }
 
                 $paymentMethodIds = [];
 
                 foreach ($paymentMethods as $paymentMethod) {
-                    $model = PaymentMethod::withTrashed()->firstOrCreate(
-                        ['type' => $paymentMethod['type'], 'reference' => $paymentMethod['reference']],
-                        ['is_active' => true],
+                    $model = $this->paymentMethods->firstOrCreate(
+                        $paymentMethod['type'],
+                        $paymentMethod['reference'],
+                        true,
                     );
-
-                    if ($model->trashed()) {
-                        $model->restore();
-                    }
-
-                    $organization->paymentMethods()->syncWithoutDetaching([$model->id]);
+                    $this->organizations->attachPaymentMethod($organization, $model->id);
                     $paymentMethodIds[] = $model->id;
                 }
 

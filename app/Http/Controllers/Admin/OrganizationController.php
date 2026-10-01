@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domain\PaymentMethod\Enums\PaymentMethodType;
+use App\Application\Organization\OrganizationUsecaseInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PaymentMethodRequest;
 use App\Http\Requests\Admin\StoreOrganizationRequest;
@@ -11,19 +11,18 @@ use App\Http\Resources\Admin\BasicOrganizationResource;
 use App\Http\Resources\Admin\BasicPaymentMethodResource;
 use App\Http\Resources\Admin\BasicScammerResource;
 use App\Models\Organization;
-use App\Models\PaymentMethod;
 use App\Models\Scammer;
-use App\Repositories\Search\SearchCache;
-use Illuminate\Support\Facades\DB;
 
 class OrganizationController extends Controller
 {
+    public function __construct(private OrganizationUsecaseInterface $organizations) {}
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return response()->json(Organization::all());
+        return response()->json($this->organizations->list());
     }
 
     /**
@@ -31,7 +30,7 @@ class OrganizationController extends Controller
      */
     public function store(StoreOrganizationRequest $request)
     {
-        $organization = Organization::create($request->validated());
+        $organization = $this->organizations->create($request->validated());
 
         $resource = new BasicOrganizationResource($organization);
 
@@ -43,10 +42,11 @@ class OrganizationController extends Controller
      */
     public function show(Organization $organization)
     {
+        $organization = $this->organizations->load($organization);
         $organizationData = $organization->toArray();
 
         if (request()->query('withScammers') === 'basic') {
-            $organizationData['scammers'] = BasicScammerResource::collection($organization->scammers);
+            $organizationData['scammers'] = BasicScammerResource::collection($this->organizations->scammers($organization));
         }
 
         return response()->json($organizationData);
@@ -57,7 +57,7 @@ class OrganizationController extends Controller
      */
     public function update(UpdateOrganizationRequest $request, Organization $organization)
     {
-        $organization->update($request->validated());
+        $organization = $this->organizations->update($organization, $request->validated());
 
         return response()->json($organization);
     }
@@ -67,7 +67,7 @@ class OrganizationController extends Controller
      */
     public function destroy(Organization $organization)
     {
-        $organization->delete();
+        $this->organizations->delete($organization);
 
         return response()->json(null, 204);
     }
@@ -77,8 +77,7 @@ class OrganizationController extends Controller
      */
     public function restore(int $organization)
     {
-        $model = Organization::onlyTrashed()->findOrFail($organization);
-        $model->restore();
+        $model = $this->organizations->restore($organization);
 
         $resource = new BasicOrganizationResource($model);
 
@@ -90,7 +89,7 @@ class OrganizationController extends Controller
      */
     public function addScammer(Organization $organization, Scammer $scammer)
     {
-        $organization->scammers()->syncWithoutDetaching([$scammer->id]);
+        $this->organizations->addScammer($organization, $scammer);
 
         return response()->json(['message' => 'Scammer added successfully'], 201);
     }
@@ -100,31 +99,11 @@ class OrganizationController extends Controller
         Organization $organization,
     ) {
         $data = $request->validated();
-        if ($organization->paymentMethods()->where([
-            'reference' => $data['reference'],
-            'type' => $data['type'],
-        ])->exists()) {
+        if ($this->organizations->hasPaymentMethod($organization, $data['type'], $data['reference'])) {
             return response()->json(['error' => 'Payment method already exists for this organization'], 422);
         }
 
-        $paymentMethod = DB::transaction(function () use ($organization, $data): PaymentMethod {
-            $identity = [
-                'type' => PaymentMethodType::from((int) $data['type']),
-                'reference' => trim($data['reference']),
-            ];
-            $paymentMethod = PaymentMethod::withTrashed()->firstOrCreate(
-                $identity,
-                ['is_active' => $data['is_active'] ?? true],
-            );
-            if ($paymentMethod->trashed()) {
-                $paymentMethod->restore();
-            }
-
-            $organization->paymentMethods()->syncWithoutDetaching([$paymentMethod->id]);
-            SearchCache::invalidate();
-
-            return $paymentMethod;
-        });
+        $paymentMethod = $this->organizations->createPaymentMethod($organization, $data);
 
         $resource = new BasicPaymentMethodResource($paymentMethod);
 
@@ -136,6 +115,6 @@ class OrganizationController extends Controller
      */
     public function getScammers(Organization $organization)
     {
-        return response()->json($organization->scammers);
+        return response()->json($this->organizations->scammers($organization));
     }
 }

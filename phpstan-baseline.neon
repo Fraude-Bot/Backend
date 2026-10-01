@@ -148,10 +148,10 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Repositories/Organization/PublicOrganizationRepository.php
+			path: app/Repositories/Organization/OrganizationRepository.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Repositories/Scammer/PublicScammerRepository.php
+			path: app/Repositories/Scammer/ScammerRepository.php
