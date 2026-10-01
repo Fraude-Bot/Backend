@@ -18,6 +18,8 @@ use App\OpenApi\OpenApiDocument;
 use App\Repositories\Organization\OrganizationCardRepository;
 use App\Repositories\Organization\OrganizationCardRepositoryInterface;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
+use App\Repositories\Organization\OrganizationSuggestRepository;
+use App\Repositories\Organization\OrganizationSuggestRepositoryInterface;
 use App\Repositories\Organization\PublicOrganizationRepository;
 use App\Repositories\Scammer\PublicScammerRepository;
 use App\Repositories\Scammer\ScammerCardRepository;
@@ -55,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TemporaryImageStorageInterface::class, PublicDiskTemporaryImageStorage::class);
 
         $this->app->bind(OrganizationCardRepositoryInterface::class, OrganizationCardRepository::class);
+        $this->app->bind(OrganizationSuggestRepositoryInterface::class, OrganizationSuggestRepository::class);
         $this->app->bind(ScammerCardRepositoryInterface::class, ScammerCardRepository::class);
 
         $this->app->when(Public\OrganizationController::class)

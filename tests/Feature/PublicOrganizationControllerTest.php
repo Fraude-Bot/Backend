@@ -382,4 +382,62 @@ class PublicOrganizationControllerTest extends TestCase
         $response->assertStatus(404);
         $response->assertExactJson(['message' => 'Organization map not found']);
     }
+
+    public function test_suggest_organization_names_by_partial_case_insensitive_query(): void
+    {
+        Organization::factory()->create(['name' => 'Acme Payments']);
+        Organization::factory()->create(['name' => 'Acme Payments']);
+        Organization::factory()->create(['name' => 'Other Org']);
+
+        $response = $this->getJson('/api/public/organizations/suggest?q=%20%20acme%20pay%20%20');
+
+        $response->assertStatus(200);
+        $response->assertExactJson(['Acme Payments']);
+    }
+
+    public function test_suggest_organization_names_includes_inactive_and_soft_deleted(): void
+    {
+        Organization::factory()->create(['name' => 'Acme Active']);
+        Organization::factory()->inactive()->create(['name' => 'Acme Inactive']);
+        $deleted = Organization::factory()->create(['name' => 'Acme Deleted']);
+        $deleted->delete();
+
+        $response = $this->getJson('/api/public/organizations/suggest?q=Acme');
+
+        $response->assertStatus(200);
+        $response->assertExactJson(['Acme Active', 'Acme Deleted', 'Acme Inactive']);
+    }
+
+    public function test_suggest_organization_names_returns_empty_array_when_query_cannot_match(): void
+    {
+        Organization::factory()->create(['name' => 'Acme Payments']);
+
+        $this->getJson('/api/public/organizations/suggest')
+            ->assertStatus(200)
+            ->assertExactJson([]);
+
+        $this->getJson('/api/public/organizations/suggest?q=A')
+            ->assertStatus(200)
+            ->assertExactJson([]);
+
+        $this->getJson('/api/public/organizations/suggest?q=Nope')
+            ->assertStatus(200)
+            ->assertExactJson([]);
+
+        $this->getJson('/api/public/organizations/suggest?q='.str_repeat('a', 101))
+            ->assertStatus(200)
+            ->assertExactJson([]);
+    }
+
+    public function test_suggest_organization_names_is_capped_at_five_and_ordered_by_name(): void
+    {
+        foreach (['Acme F', 'Acme A', 'Acme C', 'Acme E', 'Acme B', 'Acme D'] as $name) {
+            Organization::factory()->create(['name' => $name]);
+        }
+
+        $response = $this->getJson('/api/public/organizations/suggest?q=Acme');
+
+        $response->assertStatus(200);
+        $response->assertExactJson(['Acme A', 'Acme B', 'Acme C', 'Acme D', 'Acme E']);
+    }
 }
