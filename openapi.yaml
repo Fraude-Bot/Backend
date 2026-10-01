@@ -6,20 +6,21 @@ info:
     Public JSON API for fraud-intelligence profiles.
 
     Only active scammers, organizations, contacts, and reports are returned.
+    Organization name suggestions also include inactive and soft-deleted names.
     Public routes are rate-limited to 120 requests per minute per IP.
 
     Pagination uses `p` (page, 1–100000, default 1) and `c` (page size, 1–100, default 10).
     Contact `platform` query values are lowercase enum names (`whatsapp`);
     responses return the formatted label (`Whatsapp`).
 
-    Dates use `YYYY-MM-DD`. Search and administrative endpoints are not included.
+    Dates use `YYYY-MM-DD`. Report search and administrative endpoints are not included.
 servers:
   - url: /api
 tags:
   - name: Scammers
     description: Public scammer profiles, contacts, reports, and report calendars.
   - name: Organizations
-    description: Public organization profiles, contacts, reports, and report calendars.
+    description: Public organization profiles, contacts, reports, report calendars, and name suggestions.
   - name: Reports
     description: Public report uploads.
   - name: Health
@@ -163,6 +164,40 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Scammer calendar not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/organizations/suggest:
+    get:
+      tags: [Organizations]
+      operationId: suggestOrganizationNames
+      summary: Suggest organization names
+      description: |
+        Returns up to 5 distinct organization names that contain `q`, ordered by name.
+        Inactive and soft-deleted organizations are included.
+        A missing `q`, a value shorter than 2 characters, or a value longer than 100
+        characters returns an empty array.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Substring to match against the organization name. Shorter than 2 characters, missing, or longer than 100 yields an empty array.
+          schema:
+            type: string
+            maxLength: 100
+          example: Acme
+      responses:
+        "200":
+          description: Matching organization names.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  type: string
+              example:
+                - Acme Payments
+                - Acme Retail
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}:

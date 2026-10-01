@@ -7,12 +7,14 @@ use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
 use App\Http\Resources\Public\ReportResource;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
+use App\Repositories\Suggest\PublicSuggestRepository;
 use Illuminate\Http\Request;
 
 class OrganizationController extends Controller
 {
     public function __construct(
-        private OrganizationRepositoryInterface $organizationRepository
+        private OrganizationRepositoryInterface $organizationRepository,
+        private PublicSuggestRepository $suggestRepository,
     ) {
     }
 
@@ -138,5 +140,12 @@ class OrganizationController extends Controller
         }
 
         return response()->json($map->toArray());
+    }
+
+    public function suggest(Request $request)
+    {
+        $query = $request->input('q');
+
+        return response()->json($this->suggestRepository->organizations(is_string($query) ? $query : ''));
     }
 }

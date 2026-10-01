@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('public')->middleware('throttle:public-api')->group(function () {
+    Route::get('organizations/suggest', [OrganizationController::class, 'suggest']);
     Route::get('organizations/{id}', [OrganizationController::class, 'show']);
     Route::get('organizations/{id}/calendar/{year}', [OrganizationController::class, 'calendar']);
     Route::get('organizations/{id}/contacts', [OrganizationController::class, 'contacts']);
