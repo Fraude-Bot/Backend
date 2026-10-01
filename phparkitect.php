@@ -70,6 +70,57 @@ final class ApplicationDependsOnDomainRepositoriesOrModels implements Expression
 }
 
 /**
+ * Models may use the Domain, themselves, SearchCache, and any class outside App
+ * (vendor and PHP). Other App layers stay forbidden.
+ */
+final class ModelsDependOnDomainOrVendor implements Expression
+{
+    /** @var list<string> */
+    private array $namespaces = ['App\Domain', 'App\Models'];
+
+    public function describe(ClassDescription $theClass, string $because): Description
+    {
+        $namespaces = implode(', ', $this->namespaces);
+
+        return new Description(
+            "should depend only on classes in one of these namespaces: {$namespaces}, on SearchCache, or on vendor classes",
+            $because,
+        );
+    }
+
+    public function evaluate(ClassDescription $theClass, Violations $violations, string $because): void
+    {
+        foreach ($theClass->getDependencies() as $dependency) {
+            $fqcn = $dependency->getFQCN()->toString();
+
+            if (! str_starts_with($fqcn, 'App\\')) {
+                continue;
+            }
+
+            if ($fqcn === 'App\\Repositories\\Search\\SearchCache') {
+                continue;
+            }
+
+            if ($dependency->matchesOneOf(...$this->namespaces)) {
+                continue;
+            }
+
+            $violations->add($this->violation($theClass, $dependency, $because, "depends on {$fqcn}"));
+        }
+    }
+
+    private function violation(ClassDescription $theClass, ClassDependency $dependency, string $because, string $detail): Violation
+    {
+        return Violation::createWithErrorLine(
+            $theClass->getFQCN(),
+            ViolationMessage::withDescription($this->describe($theClass, $because), $detail),
+            $dependency->getLine(),
+            $theClass->getFilePath(),
+        );
+    }
+}
+
+/**
  * Controllers call use-case interfaces. They may use Http, Domain, and Models
  * for route binding and resources. They do not call repositories, infrastructure, or concrete use cases.
  */
@@ -117,6 +168,11 @@ return static function (Config $config): void {
         ->that(new ResideInOneOfTheseNamespaces('App\Domain'))
         ->should(new NotHaveDependencyOutsideNamespace('App\Domain'))
         ->because('Domain depends on nothing outside itself');
+
+    $rules[] = Rule::allClasses()
+        ->that(new ResideInOneOfTheseNamespaces('App\Models'))
+        ->should(new ModelsDependOnDomainOrVendor)
+        ->because('Models depend on the Domain, themselves, SearchCache, and vendor classes');
 
     $rules[] = Rule::allClasses()
         ->that(new ResideInOneOfTheseNamespaces('App\Application'))
