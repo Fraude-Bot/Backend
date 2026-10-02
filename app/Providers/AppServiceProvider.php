@@ -2,17 +2,17 @@
 
 namespace App\Providers;
 
-use App\Application\Auth\AuthUsecase;
-use App\Application\Auth\AuthUsecaseInterface;
-use App\Application\Media\MediaUsecase;
-use App\Application\Media\MediaUsecaseInterface;
+use App\Application\Auth\Usecases\AuthUsecase;
+use App\Application\Auth\Usecases\AuthUsecaseInterface;
 use App\Application\Media\TemporaryImageStorageInterface;
-use App\Application\Organization\OrganizationUsecase;
-use App\Application\Organization\OrganizationUsecaseInterface;
-use App\Application\Report\ReportUsecase;
-use App\Application\Report\ReportUsecaseInterface;
-use App\Application\Scammer\ScammerUsecase;
-use App\Application\Scammer\ScammerUsecaseInterface;
+use App\Application\Media\Usecases\MediaUsecase;
+use App\Application\Media\Usecases\MediaUsecaseInterface;
+use App\Application\Organization\Usecases\OrganizationUsecase;
+use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
+use App\Application\Report\Usecases\ReportUsecase;
+use App\Application\Report\Usecases\ReportUsecaseInterface;
+use App\Application\Scammer\Usecases\ScammerUsecase;
+use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
 use App\Domain\Contact\PlatformProfileExtractorInterface;
 use App\Infrastructure\Contact\PlatformProfileExtractor;
 use App\Infrastructure\Facebook\FacebookService;

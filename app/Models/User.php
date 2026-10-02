@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Domain\User\UserEntity;
+use App\Domain\User\Entities\UserEntity;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;

@@ -2,7 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Application\Organization\OrganizationUsecaseInterface;
+use App\Application\Organization\Commands\AddOrganizationScammerCommand;
+use App\Application\Organization\Commands\CreateOrganizationCommand;
+use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
+use App\Application\Organization\Commands\DeleteOrganizationCommand;
+use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
+use App\Application\Organization\Commands\ListOrganizationScammersCommand;
+use App\Application\Organization\Commands\ListOrganizationsCommand;
+use App\Application\Organization\Commands\LoadOrganizationCommand;
+use App\Application\Organization\Commands\RestoreOrganizationCommand;
+use App\Application\Organization\Commands\UpdateOrganizationCommand;
+use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PaymentMethodRequest;
 use App\Http\Requests\Admin\StoreOrganizationRequest;
@@ -22,7 +33,7 @@ class OrganizationController extends Controller
      */
     public function index()
     {
-        return response()->json($this->organizations->list());
+        return response()->json($this->organizations->list(new ListOrganizationsCommand));
     }
 
     /**
@@ -30,7 +41,7 @@ class OrganizationController extends Controller
      */
     public function store(StoreOrganizationRequest $request)
     {
-        $organization = $this->organizations->create($request->validated());
+        $organization = $this->organizations->create(CreateOrganizationCommand::fromValidated($request->validated()));
 
         $resource = new BasicOrganizationResource($organization);
 
@@ -42,11 +53,13 @@ class OrganizationController extends Controller
      */
     public function show(Organization $organization)
     {
-        $organization = $this->organizations->load($organization);
+        $organization = $this->organizations->load(new LoadOrganizationCommand($organization));
         $organizationData = $organization->toArray();
 
         if (request()->query('withScammers') === 'basic') {
-            $organizationData['scammers'] = BasicScammerResource::collection($this->organizations->scammers($organization));
+            $organizationData['scammers'] = BasicScammerResource::collection(
+                $this->organizations->scammers(new ListOrganizationScammersCommand($organization)),
+            );
         }
 
         return response()->json($organizationData);
@@ -57,7 +70,7 @@ class OrganizationController extends Controller
      */
     public function update(UpdateOrganizationRequest $request, Organization $organization)
     {
-        $organization = $this->organizations->update($organization, $request->validated());
+        $organization = $this->organizations->update(UpdateOrganizationCommand::fromValidated($organization, $request->validated()));
 
         return response()->json($organization);
     }
@@ -67,7 +80,7 @@ class OrganizationController extends Controller
      */
     public function destroy(Organization $organization)
     {
-        $this->organizations->delete($organization);
+        $this->organizations->delete(new DeleteOrganizationCommand($organization));
 
         return response()->json(null, 204);
     }
@@ -77,7 +90,7 @@ class OrganizationController extends Controller
      */
     public function restore(int $organization)
     {
-        $model = $this->organizations->restore($organization);
+        $model = $this->organizations->restore(new RestoreOrganizationCommand($organization));
 
         $resource = new BasicOrganizationResource($model);
 
@@ -89,7 +102,7 @@ class OrganizationController extends Controller
      */
     public function addScammer(Organization $organization, Scammer $scammer)
     {
-        $this->organizations->addScammer($organization, $scammer);
+        $this->organizations->addScammer(new AddOrganizationScammerCommand($organization, $scammer));
 
         return response()->json(['message' => 'Scammer added successfully'], 201);
     }
@@ -99,11 +112,12 @@ class OrganizationController extends Controller
         Organization $organization,
     ) {
         $data = $request->validated();
-        if ($this->organizations->hasPaymentMethod($organization, $data['type'], $data['reference'])) {
+        $type = PaymentMethodType::from((int) $data['type']);
+        if ($this->organizations->hasPaymentMethod(new HasOrganizationPaymentMethodCommand($organization, $type, (string) $data['reference']))) {
             return response()->json(['error' => 'Payment method already exists for this organization'], 422);
         }
 
-        $paymentMethod = $this->organizations->createPaymentMethod($organization, $data);
+        $paymentMethod = $this->organizations->createPaymentMethod(CreateOrganizationPaymentMethodCommand::fromValidated($organization, $data));
 
         $resource = new BasicPaymentMethodResource($paymentMethod);
 
@@ -115,6 +129,6 @@ class OrganizationController extends Controller
      */
     public function getScammers(Organization $organization)
     {
-        return response()->json($this->organizations->scammers($organization));
+        return response()->json($this->organizations->scammers(new ListOrganizationScammersCommand($organization)));
     }
 }

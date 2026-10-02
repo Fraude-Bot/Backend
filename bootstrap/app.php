@@ -1,7 +1,7 @@
 <?php
 
 use App\Application\Media\ImageRejectedException;
-use App\Application\Media\MediaUsecaseInterface;
+use App\Application\Media\Usecases\MediaUsecaseInterface;
 use App\Http\Middleware\EnsureResponseIsJSON;
 use App\Http\Middleware\RequestContext;
 use Illuminate\Auth\Access\AuthorizationException;

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Domain\Report\ReportEntity;
+use App\Domain\Report\Entities\ReportEntity;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

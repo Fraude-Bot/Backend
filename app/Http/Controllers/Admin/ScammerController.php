@@ -2,7 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Application\Scammer\ScammerUsecaseInterface;
+use App\Application\Scammer\Commands\CreateScammerContactCommand;
+use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
+use App\Application\Scammer\Commands\DeleteScammerCommand;
+use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
+use App\Application\Scammer\Commands\ListScammersCommand;
+use App\Application\Scammer\Commands\LoadScammerCommand;
+use App\Application\Scammer\Commands\RestoreScammerCommand;
+use App\Application\Scammer\Commands\StoreScammerCommand;
+use App\Application\Scammer\Commands\UpdateScammerCommand;
+use App\Application\Scammer\Commands\UpdateScammerContactCommand;
+use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ContactRequest;
 use App\Http\Requests\Admin\PaymentMethodRequest;
@@ -20,7 +31,7 @@ class ScammerController extends Controller
      */
     public function index()
     {
-        return response()->json($this->scammers->list());
+        return response()->json($this->scammers->list(new ListScammersCommand));
     }
 
     /**
@@ -28,7 +39,7 @@ class ScammerController extends Controller
      */
     public function store(StoreScammerRequest $request)
     {
-        $scammer = $this->scammers->store($request->validated());
+        $scammer = $this->scammers->store(StoreScammerCommand::fromValidated($request->validated()));
 
         return response()->json($scammer, 201);
     }
@@ -38,7 +49,7 @@ class ScammerController extends Controller
      */
     public function show(Scammer $scammer)
     {
-        return response()->json($this->scammers->load($scammer));
+        return response()->json($this->scammers->load(new LoadScammerCommand($scammer)));
     }
 
     /**
@@ -46,7 +57,7 @@ class ScammerController extends Controller
      */
     public function update(UpdateScammerRequest $request, Scammer $scammer)
     {
-        $scammer = $this->scammers->update($scammer, $request->validated());
+        $scammer = $this->scammers->update(UpdateScammerCommand::fromValidated($scammer, $request->validated()));
 
         return response()->json($scammer);
     }
@@ -56,7 +67,7 @@ class ScammerController extends Controller
      */
     public function destroy(Scammer $scammer)
     {
-        $this->scammers->delete($scammer);
+        $this->scammers->delete(new DeleteScammerCommand($scammer));
 
         return response()->json(null, 204);
     }
@@ -66,7 +77,7 @@ class ScammerController extends Controller
      */
     public function restore(int $scammer)
     {
-        $model = $this->scammers->restore($scammer);
+        $model = $this->scammers->restore(new RestoreScammerCommand($scammer));
 
         return response()->json($model);
     }
@@ -76,12 +87,12 @@ class ScammerController extends Controller
      */
     public function updateContact(ContactRequest $request, Scammer $scammer, Contact $contact)
     {
-        $updated = $this->scammers->updateContact(
+        $updated = $this->scammers->updateContact(UpdateScammerContactCommand::fromInput(
             $scammer,
             $contact,
             $request->all(),
             $request->has('platform'),
-        );
+        ));
 
         if ($updated === null) {
             abort(404);
@@ -101,7 +112,7 @@ class ScammerController extends Controller
     // Create contact of a scammer
     public function createContact(ContactRequest $request, Scammer $scammer)
     {
-        $contactModel = $this->scammers->createContact($scammer, $request->validated());
+        $contactModel = $this->scammers->createContact(CreateScammerContactCommand::fromValidated($scammer, $request->validated()));
 
         return response()->json([
             'id' => $contactModel->id,
@@ -120,11 +131,12 @@ class ScammerController extends Controller
     public function createPaymentMethod(PaymentMethodRequest $request, Scammer $scammer)
     {
         $data = $request->validated();
-        if ($this->scammers->hasPaymentMethod($scammer, $data['type'], $data['reference'])) {
+        $type = PaymentMethodType::from((int) $data['type']);
+        if ($this->scammers->hasPaymentMethod(new HasScammerPaymentMethodCommand($scammer, $type, (string) $data['reference']))) {
             return response()->json(['error' => 'Payment method with the same reference already exists for this scammer'], 422);
         }
 
-        $paymentMethodModel = $this->scammers->createPaymentMethod($scammer, $data);
+        $paymentMethodModel = $this->scammers->createPaymentMethod(CreateScammerPaymentMethodCommand::fromValidated($scammer, $data));
 
         $response = $paymentMethodModel->only(['id', 'reference', 'type_name', 'is_active', 'created_at']);
         $response['updated_at'] = $paymentMethodModel->modified_at;

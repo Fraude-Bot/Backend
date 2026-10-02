@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Map\ValueObjects\ScammerNode;
-use App\Domain\Scammer\ScammerEntity;
+use App\Domain\Scammer\Entities\ScammerEntity;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
