@@ -65,6 +65,7 @@ YAML);
 
         $this->assertSame('3.1.0', $document['openapi']);
         $this->assertSame('Fraudebot API', $document['info']['title']);
+        $this->assertSame('suggestScammerNames', $document['paths']['/public/scammers/suggest']['get']['operationId']);
         $this->assertSame('getScammer', $document['paths']['/public/scammers/{id}']['get']['operationId']);
         $this->assertSame('listScammerContacts', $document['paths']['/public/scammers/{id}/contacts']['get']['operationId']);
         $this->assertSame('listScammerReports', $document['paths']['/public/scammers/{id}/reports']['get']['operationId']);

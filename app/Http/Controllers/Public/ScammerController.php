@@ -7,6 +7,7 @@ use App\Application\Scammer\Commands\ListScammerReportsCommand;
 use App\Application\Scammer\Commands\ScammerCalendarCommand;
 use App\Application\Scammer\Commands\ScammerMapCommand;
 use App\Application\Scammer\Commands\ShowScammerCommand;
+use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Public\ContactResource;
@@ -144,5 +145,12 @@ class ScammerController extends Controller
         }
 
         return response()->json($map->toArray());
+    }
+
+    public function suggest(Request $request)
+    {
+        $query = $request->input('q');
+
+        return response()->json($this->scammers->suggest(new SuggestScammersCommand(is_string($query) ? $query : '')));
     }
 }

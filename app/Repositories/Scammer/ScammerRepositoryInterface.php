@@ -22,6 +22,11 @@ interface ScammerRepositoryInterface
 
     public function findMapById(int $id): ?MapResult;
 
+    /**
+     * @return list<string>
+     */
+    public function suggest(string $query): array;
+
     public function list(): Collection;
 
     public function loadDetails(Scammer $scammer): Scammer;

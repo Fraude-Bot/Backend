@@ -181,6 +181,33 @@ class ScammerRepository implements ScammerRepositoryInterface
         return new MapResult($nodes, $edges);
     }
 
+    public function suggest(string $query): array
+    {
+        $query = trim($query);
+
+        if (mb_strlen($query) < 2 || mb_strlen($query) > 100) {
+            return [];
+        }
+
+        return Cache::remember(
+            SearchCache::key('scammer:suggest:'.strtolower($query)),
+            self::CACHE_TTL_SECONDS,
+            function () use ($query): array {
+                $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query);
+
+                return Scammer::query()
+                    ->withTrashed()
+                    ->whereRaw("name LIKE ? ESCAPE '!'", ["%{$escaped}%"])
+                    ->select('name')
+                    ->distinct()
+                    ->orderBy('name')
+                    ->limit(5)
+                    ->pluck('name')
+                    ->all();
+            },
+        );
+    }
+
     public function list(): Collection
     {
         return Scammer::with(['contacts', 'paymentMethods', 'organizations'])->get();

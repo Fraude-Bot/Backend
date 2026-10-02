@@ -15,6 +15,7 @@ use App\Application\Scammer\Commands\ScammerCalendarCommand;
 use App\Application\Scammer\Commands\ScammerMapCommand;
 use App\Application\Scammer\Commands\ShowScammerCommand;
 use App\Application\Scammer\Commands\StoreScammerCommand;
+use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Commands\UpdateScammerCommand;
 use App\Application\Scammer\Commands\UpdateScammerContactCommand;
 use App\Domain\Map\ValueObjects\MapResult;
@@ -35,6 +36,11 @@ interface ScammerUsecaseInterface
     public function reports(ListScammerReportsCommand $command): ?PaginatedResult;
 
     public function map(ScammerMapCommand $command): ?MapResult;
+
+    /**
+     * @return list<string>
+     */
+    public function suggest(SuggestScammersCommand $command): array;
 
     public function list(ListScammersCommand $command): Collection;
 
