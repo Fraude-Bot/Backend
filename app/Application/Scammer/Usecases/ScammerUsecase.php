@@ -15,6 +15,7 @@ use App\Application\Scammer\Commands\ScammerCalendarCommand;
 use App\Application\Scammer\Commands\ScammerMapCommand;
 use App\Application\Scammer\Commands\ShowScammerCommand;
 use App\Application\Scammer\Commands\StoreScammerCommand;
+use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Commands\UpdateScammerCommand;
 use App\Application\Scammer\Commands\UpdateScammerContactCommand;
 use App\Domain\Contact\Entities\ContactEntity;
@@ -61,6 +62,11 @@ class ScammerUsecase implements ScammerUsecaseInterface
     public function map(ScammerMapCommand $command): ?MapResult
     {
         return $this->scammers->findMapById($command->id);
+    }
+
+    public function suggest(SuggestScammersCommand $command): array
+    {
+        return $this->scammers->suggest($command->query);
     }
 
     public function list(ListScammersCommand $command): Collection

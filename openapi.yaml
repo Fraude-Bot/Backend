@@ -6,7 +6,7 @@ info:
     Public JSON API for fraud-intelligence profiles.
 
     Only active scammers, organizations, contacts, and reports are returned.
-    Organization name suggestions also include inactive and soft-deleted names.
+    Scammer and organization name suggestions also include inactive and soft-deleted names.
     Public routes are rate-limited to 120 requests per minute per IP.
 
     Pagination uses `p` (page, 1–100000, default 1) and `c` (page size, 1–100, default 10).
@@ -18,7 +18,7 @@ servers:
   - url: /api
 tags:
   - name: Scammers
-    description: Public scammer profiles, contacts, reports, and report calendars.
+    description: Public scammer profiles, contacts, reports, report calendars, and name suggestions.
   - name: Organizations
     description: Public organization profiles, contacts, reports, report calendars, and name suggestions.
   - name: Reports
@@ -28,6 +28,40 @@ tags:
   - name: Documentation
     description: The public OpenAPI contract.
 paths:
+  /public/scammers/suggest:
+    get:
+      tags: [Scammers]
+      operationId: suggestScammerNames
+      summary: Suggest scammer names
+      description: |
+        Returns up to 5 distinct scammer names that contain `q`, ordered by name.
+        Inactive and soft-deleted scammers are included.
+        A missing `q`, a value shorter than 2 characters, or a value longer than 100
+        characters returns an empty array.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Substring to match against the scammer name. Shorter than 2 characters, missing, or longer than 100 yields an empty array.
+          schema:
+            type: string
+            maxLength: 100
+          example: Acme
+      responses:
+        "200":
+          description: Matching scammer names.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items:
+                  type: string
+              example:
+                - Acme Payments
+                - Acme Retail
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/scammers/{id}:
     get:
       tags: [Scammers]
