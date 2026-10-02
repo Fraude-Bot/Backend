@@ -18,14 +18,14 @@ alwaysApply: true
 These are under `app/` directory, which follow `Clean Architecture` guidelines.
 
 - `Console/`:  Folders/Files related to the creation of custom Laravel commands.
-- `Application/`: Folders/Files related to use cases and application logic. Contains interfaces, and event listeners. This layer depends on the Domain and on vendor classes.
-- `Domain/`: Folders/Files related to the core of the business logic. Contains Entities, Value Objects, Domain Exceptions, and Repository Interfaces. This layer depends on *nothing*.
+- `Application/`: Use cases and application ports. One `{Name}UsecaseInterface` and `{Name}Usecase` per domain, under `Application/{Domain}/`. This layer may depend on `App\Domain`, itself, `App\Repositories`, `App\Models`, and vendor classes. It must not depend on `App\Http` or `App\Infrastructure`.
+- `Domain/`: Entities, value objects, enums, and domain exceptions. This layer may depend on itself and vendor classes. It must not depend on other `App` layers.
 - `Http/`: Folders/Files related to the HTTP service. Controllers, Middleware, Requests and Resources are managed here.
 - `Infrastructure/`: Folders/Files related to external services, such as Media Storage (S3, Mega, Cloud Storage), APIs, etc.
 - `Models/`: Folders/Files related to the creation of Eloquent Models
 - `OpenApi/`: Files related to OpenAPI specification in the project.
 - `Providers/`: Files related to Laravel Providers.
-- `Repositories/`: Folders/Files related to Repositories. These will have access to the database making use of Eloquent Models.
+- `Repositories/`: One repository interface and one implementation per domain. Implementations use Eloquent models. Search card repositories stay separate from the aggregate repositories.
 
 ## Other Directories
 
@@ -42,3 +42,13 @@ These sit at the project root, outside `app/`.
 - `tests/`: Feature and unit tests.
 - `.github/`: CI workflow definitions.
 - `.cursor/`: Cursor rules for this repository.
+
+## Layer rules
+
+Enforced by `phparkitect.php` (`composer check:architecture`).
+
+- Controllers depend only on a use-case interface. They keep HTTP validation, status codes, and API resources. They do not call repositories or Eloquent.
+- Use cases type-hint repository interfaces, not concrete repositories. They return the same models, `PaginatedResult`, `MapResult`, or null that the controller needs.
+- Each domain repository exposes reads and writes for that aggregate, including pivot attaches. `SearchCache` stays a repository and model-hook helper; attach-only writes invalidate it inside the repository.
+- Ports for external systems stay in Application and are implemented in Infrastructure. Image storage goes through `TemporaryImageStorageInterface`.
+- Health, readiness, OpenAPI, and the local admin token route are not domain use cases.

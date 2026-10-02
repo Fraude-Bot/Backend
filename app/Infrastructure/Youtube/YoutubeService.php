@@ -3,7 +3,7 @@ namespace App\Infrastructure\Youtube;
 
 class YoutubeService implements YoutubeServiceInterface
 {
-    public function getChannel($url)
+    public function getChannel(string $url): string
     {
         $path = trim(parse_url($url, PHP_URL_PATH), '/');
         

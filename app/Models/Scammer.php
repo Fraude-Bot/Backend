@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Map\ValueObjects\ScammerNode;
 use App\Domain\Scammer\ScammerEntity;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -103,6 +104,11 @@ class Scammer extends Model
     /**
      * Convert the model to a domain entity.
      */
+    public function toNode(): ScammerNode
+    {
+        return ScammerNode::fromScammer((string) $this->id, $this->name);
+    }
+
     public function toEntity(): ScammerEntity
     {
         return new ScammerEntity(

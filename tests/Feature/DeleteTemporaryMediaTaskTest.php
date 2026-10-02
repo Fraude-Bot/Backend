@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Application\Media\MediaUsecaseInterface;
 use App\Application\Media\TemporaryImageStorageInterface;
-use App\Application\Tasks\DeleteTemporaryMediaTask;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +30,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Cache::forever($prefix.'two', 'http://localhost/two.jpg');
         Cache::forever('unrelated-cache-key', 'keep');
 
-        app(DeleteTemporaryMediaTask::class)();
+        app(MediaUsecaseInterface::class)();
 
         Storage::disk('public')->assertMissing($directory.'/one.jpg');
         Storage::disk('public')->assertMissing($directory.'/two.png');
@@ -48,7 +48,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Storage::fake('public');
         Storage::fake('raw');
 
-        app(DeleteTemporaryMediaTask::class)();
+        app(MediaUsecaseInterface::class)();
 
         $this->assertSame([], Storage::disk('public')->allFiles());
         $this->assertSame([], Storage::disk('raw')->allFiles());
@@ -62,7 +62,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
 
         $this->assertContains([
             'expression' => '0 0 * * 0',
-            'command' => DeleteTemporaryMediaTask::class,
+            'command' => MediaUsecaseInterface::class,
         ], array_map(fn (array $event) => [
             'expression' => $event['expression'],
             'command' => $event['command'],

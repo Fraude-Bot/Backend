@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Map\ValueObjects\PaymentMethodNode;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -36,6 +37,11 @@ class PaymentMethod extends Model
         return Attribute::make(
             get: fn () => ucfirst(strtolower($this->type->name)),
         );
+    }
+
+    public function toNode(): PaymentMethodNode
+    {
+        return PaymentMethodNode::fromPaymentMethod((string) $this->id, (string) $this->type->value, $this->reference);
     }
 
     public function organizations(): BelongsToMany

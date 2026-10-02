@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Application\Tasks;
+namespace App\Application\Media;
 
-use App\Application\Media\TemporaryImageStorageInterface;
 use Closure;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\RedisStore;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
-class DeleteTemporaryMediaTask
+class MediaUsecase implements MediaUsecaseInterface
 {
     public function __invoke(): void
     {

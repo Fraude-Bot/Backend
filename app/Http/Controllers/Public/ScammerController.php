@@ -2,18 +2,16 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Application\Scammer\ScammerUsecaseInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\ReportResource;
 use App\Http\Resources\Public\ScammerResource;
-use App\Repositories\Scammer\ScammerRepositoryInterface;
 use Illuminate\Http\Request;
 
 class ScammerController extends Controller
 {
-    public function __construct(private ScammerRepositoryInterface $scammerRepository)
-    {
-    }
+    public function __construct(private ScammerUsecaseInterface $scammers) {}
 
     public function show(Request $request, string $id)
     {
@@ -21,9 +19,9 @@ class ScammerController extends Controller
             return response()->json(['message' => 'Invalid scammer ID'], 400);
         }
 
-        $scammer = $this->scammerRepository->findScammerById((int) $id);
+        $scammer = $this->scammers->show((int) $id);
 
-        if (!$scammer) {
+        if (! $scammer) {
             return response()->json(['message' => 'Scammer not found'], 404);
         }
 
@@ -41,9 +39,9 @@ class ScammerController extends Controller
             return response()->json(['message' => 'Invalid scammer ID or year'], 400);
         }
 
-        $calendar = $this->scammerRepository->findCalendarByScammerIdAndYear((int) $id, (int) $year);
+        $calendar = $this->scammers->calendar((int) $id, (int) $year);
 
-        if (!$calendar) {
+        if (! $calendar) {
             return response()->json(['message' => 'Scammer calendar not found'], 404);
         }
 
@@ -72,9 +70,9 @@ class ScammerController extends Controller
             return response()->json(['message' => 'Invalid scammer ID, page or count'], 400);
         }
 
-        $contacts = $this->scammerRepository->findPaginatedContactsById((int) $id, (int) $page, (int) $count, $platform);
+        $contacts = $this->scammers->contacts((int) $id, (int) $page, (int) $count, $platform);
 
-        if (!$contacts) {
+        if (! $contacts) {
             return response()->json(['message' => 'Scammer contacts not found'], 404);
         }
 
@@ -103,9 +101,9 @@ class ScammerController extends Controller
             return response()->json(['message' => 'Invalid scammer ID, page or count'], 400);
         }
 
-        $reports = $this->scammerRepository->findPaginatedReportsById((int) $id, (int) $page, (int) $count);
+        $reports = $this->scammers->reports((int) $id, (int) $page, (int) $count);
 
-        if (!$reports) {
+        if (! $reports) {
             return response()->json(['message' => 'Scammer reports not found'], 404);
         }
 
@@ -126,9 +124,9 @@ class ScammerController extends Controller
             return response()->json(['message' => 'Invalid scammer ID'], 400);
         }
 
-        $map = $this->scammerRepository->findMapById((int) $id);
+        $map = $this->scammers->map((int) $id);
 
-        if (!$map) {
+        if (! $map) {
             return response()->json(['message' => 'Scammer map not found'], 404);
         }
 

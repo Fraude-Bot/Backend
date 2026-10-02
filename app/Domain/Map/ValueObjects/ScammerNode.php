@@ -2,13 +2,11 @@
 
 namespace App\Domain\Map\ValueObjects;
 
-use App\Domain\Map\Enums\NodeTypes;
 use App\Domain\Map\Enums\KindTypes;
-use App\Models\Scammer;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
+use App\Domain\Map\Enums\NodeTypes;
 
-final class ScammerNode extends Node {
+final class ScammerNode extends Node
+{
     private function __construct(
         public readonly string $id,
         public readonly NodeTypes $type,
@@ -18,27 +16,15 @@ final class ScammerNode extends Node {
         public readonly bool $isCenter = false,
     ) {}
 
-    public static function from(Model $model): self {
-        if (!$model instanceof Scammer) {
-            throw new \InvalidArgumentException('Model must be an instance of Scammer');
-        }
-
+    public static function fromScammer(string $id, string $name): self
+    {
         return new self(
-            (string) $model->id,
+            $id,
             NodeTypes::PARTY,
-            (string) $model->id,
-            $model->name,
+            $id,
+            $name,
             KindTypes::SCAMMER,
         );
-    }
-
-    /**
-     * @param  Collection<int, Scammer>  $scammers
-     * @return Collection<int, ScammerNode>
-     */
-    public static function fromCollection(Collection $scammers): Collection
-    {
-        return $scammers->map(fn (Scammer $scammer) => self::from($scammer));
     }
 
     public function center(): self
@@ -55,7 +41,7 @@ final class ScammerNode extends Node {
 
     public function graphId(): string
     {
-        return $this->type->value . ':' . $this->kind->value . ':' . $this->id;
+        return $this->type->value.':'.$this->kind->value.':'.$this->id;
     }
 
     public function toArray(): array

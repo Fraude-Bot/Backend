@@ -6,7 +6,6 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\ContactNode;
 use App\Domain\Map\ValueObjects\Edge;
 use App\Domain\Map\ValueObjects\MapResult;
-use App\Domain\Map\ValueObjects\OrganizationNode;
 use App\Domain\Map\ValueObjects\PaymentMethodNode;
 use App\Domain\Map\ValueObjects\ScammerNode;
 use App\Domain\Search\ValueObjects\PaginatedResult;
@@ -19,7 +18,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-class PublicOrganizationRepository implements OrganizationRepositoryInterface
+class OrganizationRepository implements OrganizationRepositoryInterface
 {
     private const int CACHE_TTL_SECONDS = 3600;
 
@@ -136,7 +135,7 @@ class PublicOrganizationRepository implements OrganizationRepositoryInterface
             ])
             ->find($id);
 
-        if (!$organization) {
+        if (! $organization) {
             return null;
         }
 
@@ -144,10 +143,10 @@ class PublicOrganizationRepository implements OrganizationRepositoryInterface
         $paymentMethods = $organization->paymentMethods->unique('id')->values()->ensure(PaymentMethod::class);
         $scammers = $organization->scammers->unique('id')->values()->ensure(Scammer::class);
 
-        $centerNode = OrganizationNode::from($organization)->centered();
-        $scammerNodes = ScammerNode::fromCollection($scammers);
-        $contactNodes = ContactNode::fromCollection($contacts);
-        $paymentMethodNodes = PaymentMethodNode::fromCollection($paymentMethods);
+        $centerNode = $organization->toNode()->centered();
+        $scammerNodes = $scammers->map(fn (Scammer $scammer): ScammerNode => $scammer->toNode());
+        $contactNodes = $contacts->map(fn (Contact $contact): ContactNode => $contact->toNode());
+        $paymentMethodNodes = $paymentMethods->map(fn (PaymentMethod $paymentMethod): PaymentMethodNode => $paymentMethod->toNode());
 
         $nodes = Collection::mergeAll(
             collect([$centerNode]),
@@ -172,7 +171,7 @@ class PublicOrganizationRepository implements OrganizationRepositoryInterface
         foreach ($scammers as $scammer) {
             $scammerNode = $scammerNodesById->get((string) $scammer->id);
 
-            if (!$scammerNode) {
+            if (! $scammerNode) {
                 continue;
             }
 
@@ -180,5 +179,85 @@ class PublicOrganizationRepository implements OrganizationRepositoryInterface
         }
 
         return new MapResult($nodes, $edges);
+    }
+
+    public function suggest(string $query): array
+    {
+        $query = trim($query);
+
+        if (mb_strlen($query) < 2 || mb_strlen($query) > 100) {
+            return [];
+        }
+
+        return Cache::remember(
+            SearchCache::key('organization:suggest:'.strtolower($query)),
+            self::CACHE_TTL_SECONDS,
+            function () use ($query): array {
+                $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query);
+
+                return Organization::query()
+                    ->withTrashed()
+                    ->whereRaw("name LIKE ? ESCAPE '!'", ["%{$escaped}%"])
+                    ->select('name')
+                    ->distinct()
+                    ->orderBy('name')
+                    ->limit(5)
+                    ->pluck('name')
+                    ->all();
+            },
+        );
+    }
+
+    public function list(): Collection
+    {
+        return Organization::query()->get();
+    }
+
+    public function create(array $attributes): Organization
+    {
+        return Organization::create($attributes);
+    }
+
+    public function update(Organization $organization, array $attributes): Organization
+    {
+        $organization->update($attributes);
+
+        return $organization;
+    }
+
+    public function delete(Organization $organization): void
+    {
+        $organization->delete();
+    }
+
+    public function restore(int $id): Organization
+    {
+        $organization = Organization::onlyTrashed()->findOrFail($id);
+        $organization->restore();
+
+        return $organization;
+    }
+
+    public function scammers(Organization $organization): Collection
+    {
+        return $organization->scammers;
+    }
+
+    public function attachScammer(Organization $organization, Scammer $scammer): void
+    {
+        $organization->scammers()->syncWithoutDetaching([$scammer->id]);
+        SearchCache::invalidate();
+    }
+
+    public function attachContact(Organization $organization, int $contactId): void
+    {
+        $organization->contacts()->syncWithoutDetaching([$contactId]);
+        SearchCache::invalidate();
+    }
+
+    public function attachPaymentMethod(Organization $organization, int $paymentMethodId): void
+    {
+        $organization->paymentMethods()->syncWithoutDetaching([$paymentMethodId]);
+        SearchCache::invalidate();
     }
 }

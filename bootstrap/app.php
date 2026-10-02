@@ -1,7 +1,7 @@
 <?php
 
 use App\Application\Media\ImageRejectedException;
-use App\Application\Tasks\DeleteTemporaryMediaTask;
+use App\Application\Media\MediaUsecaseInterface;
 use App\Http\Middleware\EnsureResponseIsJSON;
 use App\Http\Middleware\RequestContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -89,6 +89,6 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withSchedule(function (Schedule $schedule): void {
-        $schedule->call(DeleteTemporaryMediaTask::class)->weekly();
+        $schedule->call(MediaUsecaseInterface::class)->weekly();
     })
     ->create();
