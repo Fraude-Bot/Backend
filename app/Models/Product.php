@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Domain\Product\ProductEntity;
+use App\Domain\Product\Entities\ProductEntity;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Domain\Contact\ContactEntity;
+use App\Domain\Contact\Entities\ContactEntity;
 use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\ContactNode;
 use App\Models\Concerns\InvalidatesPublicCache;

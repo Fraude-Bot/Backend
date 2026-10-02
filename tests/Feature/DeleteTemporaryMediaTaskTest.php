@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Application\Media\MediaUsecaseInterface;
+use App\Application\Media\Commands\DeleteTemporaryMediaCommand;
 use App\Application\Media\TemporaryImageStorageInterface;
+use App\Application\Media\Usecases\MediaUsecaseInterface;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +31,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Cache::forever($prefix.'two', 'http://localhost/two.jpg');
         Cache::forever('unrelated-cache-key', 'keep');
 
-        app(MediaUsecaseInterface::class)();
+        app(MediaUsecaseInterface::class)(new DeleteTemporaryMediaCommand);
 
         Storage::disk('public')->assertMissing($directory.'/one.jpg');
         Storage::disk('public')->assertMissing($directory.'/two.png');
@@ -48,7 +49,7 @@ class DeleteTemporaryMediaTaskTest extends TestCase
         Storage::fake('public');
         Storage::fake('raw');
 
-        app(MediaUsecaseInterface::class)();
+        app(MediaUsecaseInterface::class)(new DeleteTemporaryMediaCommand);
 
         $this->assertSame([], Storage::disk('public')->allFiles());
         $this->assertSame([], Storage::disk('raw')->allFiles());

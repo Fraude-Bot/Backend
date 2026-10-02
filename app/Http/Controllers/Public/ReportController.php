@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Public;
 
-use App\Application\Report\ReportUsecaseInterface;
+use App\Application\Report\Commands\SearchReportsCommand;
+use App\Application\Report\Commands\StoreOrganizationReportCommand;
+use App\Application\Report\Commands\StoreTemporaryProfilePictureCommand;
+use App\Application\Report\Commands\StoreTemporaryProofsCommand;
+use App\Application\Report\Usecases\ReportUsecaseInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationReportRequest;
@@ -25,7 +29,7 @@ class ReportController extends Controller
         $page = max(1, min(100000, (int) $request->input('p', 1)));
         $count = max(1, min(100, (int) $request->input('c', 10)));
 
-        $result = $this->reports->search($clue, $page, $count);
+        $result = $this->reports->search(new SearchReportsCommand($clue, $page, $count));
 
         return response()->json([
             'data' => ReportCardResource::collection($result->items)->resolve(),
@@ -43,7 +47,7 @@ class ReportController extends Controller
             abort(422, 'The request data is invalid.');
         }
 
-        $path = $this->reports->storeTemporaryProfilePicture($image);
+        $path = $this->reports->storeTemporaryProfilePicture(new StoreTemporaryProfilePictureCommand($image));
 
         return response()->json(['path' => $path], 201);
     }
@@ -56,13 +60,13 @@ class ReportController extends Controller
             abort(422, 'The request data is invalid.');
         }
 
-        $paths = $this->reports->storeTemporaryProofs($images);
+        $paths = $this->reports->storeTemporaryProofs(new StoreTemporaryProofsCommand($images));
 
         return response()->json(['paths' => $paths], 201);
     }
 
     public function storeOrganization(StoreOrganizationReportRequest $request): JsonResponse
     {
-        return response()->json($this->reports->storeOrganization($request->validated()), 201);
+        return response()->json($this->reports->storeOrganization(StoreOrganizationReportCommand::fromValidated($request->validated())), 201);
     }
 }

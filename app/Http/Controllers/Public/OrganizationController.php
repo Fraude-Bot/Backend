@@ -2,7 +2,13 @@
 
 namespace App\Http\Controllers\Public;
 
-use App\Application\Organization\OrganizationUsecaseInterface;
+use App\Application\Organization\Commands\ListOrganizationContactsCommand;
+use App\Application\Organization\Commands\ListOrganizationReportsCommand;
+use App\Application\Organization\Commands\OrganizationCalendarCommand;
+use App\Application\Organization\Commands\OrganizationMapCommand;
+use App\Application\Organization\Commands\ShowOrganizationCommand;
+use App\Application\Organization\Commands\SuggestOrganizationsCommand;
+use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
@@ -21,7 +27,7 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid organization ID'], 400);
         }
 
-        $organization = $this->organizations->show((int) $id);
+        $organization = $this->organizations->show(new ShowOrganizationCommand((int) $id));
 
         if (! $organization) {
             return response()->json(['message' => 'Organization not found'], 404);
@@ -41,7 +47,7 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid organization ID or year'], 400);
         }
 
-        $calendar = $this->organizations->calendar((int) $id, (int) $year);
+        $calendar = $this->organizations->calendar(new OrganizationCalendarCommand((int) $id, (int) $year));
 
         if (! $calendar) {
             return response()->json(['message' => 'Organization not found'], 404);
@@ -56,8 +62,12 @@ class OrganizationController extends Controller
         $count = $request->input('c', 10);
         $platform = $request->input('platform', null);
 
-        if ($platform) {
+        if (is_string($platform) && $platform !== '') {
             $platform = strtolower($platform);
+        }
+
+        if (! is_string($platform)) {
+            $platform = null;
         }
 
         if (
@@ -72,7 +82,7 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid organization ID, page or count'], 400);
         }
 
-        $contacts = $this->organizations->contacts((int) $id, (int) $page, (int) $count, $platform);
+        $contacts = $this->organizations->contacts(new ListOrganizationContactsCommand((int) $id, (int) $page, (int) $count, $platform));
 
         if (! $contacts) {
             return response()->json(['message' => 'Organization contacts not found'], 404);
@@ -103,7 +113,7 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid organization ID, page or count'], 400);
         }
 
-        $reports = $this->organizations->reports((int) $id, (int) $page, (int) $count);
+        $reports = $this->organizations->reports(new ListOrganizationReportsCommand((int) $id, (int) $page, (int) $count));
 
         if (! $reports) {
             return response()->json(['message' => 'Organization reports not found'], 404);
@@ -126,7 +136,7 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Invalid organization ID'], 400);
         }
 
-        $map = $this->organizations->map((int) $id);
+        $map = $this->organizations->map(new OrganizationMapCommand((int) $id));
 
         if (! $map) {
             return response()->json(['message' => 'Organization map not found'], 404);
@@ -143,6 +153,6 @@ class OrganizationController extends Controller
     {
         $query = $request->input('q');
 
-        return response()->json($this->organizations->suggest(is_string($query) ? $query : ''));
+        return response()->json($this->organizations->suggest(new SuggestOrganizationsCommand(is_string($query) ? $query : '')));
     }
 }

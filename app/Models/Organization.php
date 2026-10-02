@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Map\ValueObjects\OrganizationNode;
-use App\Domain\Organization\OrganizationEntity;
+use App\Domain\Organization\Entities\OrganizationEntity;
 use App\Models\Concerns\InvalidatesPublicCache;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
