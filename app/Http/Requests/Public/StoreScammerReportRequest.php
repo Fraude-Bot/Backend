@@ -51,20 +51,20 @@ class StoreScammerReportRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:50'],
-            'description' => ['nullable', 'string'],
-            'profile_picture' => ['sometimes', 'nullable', 'string'],
+            'description' => ['required', 'string'],
+            'profile_picture' => ['required', 'string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],
             'scammer' => ['required', 'array'],
             'scammer.name' => ['required', 'string', 'max:100'],
-            'contacts' => ['sometimes', 'array'],
+            'contacts' => ['required', 'array', 'min:1'],
             'contacts.*.name' => ['required', 'string', 'max:50'],
             'contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'contacts.*.reference' => ['required', 'string', 'max:255'],
-            'payment_methods' => ['sometimes', 'array'],
+            'payment_methods' => ['required', 'array', 'min:1'],
             'payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'payment_methods.*.reference' => ['required', 'string', 'max:255'],
-            'products' => ['sometimes', 'array'],
+            'products' => ['required', 'array', 'min:1'],
             'products.*' => ['required', 'string', 'max:75'],
         ];
     }

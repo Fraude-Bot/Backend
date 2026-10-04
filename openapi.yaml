@@ -465,6 +465,7 @@ paths:
         for the same type and reference is reused. A trashed match is restored.
         A product whose name already exists is reused, including a difference in letter case.
         The stored spelling is kept.
+        Every field is required except `proofs`.
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
         and the files must still be present.
@@ -524,6 +525,7 @@ paths:
         for the same type and reference is reused. A trashed match is restored.
         A product whose name already exists is reused, including a difference in letter case.
         The stored spelling is kept.
+        Every field is required except `proofs`.
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
         and the files must still be present.
@@ -768,20 +770,17 @@ components:
             - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
     CreateOrganizationReportRequest:
       type: object
-      required: [title, organization]
+      required: [title, description, profile_picture, organization, contacts, payment_methods, products]
       properties:
         title:
           type: string
           maxLength: 50
           example: Fake store took my money
         description:
-          type:
-            - string
-            - "null"
+          type: string
+          example: They never shipped the order.
         profile_picture:
-          type:
-            - string
-            - "null"
+          type: string
           description: Public-disk path of a file under `tmp/reports/profile`.
           example: /storage/tmp/reports/profile/8f3c1a.jpg
         proofs:
@@ -800,6 +799,7 @@ components:
               example: Tienda Falsa
         contacts:
           type: array
+          minItems: 1
           items:
             type: object
             required: [name, platform, reference]
@@ -829,6 +829,7 @@ components:
                 maxLength: 255
         payment_methods:
           type: array
+          minItems: 1
           items:
             type: object
             required: [type, reference]
@@ -845,6 +846,7 @@ components:
                 maxLength: 255
         products:
           type: array
+          minItems: 1
           items:
             type: string
             maxLength: 75
@@ -885,20 +887,17 @@ components:
             minimum: 1
     CreateScammerReportRequest:
       type: object
-      required: [title, scammer]
+      required: [title, description, profile_picture, scammer, contacts, payment_methods, products]
       properties:
         title:
           type: string
           maxLength: 50
           example: Called me about a prize
         description:
-          type:
-            - string
-            - "null"
+          type: string
+          example: They asked for a transfer to release the prize.
         profile_picture:
-          type:
-            - string
-            - "null"
+          type: string
           description: Public-disk path of a file under `tmp/reports/profile`.
           example: /storage/tmp/reports/profile/8f3c1a.jpg
         proofs:
@@ -917,6 +916,7 @@ components:
               example: Juan Perez
         contacts:
           type: array
+          minItems: 1
           items:
             type: object
             required: [name, platform, reference]
@@ -946,6 +946,7 @@ components:
                 maxLength: 255
         payment_methods:
           type: array
+          minItems: 1
           items:
             type: object
             required: [type, reference]
@@ -962,6 +963,7 @@ components:
                 maxLength: 255
         products:
           type: array
+          minItems: 1
           items:
             type: string
             maxLength: 75

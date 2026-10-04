@@ -47,10 +47,14 @@ class StoreOrganizationReportTest extends TestCase
                 ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
                 ['type' => PaymentMethodType::CARD_NUMBER->value, 'reference' => '4111 1111 1111 1111'],
             ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertCreated();
-        $response->assertJsonPath('product_ids', []);
+
+        $product = Product::query()->where('name', 'Crypto')->first();
+        $this->assertNotNull($product);
+        $response->assertJsonPath('product_ids', [$product->id]);
 
         $organization = Organization::query()->first();
         $report = Report::query()->first();
@@ -66,6 +70,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertTrue($organization->is_active);
         $this->assertSame('Tienda Falsa', $organization->name);
         $this->assertTrue($organization->reports()->whereKey($report->id)->exists());
+        $this->assertTrue($report->products()->whereKey($product->id)->exists());
 
         $this->assertStringStartsWith('reports/organizations/avatars/', $organization->profile_picture_path);
         $this->assertSame('avatar', Storage::disk('public')->get($organization->profile_picture_path));
@@ -113,8 +118,12 @@ class StoreOrganizationReportTest extends TestCase
             'is_active' => true,
         ]);
 
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Called me again',
+            'description' => 'They called again.',
+            'profile_picture' => $profile,
             'organization' => ['name' => 'Another shop'],
             'contacts' => [
                 ['name' => 'Different name', 'platform' => 'cellphone', 'reference' => '+52 155 1234 5678'],
@@ -122,13 +131,17 @@ class StoreOrganizationReportTest extends TestCase
             'payment_methods' => [
                 ['type' => 'CLABE', 'reference' => '032 180 0001 1835 9719'],
             ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertCreated();
         $response->assertJsonPath('contact_ids', [$contact->id]);
         $response->assertJsonPath('payment_method_ids', [$paymentMethod->id]);
         $response->assertJsonPath('report_proof_ids', []);
-        $response->assertJsonPath('product_ids', []);
+
+        $product = Product::query()->where('name', 'Crypto')->first();
+        $this->assertNotNull($product);
+        $response->assertJsonPath('product_ids', [$product->id]);
 
         $this->assertSame(1, Contact::withTrashed()->count());
         $this->assertSame(1, PaymentMethod::withTrashed()->count());
@@ -137,7 +150,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertNull(Report::query()->first()->user_id);
 
         $organization = Organization::query()->first();
-        $this->assertNull($organization->profile_picture_path);
+        $this->assertStringStartsWith('reports/organizations/avatars/', $organization->profile_picture_path);
         $this->assertTrue($organization->contacts()->whereKey($contact->id)->exists());
         $this->assertTrue($organization->paymentMethods()->whereKey($paymentMethod->id)->exists());
     }
@@ -145,10 +158,19 @@ class StoreOrganizationReportTest extends TestCase
     public function test_creates_products_reuses_an_existing_name_and_links_each_name_once(): void
     {
         $existing = Product::query()->create(['name' => 'Crypto']);
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Sold me crypto',
+            'description' => 'They sold a token.',
+            'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
             'products' => ['  Crypto  ', 'crypto', 'Banking', 'Banking'],
         ]);
 
@@ -172,10 +194,16 @@ class StoreOrganizationReportTest extends TestCase
     {
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
+            'profile_picture' => '/storage/tmp/reports/profile/avatar.jpg',
             'organization' => ['name' => 'Shop'],
             'contacts' => [
                 ['name' => 'Seller', 'platform' => 'myspace', 'reference' => 'seller'],
             ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
@@ -190,8 +218,16 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $this->storagePath('other/avatar.jpg'),
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
@@ -206,11 +242,16 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Shop'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
             'payment_methods' => [
                 ['type' => 'clabe', 'reference' => '12345'],
             ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
@@ -229,8 +270,16 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $profile,
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
             'proofs' => [$this->storagePath(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg')],
         ]);
 
@@ -241,6 +290,25 @@ class StoreOrganizationReportTest extends TestCase
             [TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg'],
             Storage::disk('public')->allFiles(),
         );
+    }
+
+    public function test_requires_every_field_except_proofs(): void
+    {
+        $response = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'A title',
+            'organization' => ['name' => 'Shop'],
+        ]);
+
+        $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+
+        $details = $response->json('error.details');
+
+        foreach (['description', 'profile_picture', 'contacts', 'payment_methods', 'products'] as $field) {
+            $this->assertArrayHasKey($field, $details);
+        }
+
+        $this->assertArrayNotHasKey('proofs', $details);
+        $this->assertSame(0, Organization::query()->count());
     }
 
     private function publishTemporary(string $directory, string $filename, string $contents): string
