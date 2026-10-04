@@ -380,7 +380,7 @@ paths:
       description: |
         Accepts a JPG or PNG image up to 5 MB. The original is stored on the raw
         disk and must pass image moderation before a 640×640 cover is published on
-        the public disk under `tmp/reports/profile`. The response path is
+        the public disk under `tmp/reports/profiles`. The response path is
         the public URL of that file. Uploading the same image again returns the
         existing URL while the file is still present. A rejected image is moved
         to quarantine and the response does not include its path; it responds
@@ -405,7 +405,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/StoredImagePath"
               example:
-                path: http://localhost:9000/storage/tmp/reports/profile/8f3c1a.jpg
+                path: http://localhost:9000/storage/tmp/reports/profiles/8f3c1a.jpg
         "422":
           $ref: "#/components/responses/ValidationFailed"
         "429":
@@ -464,7 +464,7 @@ paths:
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
         `profile_picture` and `proofs` are public-disk paths previously returned by
-        the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
+        the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
         The report is stored without a user and is active.
       requestBody:
@@ -476,7 +476,7 @@ paths:
             example:
               title: Fake store took my money
               description: They never shipped the order.
-              profile_picture: /storage/tmp/reports/profile/8f3c1a.jpg
+              profile_picture: /storage/tmp/reports/profiles/8f3c1a.jpg
               proofs:
                 - /storage/tmp/reports/proofs/8f3c1a.jpg
                 - /storage/tmp/reports/proofs/9a4d2b.png
@@ -516,7 +516,7 @@ paths:
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
         `profile_picture` and `proofs` are public-disk paths previously returned by
-        the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
+        the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
         The report is stored without a user and is active.
       requestBody:
@@ -528,7 +528,7 @@ paths:
             example:
               title: Called me about a prize
               description: They asked for a transfer to release the prize.
-              profile_picture: /storage/tmp/reports/profile/8f3c1a.jpg
+              profile_picture: /storage/tmp/reports/profiles/8f3c1a.jpg
               proofs:
                 - /storage/tmp/reports/proofs/8f3c1a.jpg
                 - /storage/tmp/reports/proofs/9a4d2b.png
@@ -737,7 +737,7 @@ components:
           type: string
           format: uri
           description: Public URL of the stored image.
-          example: http://localhost:9000/storage/tmp/reports/profile/8f3c1a.jpg
+          example: http://localhost:9000/storage/tmp/reports/profiles/8f3c1a.jpg
     StoredImagePaths:
       type: object
       required: [paths]
@@ -768,8 +768,8 @@ components:
           type:
             - string
             - "null"
-          description: Public-disk path of a file under `tmp/reports/profile`.
-          example: /storage/tmp/reports/profile/8f3c1a.jpg
+          description: Public-disk path of a file under `tmp/reports/profiles`.
+          example: /storage/tmp/reports/profiles/8f3c1a.jpg
         proofs:
           type: array
           items:
@@ -870,8 +870,8 @@ components:
           type:
             - string
             - "null"
-          description: Public-disk path of a file under `tmp/reports/profile`.
-          example: /storage/tmp/reports/profile/8f3c1a.jpg
+          description: Public-disk path of a file under `tmp/reports/profiles`.
+          example: /storage/tmp/reports/profiles/8f3c1a.jpg
         proofs:
           type: array
           items:

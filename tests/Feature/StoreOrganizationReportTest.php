@@ -65,7 +65,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertSame('Tienda Falsa', $organization->name);
         $this->assertTrue($organization->reports()->whereKey($report->id)->exists());
 
-        $this->assertStringStartsWith('reports/organizations/avatars/', $organization->profile_picture_path);
+        $this->assertStringStartsWith('reports/organizations/profiles/', $organization->profile_picture_path);
         $this->assertSame('avatar', Storage::disk('public')->get($organization->profile_picture_path));
         $this->assertTrue(Storage::disk('public')->exists(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg'));
 
@@ -76,6 +76,8 @@ class StoreOrganizationReportTest extends TestCase
             Storage::disk('public')->get($storedProofs[0]->path),
             Storage::disk('public')->get($storedProofs[1]->path),
         ]);
+        $this->assertStringStartsWith('reports/organizations/proofs/', $storedProofs[0]->path);
+        $this->assertStringStartsWith('reports/organizations/proofs/', $storedProofs[1]->path);
         $this->assertTrue(Storage::disk('public')->exists(TemporaryImageStorageInterface::PROOF_DIRECTORY.'/one.jpg'));
         $this->assertTrue(Storage::disk('public')->exists(TemporaryImageStorageInterface::PROOF_DIRECTORY.'/two.png'));
 
