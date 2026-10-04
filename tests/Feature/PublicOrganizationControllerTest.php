@@ -120,19 +120,16 @@ class PublicOrganizationControllerTest extends TestCase
         $organization = Organization::factory()->create();
         $contacts = Contact::factory()->createMany([
             [
-                'name' => 'John Doe',
                 'reference' => 'john-doe',
                 'platform' => PlatformType::INSTAGRAM,
                 'is_active' => true,
             ],
             [
-                'name' => 'Jane Doe',
                 'reference' => 'jane-doe',
                 'platform' => PlatformType::FACEBOOK,
                 'is_active' => true,
             ],
             [
-                'name' => 'Jim Doe',
                 'reference' => 'jim-doe',
                 'platform' => PlatformType::TELEGRAM,
                 'is_active' => true,

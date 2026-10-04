@@ -128,7 +128,6 @@ class ReportUsecase implements ReportUsecaseInterface
                     $model = $this->contacts->firstOrCreate(
                         $contact['platform'],
                         $contact['reference'],
-                        $contact['name'],
                         true,
                     );
                     $this->organizations->attachContact($organization, $model->id);
@@ -224,7 +223,6 @@ class ReportUsecase implements ReportUsecaseInterface
                     $model = $this->contacts->firstOrCreate(
                         $contact['platform'],
                         $contact['reference'],
-                        $contact['name'],
                         true,
                     );
                     $this->scammers->attachContact($scammer, $model->id);
@@ -273,7 +271,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
     /**
      * @param  list<ContactInput>  $contacts
-     * @return list<array{name: string, platform: PlatformType, reference: string}>
+     * @return list<array{platform: PlatformType, reference: string}>
      */
     private function normalizeContacts(array $contacts): array
     {
@@ -283,22 +281,18 @@ class ReportUsecase implements ReportUsecaseInterface
             try {
                 $entity = new ContactEntity(
                     id: null,
-                    name: $contact->name,
                     platformType: $contact->platform,
                     reference: $contact->reference,
                     isActive: true,
                 );
             } catch (InvalidArgumentException $exception) {
-                $field = str_contains($exception->getMessage(), 'Name') ? 'name' : 'reference';
-
                 throw ValidationException::withMessages([
-                    "contacts.$index.$field" => [$exception->getMessage()],
+                    "contacts.$index.reference" => [$exception->getMessage()],
                 ]);
             }
 
             $values = $entity->toArray();
             $normalized[] = [
-                'name' => $values['name'],
                 'platform' => $values['platform'],
                 'reference' => $values['reference'],
             ];

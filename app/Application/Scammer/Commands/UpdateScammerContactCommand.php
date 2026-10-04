@@ -11,8 +11,6 @@ final readonly class UpdateScammerContactCommand
     public function __construct(
         public Scammer $scammer,
         public Contact $contact,
-        public ?string $name = null,
-        public bool $nameProvided = false,
         public ?PlatformType $platform = null,
         public bool $platformProvided = false,
         public ?string $reference = null,
@@ -29,8 +27,6 @@ final readonly class UpdateScammerContactCommand
         return new self(
             scammer: $scammer,
             contact: $contact,
-            name: array_key_exists('name', $input) ? (string) $input['name'] : null,
-            nameProvided: array_key_exists('name', $input),
             platform: $platformProvided ? PlatformType::from((int) $input['platform']) : null,
             platformProvided: $platformProvided,
             reference: array_key_exists('reference', $input) ? (string) $input['reference'] : null,

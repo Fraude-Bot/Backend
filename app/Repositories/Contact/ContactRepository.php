@@ -7,11 +7,11 @@ use App\Models\Contact;
 
 class ContactRepository implements ContactRepositoryInterface
 {
-    public function firstOrCreate(PlatformType $platform, string $reference, string $name, bool $isActive): Contact
+    public function firstOrCreate(PlatformType $platform, string $reference, bool $isActive): Contact
     {
         $contact = Contact::withTrashed()->firstOrCreate(
             ['platform' => $platform, 'reference' => $reference],
-            ['name' => $name, 'is_active' => $isActive],
+            ['is_active' => $isActive],
         );
 
         if ($contact->trashed()) {

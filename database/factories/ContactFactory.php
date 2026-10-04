@@ -18,7 +18,6 @@ class ContactFactory extends Factory
         $platform = $this->faker->randomElement(PlatformType::cases());
 
         return [
-            'name' => $this->faker->firstName(),
             'platform' => $platform,
             'reference' => $this->referenceFor($platform),
             'is_active' => true,

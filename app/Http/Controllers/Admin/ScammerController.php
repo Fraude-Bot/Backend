@@ -100,7 +100,6 @@ class ScammerController extends Controller
 
         return response()->json([
             'id' => $updated->id,
-            'name' => $updated->name,
             'platform' => $updated->platform_name,
             'reference' => $updated->reference,
             'is_active' => $updated->is_active,
@@ -116,7 +115,6 @@ class ScammerController extends Controller
 
         return response()->json([
             'id' => $contactModel->id,
-            'name' => $contactModel->name,
             'platform' => $contactModel->platform_name,
             'reference' => $contactModel->reference,
             'is_active' => $contactModel->is_active,

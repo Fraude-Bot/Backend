@@ -31,7 +31,6 @@ final readonly class StoreScammerCommand
             }
 
             $contacts[] = new ContactInput(
-                name: (string) $contactData['name'],
                 platform: PlatformType::from((int) $contactData['platform']),
                 reference: (string) $contactData['reference'],
                 isActive: (bool) ($contactData['is_active'] ?? true),

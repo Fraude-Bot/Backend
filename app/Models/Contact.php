@@ -17,7 +17,6 @@ class Contact extends Model
     use HasFactory, InvalidatesPublicCache, SoftDeletes;
 
     protected $fillable = [
-        'name',
         'platform',
         'reference',
         'is_active',
@@ -30,7 +29,6 @@ class Contact extends Model
     protected $casts = [
         'id' => 'integer',
         'reference' => 'string',
-        'name' => 'string',
         'platform' => PlatformType::class,
         'is_active' => 'boolean',
     ];
@@ -69,7 +67,6 @@ class Contact extends Model
     {
         return new ContactEntity(
             id: $this->id,
-            name: $this->name,
             platformType: $this->platform,
             reference: $this->reference,
             isActive: $this->is_active,

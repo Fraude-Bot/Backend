@@ -49,7 +49,6 @@ class StoreOrganizationReportRequest extends FormRequest
             'organization' => ['required', 'array'],
             'organization.name' => ['required', 'string', 'max:100'],
             'contacts' => ['sometimes', 'array'],
-            'contacts.*.name' => ['required', 'string', 'max:50'],
             'contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'contacts.*.reference' => ['required', 'string', 'max:255'],
             'payment_methods' => ['sometimes', 'array'],
