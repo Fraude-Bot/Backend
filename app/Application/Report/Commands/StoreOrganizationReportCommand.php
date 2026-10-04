@@ -12,6 +12,7 @@ final readonly class StoreOrganizationReportCommand
      * @param  list<string>  $productNames
      * @param  list<ContactInput>  $contacts
      * @param  list<PaymentMethodInput>  $paymentMethods
+     * @param  list<OrganizationReportScammerInput>  $scammers
      */
     public function __construct(
         public string $title,
@@ -22,6 +23,7 @@ final readonly class StoreOrganizationReportCommand
         public string $organizationName,
         public array $contacts,
         public array $paymentMethods,
+        public array $scammers,
     ) {}
 
     /**
@@ -29,30 +31,19 @@ final readonly class StoreOrganizationReportCommand
      */
     public static function fromValidated(array $input): self
     {
-        $contacts = [];
+        $contacts = self::contactsFrom($input['contacts'] ?? []);
+        $paymentMethods = self::paymentMethodsFrom($input['payment_methods'] ?? []);
+        $scammers = [];
 
-        foreach ($input['contacts'] ?? [] as $contact) {
-            if (! is_array($contact)) {
+        foreach ($input['scammers'] ?? [] as $scammer) {
+            if (! is_array($scammer)) {
                 continue;
             }
 
-            $contacts[] = new ContactInput(
-                name: (string) ($contact['name'] ?? ''),
-                platform: PlatformType::from((int) ($contact['platform'] ?? 0)),
-                reference: (string) ($contact['reference'] ?? ''),
-            );
-        }
-
-        $paymentMethods = [];
-
-        foreach ($input['payment_methods'] ?? [] as $paymentMethod) {
-            if (! is_array($paymentMethod)) {
-                continue;
-            }
-
-            $paymentMethods[] = new PaymentMethodInput(
-                type: PaymentMethodType::from((int) ($paymentMethod['type'] ?? 0)),
-                reference: (string) ($paymentMethod['reference'] ?? ''),
+            $scammers[] = new OrganizationReportScammerInput(
+                name: (string) ($scammer['name'] ?? ''),
+                contacts: self::contactsFrom($scammer['contacts'] ?? []),
+                paymentMethods: self::paymentMethodsFrom($scammer['payment_methods'] ?? []),
             );
         }
 
@@ -82,6 +73,58 @@ final readonly class StoreOrganizationReportCommand
             organizationName: (string) ($organizationInput['name'] ?? ''),
             contacts: $contacts,
             paymentMethods: $paymentMethods,
+            scammers: $scammers,
         );
+    }
+
+    /**
+     * @return list<ContactInput>
+     */
+    private static function contactsFrom(mixed $contacts): array
+    {
+        if (! is_array($contacts)) {
+            return [];
+        }
+
+        $inputs = [];
+
+        foreach ($contacts as $contact) {
+            if (! is_array($contact)) {
+                continue;
+            }
+
+            $inputs[] = new ContactInput(
+                name: (string) ($contact['name'] ?? ''),
+                platform: PlatformType::from((int) ($contact['platform'] ?? 0)),
+                reference: (string) ($contact['reference'] ?? ''),
+            );
+        }
+
+        return $inputs;
+    }
+
+    /**
+     * @return list<PaymentMethodInput>
+     */
+    private static function paymentMethodsFrom(mixed $paymentMethods): array
+    {
+        if (! is_array($paymentMethods)) {
+            return [];
+        }
+
+        $inputs = [];
+
+        foreach ($paymentMethods as $paymentMethod) {
+            if (! is_array($paymentMethod)) {
+                continue;
+            }
+
+            $inputs[] = new PaymentMethodInput(
+                type: PaymentMethodType::from((int) ($paymentMethod['type'] ?? 0)),
+                reference: (string) ($paymentMethod['reference'] ?? ''),
+            );
+        }
+
+        return $inputs;
     }
 }

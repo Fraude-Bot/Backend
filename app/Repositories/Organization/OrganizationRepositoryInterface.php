@@ -29,6 +29,8 @@ interface OrganizationRepositoryInterface
 
     public function list(): Collection;
 
+    public function firstOrCreate(string $name, ?string $profilePicturePath): Organization;
+
     /**
      * @param  array<string, mixed>  $attributes
      */

@@ -382,7 +382,6 @@ class PublicOrganizationControllerTest extends TestCase
     public function test_suggest_organization_names_by_partial_case_insensitive_query(): void
     {
         Organization::factory()->create(['name' => 'Acme Payments']);
-        Organization::factory()->create(['name' => 'Acme Payments']);
         Organization::factory()->create(['name' => 'Other Org']);
 
         $response = $this->getJson('/api/public/organizations/suggest?q=%20%20acme%20pay%20%20');

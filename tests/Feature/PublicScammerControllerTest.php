@@ -316,7 +316,6 @@ class PublicScammerControllerTest extends TestCase
     public function test_suggest_scammer_names_by_partial_case_insensitive_query(): void
     {
         Scammer::factory()->create(['name' => 'Acme Payments']);
-        Scammer::factory()->create(['name' => 'Acme Payments']);
         Scammer::factory()->create(['name' => 'Other Org']);
 
         $response = $this->getJson('/api/public/scammers/suggest?q=%20%20acme%20pay%20%20');

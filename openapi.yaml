@@ -852,9 +852,65 @@ components:
             maxLength: 75
             example: Crypto
           description: Product names to create or reuse and attach to the report.
+        scammers:
+          type: array
+          description: Optional scammers to create or reuse by name and link to the organization. Contacts and payment methods belong to the scammer.
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                maxLength: 100
+                example: Juan Perez
+              contacts:
+                type: array
+                items:
+                  type: object
+                  required: [name, platform, reference]
+                  properties:
+                    name:
+                      type: string
+                      maxLength: 50
+                    platform:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 10
+                        - type: string
+                          enum:
+                            - whatsapp
+                            - facebook
+                            - youtube
+                            - tiktok
+                            - email
+                            - cellphone
+                            - telegram
+                            - instagram
+                            - url
+                            - other
+                    reference:
+                      type: string
+                      maxLength: 255
+              payment_methods:
+                type: array
+                items:
+                  type: object
+                  required: [type, reference]
+                  properties:
+                    type:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 5
+                        - type: string
+                          enum: [card_number, clabe, account_number, wallet, other]
+                    reference:
+                      type: string
+                      maxLength: 255
     OrganizationReportCreated:
       type: object
-      required: [id, organization_id, contact_ids, payment_method_ids, product_ids, report_proof_ids]
+      required: [id, organization_id, contact_ids, payment_method_ids, product_ids, scammer_ids, report_proof_ids]
       properties:
         id:
           type: integer
@@ -876,6 +932,11 @@ components:
             type: integer
             minimum: 1
         product_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        scammer_ids:
           type: array
           items:
             type: integer
@@ -969,9 +1030,65 @@ components:
             maxLength: 75
             example: Crypto
           description: Product names to create or reuse and attach to the report.
+        organizations:
+          type: array
+          description: Optional organizations to create or reuse by name and link to the scammer. Contacts and payment methods belong to the organization. The report is not filed against these organizations.
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                maxLength: 100
+                example: Tienda Falsa
+              contacts:
+                type: array
+                items:
+                  type: object
+                  required: [name, platform, reference]
+                  properties:
+                    name:
+                      type: string
+                      maxLength: 50
+                    platform:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 10
+                        - type: string
+                          enum:
+                            - whatsapp
+                            - facebook
+                            - youtube
+                            - tiktok
+                            - email
+                            - cellphone
+                            - telegram
+                            - instagram
+                            - url
+                            - other
+                    reference:
+                      type: string
+                      maxLength: 255
+              payment_methods:
+                type: array
+                items:
+                  type: object
+                  required: [type, reference]
+                  properties:
+                    type:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 5
+                        - type: string
+                          enum: [card_number, clabe, account_number, wallet, other]
+                    reference:
+                      type: string
+                      maxLength: 255
     ScammerReportCreated:
       type: object
-      required: [id, scammer_id, contact_ids, payment_method_ids, product_ids, report_proof_ids]
+      required: [id, scammer_id, contact_ids, payment_method_ids, product_ids, organization_ids, report_proof_ids]
       properties:
         id:
           type: integer
@@ -993,6 +1110,11 @@ components:
             type: integer
             minimum: 1
         product_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        organization_ids:
           type: array
           items:
             type: integer

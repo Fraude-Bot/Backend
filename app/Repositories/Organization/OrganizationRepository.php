@@ -14,8 +14,10 @@ use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Scammer;
 use App\Repositories\Search\SearchCache;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class OrganizationRepository implements OrganizationRepositoryInterface
@@ -213,6 +215,27 @@ class OrganizationRepository implements OrganizationRepositoryInterface
         return Organization::query()->get();
     }
 
+    public function firstOrCreate(string $name, ?string $profilePicturePath): Organization
+    {
+        $existing = $this->findByName($name);
+
+        if ($existing instanceof Organization) {
+            return $this->restoreIfTrashed($existing);
+        }
+
+        try {
+            return DB::transaction(fn (): Organization => Organization::query()->create([
+                'name' => $name,
+                'profile_picture_path' => $profilePicturePath,
+                'is_active' => true,
+            ]));
+        } catch (UniqueConstraintViolationException $exception) {
+            $existing = $this->findByName($name) ?? throw $exception;
+
+            return $this->restoreIfTrashed($existing);
+        }
+    }
+
     public function create(array $attributes): Organization
     {
         return Organization::create($attributes);
@@ -259,5 +282,22 @@ class OrganizationRepository implements OrganizationRepositoryInterface
     {
         $organization->paymentMethods()->syncWithoutDetaching([$paymentMethodId]);
         SearchCache::invalidate();
+    }
+
+    private function findByName(string $name): ?Organization
+    {
+        return Organization::withTrashed()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function restoreIfTrashed(Organization $organization): Organization
+    {
+        if ($organization->trashed()) {
+            $organization->restore();
+        }
+
+        return $organization;
     }
 }

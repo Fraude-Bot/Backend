@@ -4,7 +4,9 @@ namespace App\Application\Report\Usecases;
 
 use App\Application\Media\TemporaryImageStorageInterface;
 use App\Application\Report\Commands\ContactInput;
+use App\Application\Report\Commands\OrganizationReportScammerInput;
 use App\Application\Report\Commands\PaymentMethodInput;
+use App\Application\Report\Commands\ScammerReportOrganizationInput;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
@@ -18,7 +20,9 @@ use App\Domain\PaymentMethod\ValueObjects\CardNumber;
 use App\Domain\PaymentMethod\ValueObjects\Clabe;
 use App\Domain\PaymentMethod\ValueObjects\Reference;
 use App\Domain\Search\ValueObjects\CardSearchResult;
+use App\Models\Organization;
 use App\Models\Report;
+use App\Models\Scammer;
 use App\Repositories\Contact\ContactRepositoryInterface;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
 use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
@@ -75,6 +79,7 @@ class ReportUsecase implements ReportUsecaseInterface
     {
         $contacts = $this->normalizeContacts($command->contacts);
         $paymentMethods = $this->normalizePaymentMethods($command->paymentMethods);
+        $scammerPayloads = $this->normalizeScammers($command->scammers);
         $copied = [];
 
         try {
@@ -109,12 +114,11 @@ class ReportUsecase implements ReportUsecaseInterface
                 $proofPaths,
                 $contacts,
                 $paymentMethods,
+                $scammerPayloads,
+                &$copied,
             ): array {
-                $organization = $this->organizations->create([
-                    'name' => $command->organizationName,
-                    'profile_picture_path' => $avatarPath,
-                    'is_active' => true,
-                ]);
+                $organization = $this->organizations->firstOrCreate($command->organizationName, $avatarPath);
+                $this->discardUnusedAvatar($avatarPath, $organization->profile_picture_path, $copied);
 
                 $report = $this->reports->create($command->title, $command->description);
                 $this->reports->attachToOrganization($organization, $report);
@@ -151,12 +155,15 @@ class ReportUsecase implements ReportUsecaseInterface
                     $paymentMethodIds[] = $model->id;
                 }
 
+                $scammerIds = $this->attachScammers($organization, $scammerPayloads);
+
                 return [
                     'id' => $report->id,
                     'organization_id' => $organization->id,
                     'contact_ids' => $contactIds,
                     'payment_method_ids' => $paymentMethodIds,
                     'product_ids' => $productIds,
+                    'scammer_ids' => $scammerIds,
                     'report_proof_ids' => $proofIds,
                 ];
             });
@@ -173,6 +180,7 @@ class ReportUsecase implements ReportUsecaseInterface
     {
         $contacts = $this->normalizeContacts($command->contacts);
         $paymentMethods = $this->normalizePaymentMethods($command->paymentMethods);
+        $organizationPayloads = $this->normalizeOrganizations($command->organizations);
         $copied = [];
 
         try {
@@ -207,6 +215,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $proofPaths,
                 $contacts,
                 $paymentMethods,
+                $organizationPayloads,
             ): array {
                 $scammer = $this->scammers->create([
                     'name' => $command->scammerName,
@@ -249,12 +258,15 @@ class ReportUsecase implements ReportUsecaseInterface
                     $paymentMethodIds[] = $model->id;
                 }
 
+                $organizationIds = $this->attachOrganizations($scammer, $organizationPayloads);
+
                 return [
                     'id' => $report->id,
                     'scammer_id' => $scammer->id,
                     'contact_ids' => $contactIds,
                     'payment_method_ids' => $paymentMethodIds,
                     'product_ids' => $productIds,
+                    'organization_ids' => $organizationIds,
                     'report_proof_ids' => $proofIds,
                 ];
             });
@@ -299,10 +311,142 @@ class ReportUsecase implements ReportUsecaseInterface
     }
 
     /**
+     * @param  list<OrganizationReportScammerInput>  $scammers
+     * @return list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     */
+    private function normalizeScammers(array $scammers): array
+    {
+        $normalized = [];
+
+        foreach ($scammers as $index => $scammer) {
+            $normalized[] = [
+                'name' => $scammer->name,
+                'contacts' => $this->normalizeContacts($scammer->contacts, "scammers.{$index}.contacts"),
+                'payment_methods' => $this->normalizePaymentMethods($scammer->paymentMethods, "scammers.{$index}.payment_methods"),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $scammers
+     * @return list<int>
+     */
+    private function attachScammers(Organization $organization, array $scammers): array
+    {
+        $scammerIds = [];
+
+        foreach ($scammers as $scammer) {
+            $model = $this->scammers->firstOrCreate($scammer['name']);
+            $this->organizations->attachScammer($organization, $model);
+
+            foreach ($scammer['contacts'] as $contact) {
+                $contactModel = $this->contacts->firstOrCreate(
+                    $contact['platform'],
+                    $contact['reference'],
+                    $contact['name'],
+                    true,
+                );
+                $this->scammers->attachContact($model, $contactModel->id);
+            }
+
+            foreach ($scammer['payment_methods'] as $paymentMethod) {
+                $paymentMethodModel = $this->paymentMethods->firstOrCreate(
+                    $paymentMethod['type'],
+                    $paymentMethod['reference'],
+                    true,
+                );
+                $this->scammers->attachPaymentMethod($model, $paymentMethodModel->id);
+            }
+
+            if (! in_array($model->id, $scammerIds, true)) {
+                $scammerIds[] = $model->id;
+            }
+        }
+
+        return $scammerIds;
+    }
+
+    /**
+     * @param  list<ScammerReportOrganizationInput>  $organizations
+     * @return list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     */
+    private function normalizeOrganizations(array $organizations): array
+    {
+        $normalized = [];
+
+        foreach ($organizations as $index => $organization) {
+            $normalized[] = [
+                'name' => $organization->name,
+                'contacts' => $this->normalizeContacts($organization->contacts, "organizations.{$index}.contacts"),
+                'payment_methods' => $this->normalizePaymentMethods($organization->paymentMethods, "organizations.{$index}.payment_methods"),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $organizations
+     * @return list<int>
+     */
+    private function attachOrganizations(Scammer $scammer, array $organizations): array
+    {
+        $organizationIds = [];
+
+        foreach ($organizations as $organization) {
+            $model = $this->organizations->firstOrCreate($organization['name'], null);
+            $this->organizations->attachScammer($model, $scammer);
+
+            foreach ($organization['contacts'] as $contact) {
+                $contactModel = $this->contacts->firstOrCreate(
+                    $contact['platform'],
+                    $contact['reference'],
+                    $contact['name'],
+                    true,
+                );
+                $this->organizations->attachContact($model, $contactModel->id);
+            }
+
+            foreach ($organization['payment_methods'] as $paymentMethod) {
+                $paymentMethodModel = $this->paymentMethods->firstOrCreate(
+                    $paymentMethod['type'],
+                    $paymentMethod['reference'],
+                    true,
+                );
+                $this->organizations->attachPaymentMethod($model, $paymentMethodModel->id);
+            }
+
+            if (! in_array($model->id, $organizationIds, true)) {
+                $organizationIds[] = $model->id;
+            }
+        }
+
+        return $organizationIds;
+    }
+
+    /**
+     * @param  list<string>  $copied
+     */
+    private function discardUnusedAvatar(?string $copiedPath, ?string $storedPath, array &$copied): void
+    {
+        if (! is_string($copiedPath) || $copiedPath === $storedPath) {
+            return;
+        }
+
+        $this->images->deletePublished($copiedPath);
+        $copied = array_values(array_filter(
+            $copied,
+            fn (string $path): bool => $path !== $copiedPath,
+        ));
+    }
+
+    /**
      * @param  list<ContactInput>  $contacts
      * @return list<array{name: string, platform: PlatformType, reference: string}>
      */
-    private function normalizeContacts(array $contacts): array
+    private function normalizeContacts(array $contacts, string $key = 'contacts'): array
     {
         $normalized = [];
 
@@ -319,7 +463,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $field = str_contains($exception->getMessage(), 'Name') ? 'name' : 'reference';
 
                 throw ValidationException::withMessages([
-                    "contacts.$index.$field" => [$exception->getMessage()],
+                    "{$key}.{$index}.{$field}" => [$exception->getMessage()],
                 ]);
             }
 
@@ -338,7 +482,7 @@ class ReportUsecase implements ReportUsecaseInterface
      * @param  list<PaymentMethodInput>  $paymentMethods
      * @return list<array{type: PaymentMethodType, reference: string}>
      */
-    private function normalizePaymentMethods(array $paymentMethods): array
+    private function normalizePaymentMethods(array $paymentMethods, string $key = 'payment_methods'): array
     {
         $normalized = [];
 
@@ -347,7 +491,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $reference = $this->normalizePaymentReference($paymentMethod->type, $paymentMethod->reference);
             } catch (InvalidArgumentException $exception) {
                 throw ValidationException::withMessages([
-                    "payment_methods.$index.reference" => [$exception->getMessage()],
+                    "{$key}.{$index}.reference" => [$exception->getMessage()],
                 ]);
             }
 

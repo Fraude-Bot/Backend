@@ -44,6 +44,38 @@ class StoreScammerReportRequest extends FormRequest
             );
         }
 
+        $organizations = $this->input('organizations');
+
+        if (is_array($organizations)) {
+            $merge['organizations'] = array_map(function (mixed $organization): mixed {
+                if (! is_array($organization)) {
+                    return $organization;
+                }
+
+                if (is_string($organization['name'] ?? null)) {
+                    $organization['name'] = trim($organization['name']);
+                }
+
+                if (is_array($organization['contacts'] ?? null)) {
+                    $organization['contacts'] = $this->resolveEnumItems(
+                        $organization['contacts'],
+                        'platform',
+                        PlatformType::tryFromInput(...),
+                    );
+                }
+
+                if (is_array($organization['payment_methods'] ?? null)) {
+                    $organization['payment_methods'] = $this->resolveEnumItems(
+                        $organization['payment_methods'],
+                        'type',
+                        PaymentMethodType::tryFromInput(...),
+                    );
+                }
+
+                return $organization;
+            }, $organizations);
+        }
+
         $this->merge($merge);
     }
 
@@ -66,6 +98,15 @@ class StoreScammerReportRequest extends FormRequest
             'payment_methods.*.reference' => ['required', 'string', 'max:255'],
             'products' => ['required', 'array', 'min:1'],
             'products.*' => ['required', 'string', 'max:75'],
+            'organizations' => ['sometimes', 'array'],
+            'organizations.*.name' => ['required', 'string', 'max:100'],
+            'organizations.*.contacts' => ['sometimes', 'array'],
+            'organizations.*.contacts.*.name' => ['required', 'string', 'max:50'],
+            'organizations.*.contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
+            'organizations.*.contacts.*.reference' => ['required', 'string', 'max:255'],
+            'organizations.*.payment_methods' => ['sometimes', 'array'],
+            'organizations.*.payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
+            'organizations.*.payment_methods.*.reference' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -80,6 +121,16 @@ class StoreScammerReportRequest extends FormRequest
             return $items;
         }
 
+        return $this->resolveEnumItems($items, $enumKey, $resolve);
+    }
+
+    /**
+     * @param  array<mixed>  $items
+     * @param  callable(mixed): (?\BackedEnum)  $resolve
+     * @return array<mixed>
+     */
+    private function resolveEnumItems(array $items, string $enumKey, callable $resolve): array
+    {
         return array_map(function ($item) use ($enumKey, $resolve) {
             if (! is_array($item)) {
                 return $item;
