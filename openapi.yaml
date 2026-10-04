@@ -486,8 +486,7 @@ paths:
               organization:
                 name: Tienda Falsa
               contacts:
-                - name: Seller
-                  platform: whatsapp
+                - platform: whatsapp
                   reference: "+525511112222"
               payment_methods:
                 - type: clabe
@@ -546,8 +545,7 @@ paths:
               scammer:
                 name: Juan Perez
               contacts:
-                - name: Seller
-                  platform: whatsapp
+                - platform: whatsapp
                   reference: "+525511112222"
               payment_methods:
                 - type: clabe
@@ -802,11 +800,8 @@ components:
           minItems: 1
           items:
             type: object
-            required: [name, platform, reference]
+            required: [platform, reference]
             properties:
-              name:
-                type: string
-                maxLength: 50
               platform:
                 oneOf:
                   - type: integer
@@ -867,11 +862,8 @@ components:
                 type: array
                 items:
                   type: object
-                  required: [name, platform, reference]
+                  required: [platform, reference]
                   properties:
-                    name:
-                      type: string
-                      maxLength: 50
                     platform:
                       oneOf:
                         - type: integer
@@ -980,11 +972,8 @@ components:
           minItems: 1
           items:
             type: object
-            required: [name, platform, reference]
+            required: [platform, reference]
             properties:
-              name:
-                type: string
-                maxLength: 50
               platform:
                 oneOf:
                   - type: integer
@@ -1045,11 +1034,8 @@ components:
                 type: array
                 items:
                   type: object
-                  required: [name, platform, reference]
+                  required: [platform, reference]
                   properties:
-                    name:
-                      type: string
-                      maxLength: 50
                     platform:
                       oneOf:
                         - type: integer

@@ -7,7 +7,7 @@ use App\Models\Contact;
 
 interface ContactRepositoryInterface
 {
-    public function firstOrCreate(PlatformType $platform, string $reference, string $name, bool $isActive): Contact;
+    public function firstOrCreate(PlatformType $platform, string $reference, bool $isActive): Contact;
 
     /**
      * @param  array<string, mixed>  $attributes

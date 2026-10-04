@@ -90,7 +90,6 @@ class ScammerUsecase implements ScammerUsecaseInterface
             foreach ($command->contacts as $contactData) {
                 $entity = new ContactEntity(
                     id: null,
-                    name: $contactData->name,
                     platformType: $contactData->platform,
                     reference: $contactData->reference,
                     isActive: $contactData->isActive,
@@ -99,7 +98,6 @@ class ScammerUsecase implements ScammerUsecaseInterface
                 $contact = $this->contacts->firstOrCreate(
                     $values['platform'],
                     $values['reference'],
-                    $values['name'],
                     $values['is_active'],
                 );
                 $this->scammers->attachContact($scammer, $contact->id);
@@ -138,7 +136,6 @@ class ScammerUsecase implements ScammerUsecaseInterface
         return DB::transaction(function () use ($command): Contact {
             $entity = new ContactEntity(
                 id: null,
-                name: $command->name,
                 platformType: $command->platform,
                 reference: $command->reference,
                 isActive: $command->isActive,
@@ -147,7 +144,6 @@ class ScammerUsecase implements ScammerUsecaseInterface
             $contact = $this->contacts->firstOrCreate(
                 $values['platform'],
                 $values['reference'],
-                $values['name'],
                 $values['is_active'],
             );
             $this->scammers->attachContact($command->scammer, $contact->id);
@@ -174,7 +170,6 @@ class ScammerUsecase implements ScammerUsecaseInterface
 
         $entity = new ContactEntity(
             id: $command->contact->id,
-            name: $command->nameProvided ? (string) $command->name : $command->contact->name,
             platformType: $platform,
             reference: $command->referenceProvided ? (string) $command->reference : $command->contact->reference,
             isActive: $command->isActiveProvided ? (bool) $command->isActive : $command->contact->is_active,

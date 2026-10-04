@@ -71,19 +71,16 @@ class PublicScammerControllerTest extends TestCase
         $scammer = Scammer::factory()->create();
         $contacts = Contact::factory()->createMany([
             [
-                'name' => 'John Doe',
                 'reference' => 'john-doe',
                 'platform' => PlatformType::INSTAGRAM,
                 'is_active' => true,
             ],
             [
-                'name' => 'Jane Doe',
                 'reference' => 'jane-doe',
                 'platform' => PlatformType::FACEBOOK,
                 'is_active' => true,
             ],
             [
-                'name' => 'Jim Doe',
                 'reference' => 'jim-doe',
                 'platform' => PlatformType::TELEGRAM,
                 'is_active' => true,
@@ -130,16 +127,16 @@ class PublicScammerControllerTest extends TestCase
     public function test_contact_changes_invalidate_cached_public_contacts(): void
     {
         $scammer = Scammer::factory()->create();
-        $contact = Contact::factory()->create(['name' => 'Before']);
+        $contact = Contact::factory()->create(['reference' => 'before-handle']);
         $scammer->contacts()->attach($contact);
 
         $this->getJson("/api/public/scammers/{$scammer->id}/contacts")
-            ->assertJsonPath('data.0.name', 'Before');
+            ->assertJsonPath('data.0.reference', 'before-handle');
 
-        $contact->update(['name' => 'After']);
+        $contact->update(['reference' => 'after-handle']);
 
         $this->getJson("/api/public/scammers/{$scammer->id}/contacts")
-            ->assertJsonPath('data.0.name', 'After');
+            ->assertJsonPath('data.0.reference', 'after-handle');
     }
 
     public function test_find_scammer_contacts_by_id_with_invalid_page_returns404(): void

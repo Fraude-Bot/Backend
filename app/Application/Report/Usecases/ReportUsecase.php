@@ -136,7 +136,6 @@ class ReportUsecase implements ReportUsecaseInterface
                     $model = $this->contacts->firstOrCreate(
                         $contact['platform'],
                         $contact['reference'],
-                        $contact['name'],
                         true,
                     );
                     $this->organizations->attachContact($organization, $model->id);
@@ -239,7 +238,6 @@ class ReportUsecase implements ReportUsecaseInterface
                     $model = $this->contacts->firstOrCreate(
                         $contact['platform'],
                         $contact['reference'],
-                        $contact['name'],
                         true,
                     );
                     $this->scammers->attachContact($scammer, $model->id);
@@ -312,7 +310,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
     /**
      * @param  list<OrganizationReportScammerInput>  $scammers
-     * @return list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     * @return list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
      */
     private function normalizeScammers(array $scammers): array
     {
@@ -330,7 +328,7 @@ class ReportUsecase implements ReportUsecaseInterface
     }
 
     /**
-     * @param  list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $scammers
+     * @param  list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $scammers
      * @return list<int>
      */
     private function attachScammers(Organization $organization, array $scammers): array
@@ -345,7 +343,6 @@ class ReportUsecase implements ReportUsecaseInterface
                 $contactModel = $this->contacts->firstOrCreate(
                     $contact['platform'],
                     $contact['reference'],
-                    $contact['name'],
                     true,
                 );
                 $this->scammers->attachContact($model, $contactModel->id);
@@ -370,7 +367,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
     /**
      * @param  list<ScammerReportOrganizationInput>  $organizations
-     * @return list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     * @return list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
      */
     private function normalizeOrganizations(array $organizations): array
     {
@@ -388,7 +385,7 @@ class ReportUsecase implements ReportUsecaseInterface
     }
 
     /**
-     * @param  list<array{name: string, contacts: list<array{name: string, platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $organizations
+     * @param  list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $organizations
      * @return list<int>
      */
     private function attachOrganizations(Scammer $scammer, array $organizations): array
@@ -403,7 +400,6 @@ class ReportUsecase implements ReportUsecaseInterface
                 $contactModel = $this->contacts->firstOrCreate(
                     $contact['platform'],
                     $contact['reference'],
-                    $contact['name'],
                     true,
                 );
                 $this->organizations->attachContact($model, $contactModel->id);
@@ -444,7 +440,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
     /**
      * @param  list<ContactInput>  $contacts
-     * @return list<array{name: string, platform: PlatformType, reference: string}>
+     * @return list<array{platform: PlatformType, reference: string}>
      */
     private function normalizeContacts(array $contacts, string $key = 'contacts'): array
     {
@@ -454,22 +450,18 @@ class ReportUsecase implements ReportUsecaseInterface
             try {
                 $entity = new ContactEntity(
                     id: null,
-                    name: $contact->name,
                     platformType: $contact->platform,
                     reference: $contact->reference,
                     isActive: true,
                 );
             } catch (InvalidArgumentException $exception) {
-                $field = str_contains($exception->getMessage(), 'Name') ? 'name' : 'reference';
-
                 throw ValidationException::withMessages([
-                    "{$key}.{$index}.{$field}" => [$exception->getMessage()],
+                    "{$key}.{$index}.reference" => [$exception->getMessage()],
                 ]);
             }
 
             $values = $entity->toArray();
             $normalized[] = [
-                'name' => $values['name'],
                 'platform' => $values['platform'],
                 'reference' => $values['reference'],
             ];
