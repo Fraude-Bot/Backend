@@ -1034,6 +1034,10 @@ components:
                 type: string
                 maxLength: 100
                 example: Tienda Falsa
+              profile_picture_path:
+                type: string
+                description: Public URL or `/storage` path of a file under `tmp/reports/profiles`.
+                example: /storage/tmp/reports/profiles/8f3c1a.jpg
               contacts:
                 type: array
                 items:

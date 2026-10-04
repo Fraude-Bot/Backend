@@ -210,6 +210,8 @@ class ReportUsecase implements ReportUsecaseInterface
                 $proofPaths[] = $path;
             }
 
+            $organizationPayloads = $this->copyOrganizationPictures($organizationPayloads, $copied);
+
             return DB::transaction(function () use (
                 $command,
                 $avatarPath,
@@ -217,6 +219,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $contacts,
                 $paymentMethods,
                 $organizationPayloads,
+                &$copied,
             ): array {
                 $scammer = $this->scammers->create([
                     'name' => $command->scammerName,
@@ -258,7 +261,7 @@ class ReportUsecase implements ReportUsecaseInterface
                     $paymentMethodIds[] = $model->id;
                 }
 
-                $organizationIds = $this->attachOrganizations($scammer, $organizationPayloads);
+                $organizationIds = $this->attachOrganizations($scammer, $organizationPayloads, $copied);
 
                 return [
                     'id' => $report->id,
@@ -369,7 +372,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
     /**
      * @param  list<ScammerReportOrganizationInput>  $organizations
-     * @return list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     * @return list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
      */
     private function normalizeOrganizations(array $organizations): array
     {
@@ -378,6 +381,7 @@ class ReportUsecase implements ReportUsecaseInterface
         foreach ($organizations as $index => $organization) {
             $normalized[] = [
                 'name' => $organization->name,
+                'profile_picture' => $organization->profilePicture,
                 'contacts' => $this->normalizeContacts($organization->contacts, "organizations.{$index}.contacts"),
                 'payment_methods' => $this->normalizePaymentMethods($organization->paymentMethods, "organizations.{$index}.payment_methods"),
             ];
@@ -387,15 +391,46 @@ class ReportUsecase implements ReportUsecaseInterface
     }
 
     /**
-     * @param  list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $organizations
+     * @param  list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $organizations
+     * @param  list<string>  $copied
+     * @return list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     */
+    private function copyOrganizationPictures(array $organizations, array &$copied): array
+    {
+        foreach ($organizations as $index => $organization) {
+            $picture = $organization['profile_picture'];
+
+            if (! is_string($picture) || $picture === '') {
+                $organizations[$index]['profile_picture'] = null;
+
+                continue;
+            }
+
+            $path = $this->copyTemporary(
+                $picture,
+                TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
+                self::ORGANIZATION_PROFILE_DIRECTORY,
+                "organizations.{$index}.profile_picture_path",
+            );
+            $copied[] = $path;
+            $organizations[$index]['profile_picture'] = $path;
+        }
+
+        return $organizations;
+    }
+
+    /**
+     * @param  list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $organizations
+     * @param  list<string>  $copied
      * @return list<int>
      */
-    private function attachOrganizations(Scammer $scammer, array $organizations): array
+    private function attachOrganizations(Scammer $scammer, array $organizations, array &$copied): array
     {
         $organizationIds = [];
 
         foreach ($organizations as $organization) {
-            $model = $this->organizations->firstOrCreate($organization['name'], null);
+            $model = $this->organizations->firstOrCreate($organization['name'], $organization['profile_picture']);
+            $this->discardUnusedAvatar($organization['profile_picture'], $model->profile_picture_path, $copied);
             $this->organizations->attachScammer($model, $scammer);
 
             foreach ($organization['contacts'] as $contact) {

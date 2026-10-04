@@ -12,6 +12,7 @@ use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Report;
 use App\Models\Scammer;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PublicOrganizationControllerTest extends TestCase
@@ -217,7 +218,7 @@ class PublicOrganizationControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertExactJson($expected);
         $response->assertJsonPath('data.0.created_at', $reports->first()->created_at->format('Y-m-d'));
-        $response->assertJsonPath('data.0.short_description', $reports->first()->description);
+        $response->assertJsonPath('data.0.short_description', Str::limit($reports->first()->description, 125, '...'));
     }
 
     public function test_organization_reports_total_reflects_all_matching_rows(): void

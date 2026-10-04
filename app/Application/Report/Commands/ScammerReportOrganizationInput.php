@@ -10,6 +10,7 @@ final readonly class ScammerReportOrganizationInput
      */
     public function __construct(
         public string $name,
+        public ?string $profilePicture,
         public array $contacts,
         public array $paymentMethods,
     ) {}

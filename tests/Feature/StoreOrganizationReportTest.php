@@ -153,7 +153,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertNull(Report::query()->first()->user_id);
 
         $organization = Organization::query()->first();
-        $this->assertStringStartsWith('reports/organizations/avatars/', $organization->profile_picture_path);
+        $this->assertStringStartsWith('reports/organizations/profiles/', $organization->profile_picture_path);
         $this->assertTrue($organization->contacts()->whereKey($contact->id)->exists());
         $this->assertTrue($organization->paymentMethods()->whereKey($paymentMethod->id)->exists());
     }
@@ -527,7 +527,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertSame('avatar', Storage::disk('public')->get($reused->profile_picture_path));
 
         $avatarFiles = collect(Storage::disk('public')->allFiles())
-            ->filter(fn (string $path): bool => str_starts_with($path, 'reports/organizations/avatars/'))
+            ->filter(fn (string $path): bool => str_starts_with($path, 'reports/organizations/profiles/'))
             ->values();
         $this->assertSame([$originalPicture], $avatarFiles->all());
 

@@ -153,7 +153,7 @@ class StoreScammerReportTest extends TestCase
         $this->assertNull(Report::query()->first()->user_id);
 
         $scammer = Scammer::query()->first();
-        $this->assertStringStartsWith('reports/scammers/avatars/', $scammer->profile_picture_path);
+        $this->assertStringStartsWith('reports/scammers/profiles/', $scammer->profile_picture_path);
         $this->assertTrue($scammer->contacts()->whereKey($contact->id)->exists());
         $this->assertTrue($scammer->paymentMethods()->whereKey($paymentMethod->id)->exists());
     }
@@ -477,6 +477,97 @@ class StoreScammerReportTest extends TestCase
         $this->assertArrayHasKey('organizations.0.payment_methods.0.reference', $invalidClabe->json('error.details'));
         $this->assertSame(0, Scammer::query()->count());
         $this->assertSame(0, Organization::query()->count());
+    }
+
+    public function test_stores_a_new_organization_picture_and_keeps_an_existing_one(): void
+    {
+        Storage::disk('public')->put('reports/organizations/profiles/kept.jpg', 'kept');
+        $existing = Organization::factory()->create([
+            'name' => 'Tienda Falsa',
+            'profile_picture_path' => 'reports/organizations/profiles/kept.jpg',
+        ]);
+
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+        $newPicture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'new-org.jpg', 'new-org');
+        $unusedPicture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'unused.jpg', 'unused');
+
+        $response = $this->postJson('/api/public/reports/scammers', [
+            'title' => 'Called me about a prize',
+            'description' => 'They asked for a transfer to release the prize.',
+            'profile_picture' => $profile,
+            'scammer' => ['name' => 'Juan Perez'],
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
+            'organizations' => [
+                ['name' => 'Banco Fantasma', 'profile_picture_path' => $newPicture],
+                ['name' => 'tienda falsa', 'profile_picture_path' => $unusedPicture],
+            ],
+        ]);
+
+        $response->assertCreated();
+
+        $bank = Organization::query()->where('name', 'Banco Fantasma')->first();
+        $reused = $existing->fresh();
+
+        $this->assertNotNull($bank);
+        $this->assertNotNull($reused);
+        $this->assertStringStartsWith('reports/organizations/profiles/', $bank->profile_picture_path);
+        $this->assertSame('new-org', Storage::disk('public')->get($bank->profile_picture_path));
+        $this->assertSame('reports/organizations/profiles/kept.jpg', $reused->profile_picture_path);
+        $this->assertSame('kept', Storage::disk('public')->get($reused->profile_picture_path));
+
+        $profileFiles = collect(Storage::disk('public')->allFiles())
+            ->filter(fn (string $path): bool => str_starts_with($path, 'reports/organizations/profiles/'))
+            ->sort()
+            ->values()
+            ->all();
+        $expected = collect(['reports/organizations/profiles/kept.jpg', $bank->profile_picture_path])->sort()->values()->all();
+        $this->assertSame($expected, $profileFiles);
+    }
+
+    public function test_rejects_an_organization_picture_outside_the_temporary_directory(): void
+    {
+        Storage::disk('public')->put('other/avatar.jpg', 'avatar');
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $response = $this->postJson('/api/public/reports/scammers', [
+            'title' => 'Called me about a prize',
+            'description' => 'They asked for a transfer to release the prize.',
+            'profile_picture' => $profile,
+            'scammer' => ['name' => 'Juan Perez'],
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
+            'organizations' => [
+                [
+                    'name' => 'Banco Fantasma',
+                    'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('organizations.0.profile_picture_path', $response->json('error.details'));
+        $this->assertSame(0, Scammer::query()->count());
+        $this->assertSame(0, Organization::query()->count());
+
+        $files = Storage::disk('public')->allFiles();
+        $expected = [
+            TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg',
+            'other/avatar.jpg',
+        ];
+        sort($files);
+        sort($expected);
+        $this->assertSame($expected, $files);
     }
 
     public function test_requires_every_field_except_proofs(): void
