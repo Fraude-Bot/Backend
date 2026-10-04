@@ -44,7 +44,7 @@ class PublicReportControllerTest extends TestCase
 
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
             $url = $response->json('path');
-            $prefix = config('filesystems.disks.public.url').'/tmp/reports/profile/';
+            $prefix = config('filesystems.disks.public.url').'/tmp/reports/profiles/';
 
             $this->assertStringStartsWith($prefix, $url);
             $this->assertStringEndsWith('.'.$extension, $url);
@@ -94,7 +94,7 @@ class PublicReportControllerTest extends TestCase
         $quarantined = Storage::disk('quarantine')->allFiles();
 
         $this->assertCount(1, $quarantined);
-        $this->assertStringStartsWith('tmp/reports/profile/', $quarantined[0]);
+        $this->assertStringStartsWith('tmp/reports/profiles/', $quarantined[0]);
         $this->assertSame($contents, Storage::disk('quarantine')->get($quarantined[0]));
         $this->assertSame([], Storage::disk('public')->allFiles());
         $this->assertSame([], Storage::disk('raw')->allFiles());
