@@ -8,8 +8,10 @@ use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\Report;
 use App\Models\ReportProof;
+use App\Models\Scammer;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -46,9 +48,16 @@ class StoreOrganizationReportTest extends TestCase
                 ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
                 ['type' => PaymentMethodType::CARD_NUMBER->value, 'reference' => '4111 1111 1111 1111'],
             ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertCreated();
+        $response->assertJsonPath('scammer_ids', []);
+        $this->assertSame(0, Scammer::query()->count());
+
+        $product = Product::query()->where('name', 'Crypto')->first();
+        $this->assertNotNull($product);
+        $response->assertJsonPath('product_ids', [$product->id]);
 
         $organization = Organization::query()->first();
         $report = Report::query()->first();
@@ -64,6 +73,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertTrue($organization->is_active);
         $this->assertSame('Tienda Falsa', $organization->name);
         $this->assertTrue($organization->reports()->whereKey($report->id)->exists());
+        $this->assertTrue($report->products()->whereKey($product->id)->exists());
 
         $this->assertStringStartsWith('reports/organizations/profiles/', $organization->profile_picture_path);
         $this->assertSame('avatar', Storage::disk('public')->get($organization->profile_picture_path));
@@ -112,8 +122,12 @@ class StoreOrganizationReportTest extends TestCase
             'is_active' => true,
         ]);
 
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Called me again',
+            'description' => 'They called again.',
+            'profile_picture' => $profile,
             'organization' => ['name' => 'Another shop'],
             'contacts' => [
                 ['platform' => 'cellphone', 'reference' => '+52 155 1234 5678'],
@@ -121,6 +135,7 @@ class StoreOrganizationReportTest extends TestCase
             'payment_methods' => [
                 ['type' => 'CLABE', 'reference' => '032 180 0001 1835 9719'],
             ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertCreated();
@@ -128,25 +143,70 @@ class StoreOrganizationReportTest extends TestCase
         $response->assertJsonPath('payment_method_ids', [$paymentMethod->id]);
         $response->assertJsonPath('report_proof_ids', []);
 
+        $product = Product::query()->where('name', 'Crypto')->first();
+        $this->assertNotNull($product);
+        $response->assertJsonPath('product_ids', [$product->id]);
+
         $this->assertSame(1, Contact::withTrashed()->count());
         $this->assertSame(1, PaymentMethod::withTrashed()->count());
         $this->assertNull($contact->fresh()->deleted_at);
         $this->assertNull(Report::query()->first()->user_id);
 
         $organization = Organization::query()->first();
-        $this->assertNull($organization->profile_picture_path);
+        $this->assertStringStartsWith('reports/organizations/profiles/', $organization->profile_picture_path);
         $this->assertTrue($organization->contacts()->whereKey($contact->id)->exists());
         $this->assertTrue($organization->paymentMethods()->whereKey($paymentMethod->id)->exists());
+    }
+
+    public function test_creates_products_reuses_an_existing_name_and_links_each_name_once(): void
+    {
+        $existing = Product::query()->create(['name' => 'Crypto']);
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $response = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'Sold me crypto',
+            'description' => 'They sold a token.',
+            'profile_picture' => $profile,
+            'organization' => ['name' => 'Tienda Falsa'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['  Crypto  ', 'crypto', 'Banking', 'Banking'],
+        ]);
+
+        $response->assertCreated();
+
+        $banking = Product::query()->where('name', 'Banking')->first();
+        $report = Report::query()->first();
+
+        $this->assertNotNull($banking);
+        $this->assertNotNull($report);
+        $this->assertSame(2, Product::query()->count());
+        $this->assertSame('Crypto', $existing->fresh()->name);
+        $response->assertJsonPath('product_ids', [$existing->id, $banking->id]);
+        $this->assertEqualsCanonicalizing(
+            [$existing->id, $banking->id],
+            $report->products()->pluck('products.id')->all(),
+        );
     }
 
     public function test_rejects_an_unknown_platform(): void
     {
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
+            'profile_picture' => '/storage/tmp/reports/profile/avatar.jpg',
             'organization' => ['name' => 'Shop'],
             'contacts' => [
                 ['platform' => 'myspace', 'reference' => 'seller'],
             ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
@@ -161,8 +221,16 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $this->storagePath('other/avatar.jpg'),
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
@@ -177,11 +245,16 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Shop'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
             'payment_methods' => [
                 ['type' => 'clabe', 'reference' => '12345'],
             ],
+            'products' => ['Crypto'],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
@@ -200,8 +273,16 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'description' => 'A description',
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $profile,
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
             'proofs' => [$this->storagePath(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg')],
         ]);
 
@@ -212,6 +293,272 @@ class StoreOrganizationReportTest extends TestCase
             [TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg'],
             Storage::disk('public')->allFiles(),
         );
+    }
+
+    public function test_accepts_an_empty_scammer_list(): void
+    {
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $response = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'Fake store took my money',
+            'description' => 'They never shipped the order.',
+            'profile_picture' => $profile,
+            'organization' => ['name' => 'Tienda Falsa'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
+            'scammers' => [],
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('scammer_ids', []);
+        $this->assertSame(0, Scammer::query()->count());
+    }
+
+    public function test_links_optional_scammers_by_name_without_attaching_the_report(): void
+    {
+        $existing = Scammer::factory()->create([
+            'name' => 'Juan Perez',
+            'profile_picture_path' => 'reports/scammers/avatars/kept.jpg',
+            'is_active' => false,
+        ]);
+        $existing->delete();
+
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $response = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'Fake store took my money',
+            'description' => 'They never shipped the order.',
+            'profile_picture' => $profile,
+            'organization' => ['name' => 'Tienda Falsa'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
+            'scammers' => [
+                ['name' => '  juan perez  '],
+                [
+                    'name' => 'Ana Lopez',
+                    'contacts' => [
+                        ['name' => 'Ana', 'platform' => 'cellphone', 'reference' => '+52 55 9999 8888'],
+                    ],
+                    'payment_methods' => [
+                        ['type' => 'clabe', 'reference' => '032180000118359719'],
+                    ],
+                ],
+                [
+                    'name' => 'ana lopez',
+                    'contacts' => [
+                        ['name' => 'Ana Mail', 'platform' => 'email', 'reference' => 'ana@example.com'],
+                    ],
+                ],
+                [
+                    'name' => 'Solo Nombre',
+                    'contacts' => [],
+                    'payment_methods' => [],
+                ],
+            ],
+        ]);
+
+        $response->assertCreated();
+
+        $ana = Scammer::query()->where('name', 'Ana Lopez')->first();
+        $solo = Scammer::query()->where('name', 'Solo Nombre')->first();
+        $organization = Organization::query()->first();
+        $report = Report::query()->first();
+
+        $this->assertNotNull($ana);
+        $this->assertNotNull($solo);
+        $this->assertNotNull($organization);
+        $this->assertNotNull($report);
+        $this->assertSame(3, Scammer::withTrashed()->count());
+        $response->assertJsonPath('scammer_ids', [$existing->id, $ana->id, $solo->id]);
+
+        $restored = $existing->fresh();
+        $this->assertNotNull($restored);
+        $this->assertNull($restored->deleted_at);
+        $this->assertFalse($restored->is_active);
+        $this->assertSame('Juan Perez', $restored->name);
+        $this->assertSame('reports/scammers/avatars/kept.jpg', $restored->profile_picture_path);
+        $this->assertSame(0, $restored->contacts()->count());
+        $this->assertSame(0, $restored->paymentMethods()->count());
+
+        $this->assertTrue($ana->is_active);
+        $this->assertNull($ana->profile_picture_path);
+        $this->assertTrue($solo->is_active);
+        $this->assertSame(0, $solo->contacts()->count());
+        $this->assertSame(0, $solo->paymentMethods()->count());
+
+        $this->assertEqualsCanonicalizing(
+            [$existing->id, $ana->id, $solo->id],
+            $organization->scammers()->pluck('scammers.id')->all(),
+        );
+        $this->assertTrue($organization->reports()->whereKey($report->id)->exists());
+
+        foreach ([$restored, $ana, $solo] as $scammer) {
+            $this->assertFalse($scammer->reports()->whereKey($report->id)->exists());
+        }
+
+        $anaContacts = $ana->contacts()->orderBy('contacts.id')->get();
+        $this->assertCount(2, $anaContacts);
+        $this->assertSame('525599998888', $anaContacts[0]->reference);
+        $this->assertSame('ana@example.com', $anaContacts[1]->reference);
+
+        $anaPayments = $ana->paymentMethods()->get();
+        $this->assertCount(1, $anaPayments);
+        $this->assertSame('032180000118359719', $anaPayments[0]->reference);
+
+        $organizationContactIds = $organization->contacts()->pluck('contacts.id')->all();
+        $this->assertSame($organizationContactIds, $response->json('contact_ids'));
+        $this->assertEmpty(array_intersect($organizationContactIds, $anaContacts->modelKeys()));
+
+        $organizationPaymentIds = $organization->paymentMethods()->pluck('payment_methods.id')->all();
+        $this->assertSame($organizationPaymentIds, $response->json('payment_method_ids'));
+        $this->assertEmpty(array_intersect($organizationPaymentIds, $anaPayments->modelKeys()));
+        $this->assertFalse($organization->contacts()->whereKey($anaContacts->modelKeys())->exists());
+        $this->assertFalse($organization->paymentMethods()->whereKey($anaPayments->modelKeys())->exists());
+    }
+
+    public function test_rejects_an_incomplete_nested_scammer(): void
+    {
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+        $payload = [
+            'title' => 'Fake store took my money',
+            'description' => 'They never shipped the order.',
+            'profile_picture' => $profile,
+            'organization' => ['name' => 'Tienda Falsa'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
+        ];
+
+        $missingFields = $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'scammers' => [
+                [],
+                ['name' => 'Ana Lopez', 'contacts' => [['name' => 'Ana']]],
+            ],
+        ]);
+
+        $missingFields->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+        $details = $missingFields->json('error.details');
+        $this->assertArrayHasKey('scammers.0.name', $details);
+        $this->assertArrayHasKey('scammers.1.contacts.0.platform', $details);
+        $this->assertArrayHasKey('scammers.1.contacts.0.reference', $details);
+        $this->assertSame(0, Organization::query()->count());
+        $this->assertSame(0, Scammer::query()->count());
+
+        $invalidClabe = $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'scammers' => [
+                [
+                    'name' => 'Ana Lopez',
+                    'payment_methods' => [
+                        ['type' => 'clabe', 'reference' => '12345'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $invalidClabe->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('scammers.0.payment_methods.0.reference', $invalidClabe->json('error.details'));
+        $this->assertSame(0, Organization::query()->count());
+        $this->assertSame(0, Scammer::query()->count());
+    }
+
+    public function test_reuses_an_existing_organization_and_still_files_the_report(): void
+    {
+        $firstPicture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+        $first = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'First report',
+            'description' => 'They never shipped the order.',
+            'profile_picture' => $firstPicture,
+            'organization' => ['name' => 'Tienda Falsa'],
+            'contacts' => [
+                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+            'products' => ['Crypto'],
+        ]);
+
+        $first->assertCreated();
+
+        $organization = Organization::query()->first();
+        $this->assertNotNull($organization);
+        $originalPicture = $organization->profile_picture_path;
+
+        $secondPicture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'other.jpg', 'other');
+        $second = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'Second report',
+            'description' => 'They asked for another transfer.',
+            'profile_picture' => $secondPicture,
+            'organization' => ['name' => 'tienda falsa'],
+            'contacts' => [
+                ['name' => 'Other seller', 'platform' => 'email', 'reference' => 'other@example.com'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '032180000118359719'],
+            ],
+            'products' => ['Banking'],
+        ]);
+
+        $second->assertCreated();
+        $second->assertJsonPath('organization_id', $organization->id);
+
+        $reused = $organization->fresh();
+        $this->assertNotNull($reused);
+        $this->assertSame(1, Organization::withTrashed()->count());
+        $this->assertSame('Tienda Falsa', $reused->name);
+        $this->assertTrue($reused->is_active);
+        $this->assertSame($originalPicture, $reused->profile_picture_path);
+        $this->assertSame('avatar', Storage::disk('public')->get($reused->profile_picture_path));
+
+        $avatarFiles = collect(Storage::disk('public')->allFiles())
+            ->filter(fn (string $path): bool => str_starts_with($path, 'reports/organizations/profiles/'))
+            ->values();
+        $this->assertSame([$originalPicture], $avatarFiles->all());
+
+        $reports = Report::query()->orderBy('id')->get();
+        $this->assertCount(2, $reports);
+        $this->assertEqualsCanonicalizing(
+            $reports->modelKeys(),
+            $reused->reports()->pluck('reports.id')->all(),
+        );
+        $this->assertCount(2, $reused->contacts);
+        $this->assertCount(2, $reused->paymentMethods);
+    }
+
+    public function test_requires_every_field_except_proofs(): void
+    {
+        $response = $this->postJson('/api/public/reports/organizations', [
+            'title' => 'A title',
+            'organization' => ['name' => 'Shop'],
+        ]);
+
+        $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+
+        $details = $response->json('error.details');
+
+        foreach (['description', 'profile_picture', 'contacts', 'payment_methods', 'products'] as $field) {
+            $this->assertArrayHasKey($field, $details);
+        }
+
+        $this->assertArrayNotHasKey('proofs', $details);
+        $this->assertArrayNotHasKey('scammers', $details);
+        $this->assertSame(0, Organization::query()->count());
     }
 
     private function publishTemporary(string $directory, string $filename, string $contents): string

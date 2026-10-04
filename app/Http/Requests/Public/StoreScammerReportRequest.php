@@ -35,6 +35,47 @@ class StoreScammerReportRequest extends FormRequest
             $merge['scammer'] = $scammer;
         }
 
+        $products = $this->input('products');
+
+        if (is_array($products)) {
+            $merge['products'] = array_map(
+                fn (mixed $name): mixed => is_string($name) ? trim($name) : $name,
+                $products,
+            );
+        }
+
+        $organizations = $this->input('organizations');
+
+        if (is_array($organizations)) {
+            $merge['organizations'] = array_map(function (mixed $organization): mixed {
+                if (! is_array($organization)) {
+                    return $organization;
+                }
+
+                if (is_string($organization['name'] ?? null)) {
+                    $organization['name'] = trim($organization['name']);
+                }
+
+                if (is_array($organization['contacts'] ?? null)) {
+                    $organization['contacts'] = $this->resolveEnumItems(
+                        $organization['contacts'],
+                        'platform',
+                        PlatformType::tryFromInput(...),
+                    );
+                }
+
+                if (is_array($organization['payment_methods'] ?? null)) {
+                    $organization['payment_methods'] = $this->resolveEnumItems(
+                        $organization['payment_methods'],
+                        'type',
+                        PaymentMethodType::tryFromInput(...),
+                    );
+                }
+
+                return $organization;
+            }, $organizations);
+        }
+
         $this->merge($merge);
     }
 
@@ -42,18 +83,29 @@ class StoreScammerReportRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:50'],
-            'description' => ['nullable', 'string'],
-            'profile_picture' => ['sometimes', 'nullable', 'string'],
+            'description' => ['required', 'string'],
+            'profile_picture' => ['required', 'string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],
             'scammer' => ['required', 'array'],
             'scammer.name' => ['required', 'string', 'max:100'],
-            'contacts' => ['sometimes', 'array'],
+            'contacts' => ['required', 'array', 'min:1'],
             'contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'contacts.*.reference' => ['required', 'string', 'max:255'],
-            'payment_methods' => ['sometimes', 'array'],
+            'payment_methods' => ['required', 'array', 'min:1'],
             'payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'payment_methods.*.reference' => ['required', 'string', 'max:255'],
+            'products' => ['required', 'array', 'min:1'],
+            'products.*' => ['required', 'string', 'max:75'],
+            'organizations' => ['sometimes', 'array'],
+            'organizations.*.name' => ['required', 'string', 'max:100'],
+            'organizations.*.profile_picture_path' => ['sometimes', 'nullable', 'string'],
+            'organizations.*.contacts' => ['sometimes', 'array'],
+            'organizations.*.contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
+            'organizations.*.contacts.*.reference' => ['required', 'string', 'max:255'],
+            'organizations.*.payment_methods' => ['sometimes', 'array'],
+            'organizations.*.payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
+            'organizations.*.payment_methods.*.reference' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -68,6 +120,16 @@ class StoreScammerReportRequest extends FormRequest
             return $items;
         }
 
+        return $this->resolveEnumItems($items, $enumKey, $resolve);
+    }
+
+    /**
+     * @param  array<mixed>  $items
+     * @param  callable(mixed): (?\BackedEnum)  $resolve
+     * @return array<mixed>
+     */
+    private function resolveEnumItems(array $items, string $enumKey, callable $resolve): array
+    {
         return array_map(function ($item) use ($enumKey, $resolve) {
             if (! is_array($item)) {
                 return $item;

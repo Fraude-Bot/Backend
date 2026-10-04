@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\Report;
 use App\Models\ReportProof;
 use App\Models\Scammer;
+use App\Repositories\Search\SearchCache;
 
 class ReportRepository implements ReportRepositoryInterface
 {
@@ -35,5 +36,11 @@ class ReportRepository implements ReportRepositoryInterface
             'report_id' => $report->id,
             'path' => $path,
         ])->id;
+    }
+
+    public function attachProduct(Report $report, int $productId): void
+    {
+        $report->products()->syncWithoutDetaching([$productId]);
+        SearchCache::invalidate();
     }
 }

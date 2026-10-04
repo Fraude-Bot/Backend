@@ -460,9 +460,12 @@ paths:
       summary: Create a report for a new organization
       description: |
         Creates a report and a new organization, then attaches the submitted
-        contacts and payment methods. A contact that already exists for the same
+        contacts, payment methods, and products. A contact that already exists for the same
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
+        A product whose name already exists is reused, including a difference in letter case.
+        The stored spelling is kept.
+        Every field is required except `proofs`.
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
@@ -488,6 +491,9 @@ paths:
               payment_methods:
                 - type: clabe
                   reference: "012345678901234567"
+              products:
+                - Crypto
+                - Banking
       responses:
         "201":
           description: The report and organization were created.
@@ -500,6 +506,7 @@ paths:
                 organization_id: 2
                 contact_ids: [3]
                 payment_method_ids: [5]
+                product_ids: [8, 9]
                 report_proof_ids: [6, 7]
         "422":
           $ref: "#/components/responses/ValidationFailed"
@@ -512,9 +519,12 @@ paths:
       summary: Create a report for a new scammer
       description: |
         Creates a report and a new scammer, then attaches the submitted
-        contacts and payment methods. A contact that already exists for the same
+        contacts, payment methods, and products. A contact that already exists for the same
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
+        A product whose name already exists is reused, including a difference in letter case.
+        The stored spelling is kept.
+        Every field is required except `proofs`.
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
@@ -540,6 +550,9 @@ paths:
               payment_methods:
                 - type: clabe
                   reference: "012345678901234567"
+              products:
+                - Crypto
+                - Banking
       responses:
         "201":
           description: The report and scammer were created.
@@ -552,6 +565,7 @@ paths:
                 scammer_id: 2
                 contact_ids: [3]
                 payment_method_ids: [5]
+                product_ids: [8, 9]
                 report_proof_ids: [6, 7]
         "422":
           $ref: "#/components/responses/ValidationFailed"
@@ -754,16 +768,15 @@ components:
             - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
     CreateOrganizationReportRequest:
       type: object
-      required: [title, organization]
+      required: [title, description, profile_picture, organization, contacts, payment_methods, products]
       properties:
         title:
           type: string
           maxLength: 50
           example: Fake store took my money
         description:
-          type:
-            - string
-            - "null"
+          type: string
+          example: They never shipped the order.
         profile_picture:
           type:
             - string
@@ -786,6 +799,7 @@ components:
               example: Tienda Falsa
         contacts:
           type: array
+          minItems: 1
           items:
             type: object
             required: [platform, reference]
@@ -812,6 +826,7 @@ components:
                 maxLength: 255
         payment_methods:
           type: array
+          minItems: 1
           items:
             type: object
             required: [type, reference]
@@ -826,9 +841,70 @@ components:
               reference:
                 type: string
                 maxLength: 255
+        products:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            maxLength: 75
+            example: Crypto
+          description: Product names to create or reuse and attach to the report.
+        scammers:
+          type: array
+          description: Optional scammers to create or reuse by name and link to the organization. Contacts and payment methods belong to the scammer.
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                maxLength: 100
+                example: Juan Perez
+              contacts:
+                type: array
+                items:
+                  type: object
+                  required: [platform, reference]
+                  properties:
+                    platform:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 10
+                        - type: string
+                          enum:
+                            - whatsapp
+                            - facebook
+                            - youtube
+                            - tiktok
+                            - email
+                            - cellphone
+                            - telegram
+                            - instagram
+                            - url
+                            - other
+                    reference:
+                      type: string
+                      maxLength: 255
+              payment_methods:
+                type: array
+                items:
+                  type: object
+                  required: [type, reference]
+                  properties:
+                    type:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 5
+                        - type: string
+                          enum: [card_number, clabe, account_number, wallet, other]
+                    reference:
+                      type: string
+                      maxLength: 255
     OrganizationReportCreated:
       type: object
-      required: [id, organization_id, contact_ids, payment_method_ids, report_proof_ids]
+      required: [id, organization_id, contact_ids, payment_method_ids, product_ids, scammer_ids, report_proof_ids]
       properties:
         id:
           type: integer
@@ -849,6 +925,16 @@ components:
           items:
             type: integer
             minimum: 1
+        product_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        scammer_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
         report_proof_ids:
           type: array
           items:
@@ -856,22 +942,21 @@ components:
             minimum: 1
     CreateScammerReportRequest:
       type: object
-      required: [title, scammer]
+      required: [title, description, profile_picture, scammer, contacts, payment_methods, products]
       properties:
         title:
           type: string
           maxLength: 50
           example: Called me about a prize
         description:
-          type:
-            - string
-            - "null"
+          type: string
+          example: They asked for a transfer to release the prize.
         profile_picture:
           type:
             - string
             - "null"
-          description: Public-disk path of a file under `tmp/reports/profiles`.
-          example: /storage/tmp/reports/profiles/8f3c1a.jpg
+          description: Public-disk path of a file under `tmp/reports/profile`.
+          example: /storage/tmp/reports/profile/8f3c1a.jpg
         proofs:
           type: array
           items:
@@ -888,6 +973,7 @@ components:
               example: Juan Perez
         contacts:
           type: array
+          minItems: 1
           items:
             type: object
             required: [platform, reference]
@@ -914,6 +1000,7 @@ components:
                 maxLength: 255
         payment_methods:
           type: array
+          minItems: 1
           items:
             type: object
             required: [type, reference]
@@ -928,9 +1015,74 @@ components:
               reference:
                 type: string
                 maxLength: 255
+        products:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            maxLength: 75
+            example: Crypto
+          description: Product names to create or reuse and attach to the report.
+        organizations:
+          type: array
+          description: Optional organizations to create or reuse by name and link to the scammer. Contacts and payment methods belong to the organization. The report is not filed against these organizations.
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                maxLength: 100
+                example: Tienda Falsa
+              profile_picture_path:
+                type: string
+                description: Public URL or `/storage` path of a file under `tmp/reports/profiles`.
+                example: /storage/tmp/reports/profiles/8f3c1a.jpg
+              contacts:
+                type: array
+                items:
+                  type: object
+                  required: [platform, reference]
+                  properties:
+                    platform:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 10
+                        - type: string
+                          enum:
+                            - whatsapp
+                            - facebook
+                            - youtube
+                            - tiktok
+                            - email
+                            - cellphone
+                            - telegram
+                            - instagram
+                            - url
+                            - other
+                    reference:
+                      type: string
+                      maxLength: 255
+              payment_methods:
+                type: array
+                items:
+                  type: object
+                  required: [type, reference]
+                  properties:
+                    type:
+                      oneOf:
+                        - type: integer
+                          minimum: 1
+                          maximum: 5
+                        - type: string
+                          enum: [card_number, clabe, account_number, wallet, other]
+                    reference:
+                      type: string
+                      maxLength: 255
     ScammerReportCreated:
       type: object
-      required: [id, scammer_id, contact_ids, payment_method_ids, report_proof_ids]
+      required: [id, scammer_id, contact_ids, payment_method_ids, product_ids, organization_ids, report_proof_ids]
       properties:
         id:
           type: integer
@@ -947,6 +1099,16 @@ components:
             type: integer
             minimum: 1
         payment_method_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        product_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        organization_ids:
           type: array
           items:
             type: integer

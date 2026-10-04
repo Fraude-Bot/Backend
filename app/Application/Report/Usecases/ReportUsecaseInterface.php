@@ -21,12 +21,12 @@ interface ReportUsecaseInterface
     public function storeTemporaryProofs(StoreTemporaryProofsCommand $command): array;
 
     /**
-     * @return array{id: int, organization_id: int, contact_ids: list<int>, payment_method_ids: list<int>, report_proof_ids: list<int>}
+     * @return array{id: int, organization_id: int, contact_ids: list<int>, payment_method_ids: list<int>, product_ids: list<int>, scammer_ids: list<int>, report_proof_ids: list<int>}
      */
     public function storeOrganization(StoreOrganizationReportCommand $command): array;
 
     /**
-     * @return array{id: int, scammer_id: int, contact_ids: list<int>, payment_method_ids: list<int>, report_proof_ids: list<int>}
+     * @return array{id: int, scammer_id: int, contact_ids: list<int>, payment_method_ids: list<int>, product_ids: list<int>, organization_ids: list<int>, report_proof_ids: list<int>}
      */
     public function storeScammer(StoreScammerReportCommand $command): array;
 }

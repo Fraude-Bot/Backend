@@ -9,17 +9,21 @@ final readonly class StoreScammerReportCommand
 {
     /**
      * @param  list<string>  $proofs
+     * @param  list<string>  $productNames
      * @param  list<ContactInput>  $contacts
      * @param  list<PaymentMethodInput>  $paymentMethods
+     * @param  list<ScammerReportOrganizationInput>  $organizations
      */
     public function __construct(
         public string $title,
         public ?string $description,
         public ?string $profilePicture,
         public array $proofs,
+        public array $productNames,
         public string $scammerName,
         public array $contacts,
         public array $paymentMethods,
+        public array $organizations,
     ) {}
 
     /**
@@ -27,29 +31,22 @@ final readonly class StoreScammerReportCommand
      */
     public static function fromValidated(array $input): self
     {
-        $contacts = [];
+        $contacts = self::contactsFrom($input['contacts'] ?? []);
+        $paymentMethods = self::paymentMethodsFrom($input['payment_methods'] ?? []);
+        $organizations = [];
 
-        foreach ($input['contacts'] ?? [] as $contact) {
-            if (! is_array($contact)) {
+        foreach ($input['organizations'] ?? [] as $organization) {
+            if (! is_array($organization)) {
                 continue;
             }
 
-            $contacts[] = new ContactInput(
-                platform: PlatformType::from((int) ($contact['platform'] ?? 0)),
-                reference: (string) ($contact['reference'] ?? ''),
-            );
-        }
+            $profilePicture = $organization['profile_picture_path'] ?? null;
 
-        $paymentMethods = [];
-
-        foreach ($input['payment_methods'] ?? [] as $paymentMethod) {
-            if (! is_array($paymentMethod)) {
-                continue;
-            }
-
-            $paymentMethods[] = new PaymentMethodInput(
-                type: PaymentMethodType::from((int) ($paymentMethod['type'] ?? 0)),
-                reference: (string) ($paymentMethod['reference'] ?? ''),
+            $organizations[] = new ScammerReportOrganizationInput(
+                name: (string) ($organization['name'] ?? ''),
+                profilePicture: is_string($profilePicture) && $profilePicture !== '' ? $profilePicture : null,
+                contacts: self::contactsFrom($organization['contacts'] ?? []),
+                paymentMethods: self::paymentMethodsFrom($organization['payment_methods'] ?? []),
             );
         }
 
@@ -57,6 +54,14 @@ final readonly class StoreScammerReportCommand
 
         foreach ($input['proofs'] ?? [] as $url) {
             $proofs[] = is_string($url) ? $url : '';
+        }
+
+        $productNames = [];
+
+        foreach ($input['products'] ?? [] as $name) {
+            if (is_string($name) && $name !== '') {
+                $productNames[] = $name;
+            }
         }
 
         $scammerInput = is_array($input['scammer'] ?? null) ? $input['scammer'] : [];
@@ -67,9 +72,61 @@ final readonly class StoreScammerReportCommand
             description: is_string($input['description'] ?? null) ? $input['description'] : null,
             profilePicture: is_string($profilePicture) && $profilePicture !== '' ? $profilePicture : null,
             proofs: $proofs,
+            productNames: $productNames,
             scammerName: (string) ($scammerInput['name'] ?? ''),
             contacts: $contacts,
             paymentMethods: $paymentMethods,
+            organizations: $organizations,
         );
+    }
+
+    /**
+     * @return list<ContactInput>
+     */
+    private static function contactsFrom(mixed $contacts): array
+    {
+        if (! is_array($contacts)) {
+            return [];
+        }
+
+        $inputs = [];
+
+        foreach ($contacts as $contact) {
+            if (! is_array($contact)) {
+                continue;
+            }
+
+            $inputs[] = new ContactInput(
+                platform: PlatformType::from((int) ($contact['platform'] ?? 0)),
+                reference: (string) ($contact['reference'] ?? ''),
+            );
+        }
+
+        return $inputs;
+    }
+
+    /**
+     * @return list<PaymentMethodInput>
+     */
+    private static function paymentMethodsFrom(mixed $paymentMethods): array
+    {
+        if (! is_array($paymentMethods)) {
+            return [];
+        }
+
+        $inputs = [];
+
+        foreach ($paymentMethods as $paymentMethod) {
+            if (! is_array($paymentMethod)) {
+                continue;
+            }
+
+            $inputs[] = new PaymentMethodInput(
+                type: PaymentMethodType::from((int) ($paymentMethod['type'] ?? 0)),
+                reference: (string) ($paymentMethod['reference'] ?? ''),
+            );
+        }
+
+        return $inputs;
     }
 }

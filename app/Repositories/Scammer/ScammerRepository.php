@@ -14,8 +14,10 @@ use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Scammer;
 use App\Repositories\Search\SearchCache;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ScammerRepository implements ScammerRepositoryInterface
@@ -218,6 +220,26 @@ class ScammerRepository implements ScammerRepositoryInterface
         return $scammer->load(['contacts', 'paymentMethods', 'organizations']);
     }
 
+    public function firstOrCreate(string $name): Scammer
+    {
+        $existing = $this->findByName($name);
+
+        if ($existing instanceof Scammer) {
+            return $this->restoreIfTrashed($existing);
+        }
+
+        try {
+            return DB::transaction(fn (): Scammer => Scammer::query()->create([
+                'name' => $name,
+                'is_active' => true,
+            ]));
+        } catch (UniqueConstraintViolationException $exception) {
+            $existing = $this->findByName($name) ?? throw $exception;
+
+            return $this->restoreIfTrashed($existing);
+        }
+    }
+
     public function create(array $attributes): Scammer
     {
         return Scammer::create($attributes);
@@ -263,5 +285,22 @@ class ScammerRepository implements ScammerRepositoryInterface
     public function hasContact(Scammer $scammer, Contact $contact): bool
     {
         return $scammer->contacts()->whereKey($contact->id)->exists();
+    }
+
+    private function findByName(string $name): ?Scammer
+    {
+        return Scammer::withTrashed()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function restoreIfTrashed(Scammer $scammer): Scammer
+    {
+        if ($scammer->trashed()) {
+            $scammer->restore();
+        }
+
+        return $scammer;
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Resources\Public\ScammerResource;
 use App\Models\Contact;
 use App\Models\Report;
 use App\Models\Scammer;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PublicScammerControllerTest extends TestCase
@@ -203,7 +204,7 @@ class PublicScammerControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertExactJson($expected);
         $response->assertJsonPath('data.0.created_at', $reports->first()->created_at->format('Y-m-d'));
-        $response->assertJsonPath('data.0.short_description', $reports->first()->description);
+        $response->assertJsonPath('data.0.short_description', Str::limit($reports->first()->description, 125, '...'));
     }
 
     public function test_reports_total_reflects_all_matching_rows(): void
@@ -312,7 +313,6 @@ class PublicScammerControllerTest extends TestCase
 
     public function test_suggest_scammer_names_by_partial_case_insensitive_query(): void
     {
-        Scammer::factory()->create(['name' => 'Acme Payments']);
         Scammer::factory()->create(['name' => 'Acme Payments']);
         Scammer::factory()->create(['name' => 'Other Org']);
 

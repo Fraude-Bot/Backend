@@ -15,4 +15,6 @@ interface ReportRepositoryInterface
     public function attachToScammer(Scammer $scammer, Report $report): void;
 
     public function addProof(Report $report, string $path): int;
+
+    public function attachProduct(Report $report, int $productId): void;
 }

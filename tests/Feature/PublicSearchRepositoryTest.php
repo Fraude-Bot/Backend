@@ -13,7 +13,9 @@ class PublicSearchRepositoryTest extends TestCase
 {
     public function test_total_reflects_all_matches_not_just_the_current_page(): void
     {
-        Scammer::factory()->count(15)->create(['name' => 'Jane Doe']);
+        foreach (range(1, 15) as $index) {
+            Scammer::factory()->create(['name' => sprintf('Jane Doe %02d', $index)]);
+        }
 
         $result = $this->repository()->find(new Clue('Jane Doe'), 1, 10);
 
@@ -34,12 +36,12 @@ class PublicSearchRepositoryTest extends TestCase
 
     public function test_cache_is_invalidated_when_a_matching_scammer_is_created(): void
     {
-        Scammer::factory()->create(['name' => 'Cache Target']);
+        Scammer::factory()->create(['name' => 'Cache Target One']);
 
         $first = $this->repository()->find(new Clue('Cache Target'), 1, 10);
         $this->assertSame(1, $first->total);
 
-        Scammer::factory()->create(['name' => 'Cache Target']);
+        Scammer::factory()->create(['name' => 'Cache Target Two']);
 
         $second = $this->repository()->find(new Clue('Cache Target'), 1, 10);
         $this->assertSame(2, $second->total);
