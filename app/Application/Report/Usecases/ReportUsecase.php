@@ -7,6 +7,7 @@ use App\Application\Report\Commands\ContactInput;
 use App\Application\Report\Commands\PaymentMethodInput;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
+use App\Application\Report\Commands\StoreScammerReportCommand;
 use App\Application\Report\Commands\StoreTemporaryProfilePictureCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Domain\Contact\Entities\ContactEntity;
@@ -21,6 +22,7 @@ use App\Repositories\Contact\ContactRepositoryInterface;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
 use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
 use App\Repositories\Report\ReportRepositoryInterface;
+use App\Repositories\Scammer\ScammerRepositoryInterface;
 use App\Repositories\Search\SearchRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,12 +33,15 @@ class ReportUsecase implements ReportUsecaseInterface
 {
     public const string AVATAR_DIRECTORY = 'reports/organizations/avatars';
 
+    public const string SCAMMER_AVATAR_DIRECTORY = 'reports/scammers/avatars';
+
     public const string PROOF_DIRECTORY = 'reports/proofs';
 
     public function __construct(
         private SearchRepositoryInterface $search,
         private TemporaryImageStorageInterface $images,
         private OrganizationRepositoryInterface $organizations,
+        private ScammerRepositoryInterface $scammers,
         private ReportRepositoryInterface $reports,
         private ContactRepositoryInterface $contacts,
         private PaymentMethodRepositoryInterface $paymentMethods,
@@ -145,6 +150,102 @@ class ReportUsecase implements ReportUsecaseInterface
                 return [
                     'id' => $report->id,
                     'organization_id' => $organization->id,
+                    'contact_ids' => $contactIds,
+                    'payment_method_ids' => $paymentMethodIds,
+                    'report_proof_ids' => $proofIds,
+                ];
+            });
+        } catch (Throwable $exception) {
+            foreach ($copied as $path) {
+                $this->images->deletePublished($path);
+            }
+
+            throw $exception;
+        }
+    }
+
+    public function storeScammer(StoreScammerReportCommand $command): array
+    {
+        $contacts = $this->normalizeContacts($command->contacts);
+        $paymentMethods = $this->normalizePaymentMethods($command->paymentMethods);
+        $copied = [];
+
+        try {
+            $avatarPath = null;
+
+            if (is_string($command->profilePicture) && $command->profilePicture !== '') {
+                $avatarPath = $this->copyTemporary(
+                    $command->profilePicture,
+                    TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
+                    self::SCAMMER_AVATAR_DIRECTORY,
+                    'profile_picture',
+                );
+                $copied[] = $avatarPath;
+            }
+
+            $proofPaths = [];
+
+            foreach ($command->proofs as $index => $url) {
+                $path = $this->copyTemporary(
+                    $url,
+                    TemporaryImageStorageInterface::PROOF_DIRECTORY,
+                    self::PROOF_DIRECTORY,
+                    'proofs.'.$index,
+                );
+                $copied[] = $path;
+                $proofPaths[] = $path;
+            }
+
+            return DB::transaction(function () use (
+                $command,
+                $avatarPath,
+                $proofPaths,
+                $contacts,
+                $paymentMethods,
+            ): array {
+                $scammer = $this->scammers->create([
+                    'name' => $command->scammerName,
+                    'profile_picture_path' => $avatarPath,
+                    'is_active' => true,
+                ]);
+
+                $report = $this->reports->create($command->title, $command->description);
+                $this->reports->attachToScammer($scammer, $report);
+
+                $proofIds = [];
+
+                foreach ($proofPaths as $path) {
+                    $proofIds[] = $this->reports->addProof($report, $path);
+                }
+
+                $contactIds = [];
+
+                foreach ($contacts as $contact) {
+                    $model = $this->contacts->firstOrCreate(
+                        $contact['platform'],
+                        $contact['reference'],
+                        $contact['name'],
+                        true,
+                    );
+                    $this->scammers->attachContact($scammer, $model->id);
+                    $contactIds[] = $model->id;
+                }
+
+                $paymentMethodIds = [];
+
+                foreach ($paymentMethods as $paymentMethod) {
+                    $model = $this->paymentMethods->firstOrCreate(
+                        $paymentMethod['type'],
+                        $paymentMethod['reference'],
+                        true,
+                    );
+                    $this->scammers->attachPaymentMethod($scammer, $model->id);
+                    $paymentMethodIds[] = $model->id;
+                }
+
+                return [
+                    'id' => $report->id,
+                    'scammer_id' => $scammer->id,
                     'contact_ids' => $contactIds,
                     'payment_method_ids' => $paymentMethodIds,
                     'report_proof_ids' => $proofIds,

@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Public;
 
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
+use App\Application\Report\Commands\StoreScammerReportCommand;
 use App\Application\Report\Commands\StoreTemporaryProfilePictureCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Application\Report\Usecases\ReportUsecaseInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationReportRequest;
+use App\Http\Requests\Public\StoreScammerReportRequest;
 use App\Http\Requests\Public\StoreProfilePictureRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Resources\Public\ReportCardResource;
@@ -68,5 +70,10 @@ class ReportController extends Controller
     public function storeOrganization(StoreOrganizationReportRequest $request): JsonResponse
     {
         return response()->json($this->reports->storeOrganization(StoreOrganizationReportCommand::fromValidated($request->validated())), 201);
+    }
+
+    public function storeScammer(StoreScammerReportRequest $request): JsonResponse
+    {
+        return response()->json($this->reports->storeScammer(StoreScammerReportCommand::fromValidated($request->validated())), 201);
     }
 }

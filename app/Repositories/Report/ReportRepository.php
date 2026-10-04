@@ -5,6 +5,7 @@ namespace App\Repositories\Report;
 use App\Models\Organization;
 use App\Models\Report;
 use App\Models\ReportProof;
+use App\Models\Scammer;
 
 class ReportRepository implements ReportRepositoryInterface
 {
@@ -21,6 +22,11 @@ class ReportRepository implements ReportRepositoryInterface
     public function attachToOrganization(Organization $organization, Report $report): void
     {
         $organization->reports()->syncWithoutDetaching([$report->id]);
+    }
+
+    public function attachToScammer(Scammer $scammer, Report $report): void
+    {
+        $scammer->reports()->syncWithoutDetaching([$report->id]);
     }
 
     public function addProof(Report $report, string $path): int

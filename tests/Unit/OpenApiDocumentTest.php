@@ -82,6 +82,10 @@ YAML);
             'storeOrganizationReport',
             $document['paths']['/public/reports/organizations']['post']['operationId'],
         );
+        $this->assertSame(
+            'storeScammerReport',
+            $document['paths']['/public/reports/scammers']['post']['operationId'],
+        );
     }
 
     public function test_rejects_refs_outside_the_allowed_root(): void
