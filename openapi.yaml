@@ -506,6 +506,59 @@ paths:
           $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /public/reports/scammers:
+    post:
+      tags: [Reports]
+      operationId: storeScammerReport
+      summary: Create a report for a new scammer
+      description: |
+        Creates a report and a new scammer, then attaches the submitted
+        contacts and payment methods. A contact that already exists for the same
+        platform and reference is reused, and a payment method that already exists
+        for the same type and reference is reused. A trashed match is restored.
+        `profile_picture` and `proofs` are public-disk paths previously returned by
+        the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
+        and the files must still be present.
+        The report is stored without a user and is active.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScammerReportRequest"
+            example:
+              title: Called me about a prize
+              description: They asked for a transfer to release the prize.
+              profile_picture: /storage/tmp/reports/profile/8f3c1a.jpg
+              proofs:
+                - /storage/tmp/reports/proofs/8f3c1a.jpg
+                - /storage/tmp/reports/proofs/9a4d2b.png
+              scammer:
+                name: Juan Perez
+              contacts:
+                - name: Seller
+                  platform: whatsapp
+                  reference: "+525511112222"
+              payment_methods:
+                - type: clabe
+                  reference: "012345678901234567"
+      responses:
+        "201":
+          description: The report and scammer were created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScammerReportCreated"
+              example:
+                id: 1
+                scammer_id: 2
+                contact_ids: [3]
+                payment_method_ids: [5]
+                report_proof_ids: [6, 7]
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/healthcheck:
     get:
       tags: [Health]
@@ -788,6 +841,111 @@ components:
           description: Created report ID.
           example: 1
         organization_id:
+          type: integer
+          minimum: 1
+          example: 2
+        contact_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        payment_method_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        report_proof_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+    CreateScammerReportRequest:
+      type: object
+      required: [title, scammer]
+      properties:
+        title:
+          type: string
+          maxLength: 50
+          example: Called me about a prize
+        description:
+          type:
+            - string
+            - "null"
+        profile_picture:
+          type:
+            - string
+            - "null"
+          description: Public-disk path of a file under `tmp/reports/profile`.
+          example: /storage/tmp/reports/profile/8f3c1a.jpg
+        proofs:
+          type: array
+          items:
+            type: string
+            description: Public-disk path of a file under `tmp/reports/proofs`.
+            example: /storage/tmp/reports/proofs/8f3c1a.jpg
+        scammer:
+          type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+              maxLength: 100
+              example: Juan Perez
+        contacts:
+          type: array
+          items:
+            type: object
+            required: [name, platform, reference]
+            properties:
+              name:
+                type: string
+                maxLength: 50
+              platform:
+                oneOf:
+                  - type: integer
+                    minimum: 1
+                    maximum: 10
+                  - type: string
+                    enum:
+                      - whatsapp
+                      - facebook
+                      - youtube
+                      - tiktok
+                      - email
+                      - cellphone
+                      - telegram
+                      - instagram
+                      - url
+                      - other
+              reference:
+                type: string
+                maxLength: 255
+        payment_methods:
+          type: array
+          items:
+            type: object
+            required: [type, reference]
+            properties:
+              type:
+                oneOf:
+                  - type: integer
+                    minimum: 1
+                    maximum: 5
+                  - type: string
+                    enum: [card_number, clabe, account_number, wallet, other]
+              reference:
+                type: string
+                maxLength: 255
+    ScammerReportCreated:
+      type: object
+      required: [id, scammer_id, contact_ids, payment_method_ids, report_proof_ids]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: Created report ID.
+          example: 1
+        scammer_id:
           type: integer
           minimum: 1
           example: 2

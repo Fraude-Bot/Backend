@@ -32,6 +32,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::post('reports/media/proofs', [ReportController::class, 'storeTemporaryProof']);
     
     Route::post('reports/organizations', [ReportController::class, 'storeOrganization']);
+    Route::post('reports/scammers', [ReportController::class, 'storeScammer']);
 
     Route::get('healthcheck', function () {
         return response()->json(['status' => 'ok']);
