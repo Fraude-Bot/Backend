@@ -6,7 +6,7 @@ use Illuminate\Http\UploadedFile;
 
 interface TemporaryImageStorageInterface
 {
-    public const string PROFILE_PICTURE_DIRECTORY = 'tmp/reports/profile';
+    public const string PROFILE_PICTURE_DIRECTORY = 'tmp/reports/profiles';
 
     public const string PROOF_DIRECTORY = 'tmp/reports/proofs';
 
@@ -21,7 +21,7 @@ interface TemporaryImageStorageInterface
     /**
      * Copy a published temporary file into a permanent public directory.
      *
-     * $location is a public-disk path such as `/storage/tmp/reports/profile/file.jpg`,
+     * $location is a public-disk path such as `/storage/tmp/reports/profiles/file.jpg`,
      * or the absolute public URL of that file. The file must exist directly inside
      * $sourceDirectory. Returns the relative permanent path.
      */

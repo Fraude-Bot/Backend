@@ -37,11 +37,13 @@ use Throwable;
 
 class ReportUsecase implements ReportUsecaseInterface
 {
-    public const string AVATAR_DIRECTORY = 'reports/organizations/avatars';
+    public const string ORGANIZATION_PROFILE_DIRECTORY = 'reports/organizations/profiles';
 
-    public const string SCAMMER_AVATAR_DIRECTORY = 'reports/scammers/avatars';
+    public const string SCAMMER_PROFILE_DIRECTORY = 'reports/scammers/profiles';
 
-    public const string PROOF_DIRECTORY = 'reports/proofs';
+    public const string ORGANIZATION_PROOF_DIRECTORY = 'reports/organizations/proofs';
+
+    public const string SCAMMER_PROOF_DIRECTORY = 'reports/scammers/proofs';
 
     public function __construct(
         private SearchRepositoryInterface $search,
@@ -89,7 +91,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $avatarPath = $this->copyTemporary(
                     $command->profilePicture,
                     TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
-                    self::AVATAR_DIRECTORY,
+                    self::ORGANIZATION_PROFILE_DIRECTORY,
                     'profile_picture',
                 );
                 $copied[] = $avatarPath;
@@ -101,7 +103,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $path = $this->copyTemporary(
                     $url,
                     TemporaryImageStorageInterface::PROOF_DIRECTORY,
-                    self::PROOF_DIRECTORY,
+                    self::ORGANIZATION_PROOF_DIRECTORY,
                     'proofs.'.$index,
                 );
                 $copied[] = $path;
@@ -189,7 +191,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $avatarPath = $this->copyTemporary(
                     $command->profilePicture,
                     TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
-                    self::SCAMMER_AVATAR_DIRECTORY,
+                    self::SCAMMER_PROFILE_DIRECTORY,
                     'profile_picture',
                 );
                 $copied[] = $avatarPath;
@@ -201,7 +203,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $path = $this->copyTemporary(
                     $url,
                     TemporaryImageStorageInterface::PROOF_DIRECTORY,
-                    self::PROOF_DIRECTORY,
+                    self::SCAMMER_PROOF_DIRECTORY,
                     'proofs.'.$index,
                 );
                 $copied[] = $path;

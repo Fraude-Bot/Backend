@@ -75,7 +75,7 @@ class StoreScammerReportTest extends TestCase
         $this->assertTrue($scammer->reports()->whereKey($report->id)->exists());
         $this->assertTrue($report->products()->whereKey($product->id)->exists());
 
-        $this->assertStringStartsWith('reports/scammers/avatars/', $scammer->profile_picture_path);
+        $this->assertStringStartsWith('reports/scammers/profiles/', $scammer->profile_picture_path);
         $this->assertSame('avatar', Storage::disk('public')->get($scammer->profile_picture_path));
         $this->assertTrue(Storage::disk('public')->exists(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg'));
 
@@ -86,6 +86,8 @@ class StoreScammerReportTest extends TestCase
             Storage::disk('public')->get($storedProofs[0]->path),
             Storage::disk('public')->get($storedProofs[1]->path),
         ]);
+        $this->assertStringStartsWith('reports/scammers/proofs/', $storedProofs[0]->path);
+        $this->assertStringStartsWith('reports/scammers/proofs/', $storedProofs[1]->path);
         $this->assertTrue(Storage::disk('public')->exists(TemporaryImageStorageInterface::PROOF_DIRECTORY.'/one.jpg'));
         $this->assertTrue(Storage::disk('public')->exists(TemporaryImageStorageInterface::PROOF_DIRECTORY.'/two.png'));
 
