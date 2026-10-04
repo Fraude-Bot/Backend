@@ -2,7 +2,6 @@ type: object
 description: A public contact attached to a scammer or organization.
 required:
   - id
-  - name
   - reference
   - platform
   - created_at
@@ -13,10 +12,6 @@ properties:
     minimum: 1
     description: Numeric contact ID.
     example: 12
-  name:
-    type: string
-    description: Display name of the contact.
-    example: John Doe
   reference:
     type: string
     description: Phone number, email, URL, profile, username, or other handle.

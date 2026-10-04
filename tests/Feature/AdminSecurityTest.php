@@ -37,7 +37,6 @@ class AdminSecurityTest extends TestCase
         $this->postJson('/api/admin/scammers', [
             'name' => 'Atomic Scammer',
             'contacts' => [[
-                'name' => 'Test',
                 'platform' => PlatformType::EMAIL->value,
                 'reference' => 'valid@example.com',
             ]],
@@ -73,10 +72,10 @@ class AdminSecurityTest extends TestCase
         $owner->contacts()->attach($contact);
 
         $this->putJson("/api/admin/scammers/{$other->id}/contacts/{$contact->id}", [
-            'name' => 'Unauthorized change',
+            'reference' => 'unauthorized@example.com',
         ])->assertNotFound();
 
-        $this->assertDatabaseMissing('contacts', ['id' => $contact->id, 'name' => 'Unauthorized change']);
+        $this->assertDatabaseMissing('contacts', ['id' => $contact->id, 'reference' => 'unauthorized@example.com']);
     }
 
     private function actingAsAdmin(): User

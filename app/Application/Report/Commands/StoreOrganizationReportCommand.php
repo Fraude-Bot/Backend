@@ -35,7 +35,6 @@ final readonly class StoreOrganizationReportCommand
             }
 
             $contacts[] = new ContactInput(
-                name: (string) ($contact['name'] ?? ''),
                 platform: PlatformType::from((int) ($contact['platform'] ?? 0)),
                 reference: (string) ($contact['reference'] ?? ''),
             );

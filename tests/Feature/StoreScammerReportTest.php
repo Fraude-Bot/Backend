@@ -39,8 +39,8 @@ class StoreScammerReportTest extends TestCase
                 'name' => 'Juan Perez',
             ],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
-                ['name' => 'Mail', 'platform' => PlatformType::EMAIL->value, 'reference' => 'seller@example.com'],
+                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['platform' => PlatformType::EMAIL->value, 'reference' => 'seller@example.com'],
             ],
             'payment_methods' => [
                 ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
@@ -98,7 +98,6 @@ class StoreScammerReportTest extends TestCase
     public function test_reuses_an_existing_payment_method_and_restores_a_trashed_contact(): void
     {
         $contact = Contact::create([
-            'name' => 'Original',
             'platform' => PlatformType::CELLPHONE,
             'reference' => '5215512345678',
             'is_active' => true,
@@ -115,7 +114,7 @@ class StoreScammerReportTest extends TestCase
             'title' => 'Called me again',
             'scammer' => ['name' => 'Another person'],
             'contacts' => [
-                ['name' => 'Different name', 'platform' => 'cellphone', 'reference' => '+52 155 1234 5678'],
+                ['platform' => 'cellphone', 'reference' => '+52 155 1234 5678'],
             ],
             'payment_methods' => [
                 ['type' => 'CLABE', 'reference' => '032 180 0001 1835 9719'],
@@ -130,7 +129,6 @@ class StoreScammerReportTest extends TestCase
         $this->assertSame(1, Contact::withTrashed()->count());
         $this->assertSame(1, PaymentMethod::withTrashed()->count());
         $this->assertNull($contact->fresh()->deleted_at);
-        $this->assertSame('Original', $contact->fresh()->name);
         $this->assertNull(Report::query()->first()->user_id);
 
         $scammer = Scammer::query()->first();
@@ -145,7 +143,7 @@ class StoreScammerReportTest extends TestCase
             'title' => 'A title',
             'scammer' => ['name' => 'Person'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'myspace', 'reference' => 'seller'],
+                ['platform' => 'myspace', 'reference' => 'seller'],
             ],
         ]);
 

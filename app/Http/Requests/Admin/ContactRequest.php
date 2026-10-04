@@ -22,7 +22,6 @@ class ContactRequest extends AdminRequest
         $creating = $this->isMethod('post');
 
         return [
-            'name' => [$creating ? 'required' : 'sometimes', 'string', 'max:50'],
             'platform' => [$creating ? 'required' : 'sometimes', Rule::enum(PlatformType::class)],
             'reference' => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],

@@ -10,7 +10,6 @@ class ContactEntity extends Entity
 {
     public function __construct(
         public readonly ?int $id,
-        public string $name,
         public PlatformType $platformType,
         public string $reference,
         public bool $isActive,
@@ -22,7 +21,6 @@ class ContactEntity extends Entity
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
             'platform' => $this->platformType,
             'reference' => $this->reference,
             'is_active' => $this->isActive,
@@ -31,16 +29,8 @@ class ContactEntity extends Entity
 
     protected function validate(): void
     {
-        if ($this->name === '') {
-            throw new \InvalidArgumentException('Name cannot be empty');
-        }
-
         if ($this->reference === '') {
             throw new \InvalidArgumentException('Reference cannot be empty');
-        }
-
-        if (strlen($this->name) > 50) {
-            throw new \InvalidArgumentException('Name cannot exceed 50 characters');
         }
 
         if (strlen($this->reference) > 255) {
@@ -50,7 +40,6 @@ class ContactEntity extends Entity
 
     protected function transform(): void
     {
-        $this->name = trim($this->name);
         $this->reference = trim($this->reference);
 
         if ($this->platformType === PlatformType::CELLPHONE) {

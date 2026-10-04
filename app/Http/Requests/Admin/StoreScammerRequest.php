@@ -45,7 +45,6 @@ class StoreScammerRequest extends AdminRequest
             'name' => ['required', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'contacts' => ['sometimes', 'array'],
-            'contacts.*.name' => ['required', 'string', 'max:50'],
             'contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'contacts.*.reference' => ['required', 'string', 'max:255'],
             'contacts.*.is_active' => ['sometimes', 'boolean'],
