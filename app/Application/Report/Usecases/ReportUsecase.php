@@ -18,9 +18,11 @@ use App\Domain\PaymentMethod\ValueObjects\CardNumber;
 use App\Domain\PaymentMethod\ValueObjects\Clabe;
 use App\Domain\PaymentMethod\ValueObjects\Reference;
 use App\Domain\Search\ValueObjects\CardSearchResult;
+use App\Models\Report;
 use App\Repositories\Contact\ContactRepositoryInterface;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
 use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
+use App\Repositories\Product\ProductRepositoryInterface;
 use App\Repositories\Report\ReportRepositoryInterface;
 use App\Repositories\Scammer\ScammerRepositoryInterface;
 use App\Repositories\Search\SearchRepositoryInterface;
@@ -45,6 +47,7 @@ class ReportUsecase implements ReportUsecaseInterface
         private ReportRepositoryInterface $reports,
         private ContactRepositoryInterface $contacts,
         private PaymentMethodRepositoryInterface $paymentMethods,
+        private ProductRepositoryInterface $products,
     ) {}
 
     public function search(SearchReportsCommand $command): CardSearchResult
@@ -115,6 +118,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
                 $report = $this->reports->create($command->title, $command->description);
                 $this->reports->attachToOrganization($organization, $report);
+                $productIds = $this->attachProducts($report, $command->productNames);
 
                 $proofIds = [];
 
@@ -152,6 +156,7 @@ class ReportUsecase implements ReportUsecaseInterface
                     'organization_id' => $organization->id,
                     'contact_ids' => $contactIds,
                     'payment_method_ids' => $paymentMethodIds,
+                    'product_ids' => $productIds,
                     'report_proof_ids' => $proofIds,
                 ];
             });
@@ -211,6 +216,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
                 $report = $this->reports->create($command->title, $command->description);
                 $this->reports->attachToScammer($scammer, $report);
+                $productIds = $this->attachProducts($report, $command->productNames);
 
                 $proofIds = [];
 
@@ -248,6 +254,7 @@ class ReportUsecase implements ReportUsecaseInterface
                     'scammer_id' => $scammer->id,
                     'contact_ids' => $contactIds,
                     'payment_method_ids' => $paymentMethodIds,
+                    'product_ids' => $productIds,
                     'report_proof_ids' => $proofIds,
                 ];
             });
@@ -258,6 +265,26 @@ class ReportUsecase implements ReportUsecaseInterface
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param  list<string>  $names
+     * @return list<int>
+     */
+    private function attachProducts(Report $report, array $names): array
+    {
+        $productIds = [];
+
+        foreach ($names as $name) {
+            $product = $this->products->firstOrCreate($name);
+            $this->reports->attachProduct($report, $product->id);
+
+            if (! in_array($product->id, $productIds, true)) {
+                $productIds[] = $product->id;
+            }
+        }
+
+        return $productIds;
     }
 
     private function copyTemporary(string $url, string $sourceDirectory, string $destinationDirectory, string $errorKey): string

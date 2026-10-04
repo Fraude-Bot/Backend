@@ -7,6 +7,7 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Models\Contact;
 use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\Report;
 use App\Models\ReportProof;
 use App\Models\Scammer;
@@ -49,6 +50,7 @@ class StoreScammerReportTest extends TestCase
         ]);
 
         $response->assertCreated();
+        $response->assertJsonPath('product_ids', []);
 
         $scammer = Scammer::query()->first();
         $report = Report::query()->first();
@@ -126,6 +128,7 @@ class StoreScammerReportTest extends TestCase
         $response->assertJsonPath('contact_ids', [$contact->id]);
         $response->assertJsonPath('payment_method_ids', [$paymentMethod->id]);
         $response->assertJsonPath('report_proof_ids', []);
+        $response->assertJsonPath('product_ids', []);
 
         $this->assertSame(1, Contact::withTrashed()->count());
         $this->assertSame(1, PaymentMethod::withTrashed()->count());
@@ -137,6 +140,32 @@ class StoreScammerReportTest extends TestCase
         $this->assertNull($scammer->profile_picture_path);
         $this->assertTrue($scammer->contacts()->whereKey($contact->id)->exists());
         $this->assertTrue($scammer->paymentMethods()->whereKey($paymentMethod->id)->exists());
+    }
+
+    public function test_creates_products_reuses_an_existing_name_and_links_each_name_once(): void
+    {
+        $existing = Product::query()->create(['name' => 'Crypto']);
+
+        $response = $this->postJson('/api/public/reports/scammers', [
+            'title' => 'Sold me crypto',
+            'scammer' => ['name' => 'Juan Perez'],
+            'products' => ['  Crypto  ', 'crypto', 'Banking', 'Banking'],
+        ]);
+
+        $response->assertCreated();
+
+        $banking = Product::query()->where('name', 'Banking')->first();
+        $report = Report::query()->first();
+
+        $this->assertNotNull($banking);
+        $this->assertNotNull($report);
+        $this->assertSame(2, Product::query()->count());
+        $this->assertSame('Crypto', $existing->fresh()->name);
+        $response->assertJsonPath('product_ids', [$existing->id, $banking->id]);
+        $this->assertEqualsCanonicalizing(
+            [$existing->id, $banking->id],
+            $report->products()->pluck('products.id')->all(),
+        );
     }
 
     public function test_rejects_an_unknown_platform(): void

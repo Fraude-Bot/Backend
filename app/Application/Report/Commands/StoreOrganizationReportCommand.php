@@ -9,6 +9,7 @@ final readonly class StoreOrganizationReportCommand
 {
     /**
      * @param  list<string>  $proofs
+     * @param  list<string>  $productNames
      * @param  list<ContactInput>  $contacts
      * @param  list<PaymentMethodInput>  $paymentMethods
      */
@@ -17,6 +18,7 @@ final readonly class StoreOrganizationReportCommand
         public ?string $description,
         public ?string $profilePicture,
         public array $proofs,
+        public array $productNames,
         public string $organizationName,
         public array $contacts,
         public array $paymentMethods,
@@ -60,6 +62,14 @@ final readonly class StoreOrganizationReportCommand
             $proofs[] = is_string($url) ? $url : '';
         }
 
+        $productNames = [];
+
+        foreach ($input['products'] ?? [] as $name) {
+            if (is_string($name) && $name !== '') {
+                $productNames[] = $name;
+            }
+        }
+
         $organizationInput = is_array($input['organization'] ?? null) ? $input['organization'] : [];
         $profilePicture = $input['profile_picture'] ?? null;
 
@@ -68,6 +78,7 @@ final readonly class StoreOrganizationReportCommand
             description: is_string($input['description'] ?? null) ? $input['description'] : null,
             profilePicture: is_string($profilePicture) && $profilePicture !== '' ? $profilePicture : null,
             proofs: $proofs,
+            productNames: $productNames,
             organizationName: (string) ($organizationInput['name'] ?? ''),
             contacts: $contacts,
             paymentMethods: $paymentMethods,

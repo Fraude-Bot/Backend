@@ -9,6 +9,7 @@ final readonly class StoreScammerReportCommand
 {
     /**
      * @param  list<string>  $proofs
+     * @param  list<string>  $productNames
      * @param  list<ContactInput>  $contacts
      * @param  list<PaymentMethodInput>  $paymentMethods
      */
@@ -17,6 +18,7 @@ final readonly class StoreScammerReportCommand
         public ?string $description,
         public ?string $profilePicture,
         public array $proofs,
+        public array $productNames,
         public string $scammerName,
         public array $contacts,
         public array $paymentMethods,
@@ -60,6 +62,14 @@ final readonly class StoreScammerReportCommand
             $proofs[] = is_string($url) ? $url : '';
         }
 
+        $productNames = [];
+
+        foreach ($input['products'] ?? [] as $name) {
+            if (is_string($name) && $name !== '') {
+                $productNames[] = $name;
+            }
+        }
+
         $scammerInput = is_array($input['scammer'] ?? null) ? $input['scammer'] : [];
         $profilePicture = $input['profile_picture'] ?? null;
 
@@ -68,6 +78,7 @@ final readonly class StoreScammerReportCommand
             description: is_string($input['description'] ?? null) ? $input['description'] : null,
             profilePicture: is_string($profilePicture) && $profilePicture !== '' ? $profilePicture : null,
             proofs: $proofs,
+            productNames: $productNames,
             scammerName: (string) ($scammerInput['name'] ?? ''),
             contacts: $contacts,
             paymentMethods: $paymentMethods,

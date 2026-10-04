@@ -35,6 +35,15 @@ class StoreOrganizationReportRequest extends FormRequest
             $merge['organization'] = $organization;
         }
 
+        $products = $this->input('products');
+
+        if (is_array($products)) {
+            $merge['products'] = array_map(
+                fn (mixed $name): mixed => is_string($name) ? trim($name) : $name,
+                $products,
+            );
+        }
+
         $this->merge($merge);
     }
 
@@ -55,6 +64,8 @@ class StoreOrganizationReportRequest extends FormRequest
             'payment_methods' => ['sometimes', 'array'],
             'payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'payment_methods.*.reference' => ['required', 'string', 'max:255'],
+            'products' => ['sometimes', 'array'],
+            'products.*' => ['required', 'string', 'max:75'],
         ];
     }
 

@@ -460,9 +460,11 @@ paths:
       summary: Create a report for a new organization
       description: |
         Creates a report and a new organization, then attaches the submitted
-        contacts and payment methods. A contact that already exists for the same
+        contacts, payment methods, and products. A contact that already exists for the same
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
+        A product whose name already exists is reused, including a difference in letter case.
+        The stored spelling is kept.
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
         and the files must still be present.
@@ -489,6 +491,9 @@ paths:
               payment_methods:
                 - type: clabe
                   reference: "012345678901234567"
+              products:
+                - Crypto
+                - Banking
       responses:
         "201":
           description: The report and organization were created.
@@ -501,6 +506,7 @@ paths:
                 organization_id: 2
                 contact_ids: [3]
                 payment_method_ids: [5]
+                product_ids: [8, 9]
                 report_proof_ids: [6, 7]
         "422":
           $ref: "#/components/responses/ValidationFailed"
@@ -513,9 +519,11 @@ paths:
       summary: Create a report for a new scammer
       description: |
         Creates a report and a new scammer, then attaches the submitted
-        contacts and payment methods. A contact that already exists for the same
+        contacts, payment methods, and products. A contact that already exists for the same
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
+        A product whose name already exists is reused, including a difference in letter case.
+        The stored spelling is kept.
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profile/file.jpg`,
         and the files must still be present.
@@ -542,6 +550,9 @@ paths:
               payment_methods:
                 - type: clabe
                   reference: "012345678901234567"
+              products:
+                - Crypto
+                - Banking
       responses:
         "201":
           description: The report and scammer were created.
@@ -554,6 +565,7 @@ paths:
                 scammer_id: 2
                 contact_ids: [3]
                 payment_method_ids: [5]
+                product_ids: [8, 9]
                 report_proof_ids: [6, 7]
         "422":
           $ref: "#/components/responses/ValidationFailed"
@@ -831,9 +843,16 @@ components:
               reference:
                 type: string
                 maxLength: 255
+        products:
+          type: array
+          items:
+            type: string
+            maxLength: 75
+            example: Crypto
+          description: Product names to create or reuse and attach to the report.
     OrganizationReportCreated:
       type: object
-      required: [id, organization_id, contact_ids, payment_method_ids, report_proof_ids]
+      required: [id, organization_id, contact_ids, payment_method_ids, product_ids, report_proof_ids]
       properties:
         id:
           type: integer
@@ -850,6 +869,11 @@ components:
             type: integer
             minimum: 1
         payment_method_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        product_ids:
           type: array
           items:
             type: integer
@@ -936,9 +960,16 @@ components:
               reference:
                 type: string
                 maxLength: 255
+        products:
+          type: array
+          items:
+            type: string
+            maxLength: 75
+            example: Crypto
+          description: Product names to create or reuse and attach to the report.
     ScammerReportCreated:
       type: object
-      required: [id, scammer_id, contact_ids, payment_method_ids, report_proof_ids]
+      required: [id, scammer_id, contact_ids, payment_method_ids, product_ids, report_proof_ids]
       properties:
         id:
           type: integer
@@ -955,6 +986,11 @@ components:
             type: integer
             minimum: 1
         payment_method_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        product_ids:
           type: array
           items:
             type: integer

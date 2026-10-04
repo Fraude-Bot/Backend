@@ -18,7 +18,7 @@ class ProductFactory extends Factory
         $market = fake()->randomElement(ScamEnterprisePool::markets());
 
         return [
-            'name' => $market,
+            'name' => fake()->unique()->numerify($market.'-####'),
         ];
     }
 }
