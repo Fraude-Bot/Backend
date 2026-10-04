@@ -13,18 +13,8 @@ class Product extends Model
     use HasFactory, InvalidatesPublicCache;
 
     protected $fillable = [
-        'category_id',
         'name',
-        'emoji',
     ];
-
-    /**
-     * Get the category that owns the product.
-     */
-    public function category()
-    {
-        return $this->belongsTo(Category::class);
-    }
 
     /**
      * Get the reports associated with the product.
@@ -45,9 +35,7 @@ class Product extends Model
     {
         return new ProductEntity(
             id: $this->id,
-            categoryId: $this->category_id,
             name: $this->name,
-            emoji: $this->emoji,
         );
     }
 }

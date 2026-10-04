@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
 use App\Models\Product;
 use Database\Factories\Support\ScamEnterprisePool;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,12 +18,7 @@ class ProductFactory extends Factory
         $market = fake()->randomElement(ScamEnterprisePool::markets());
 
         return [
-            'category_id' => Category::firstOrCreate(
-                ['name' => $market],
-                ['emoji' => fake()->randomElement(['📦', '🏷️', '🛍️'])],
-            )->id,
             'name' => $market,
-            'emoji' => fake()->randomElement(['🛒', '💳', '📱', '🎮', '👟']),
         ];
     }
 }
