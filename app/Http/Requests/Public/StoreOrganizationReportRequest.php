@@ -84,7 +84,7 @@ class StoreOrganizationReportRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:50'],
             'description' => ['required', 'string'],
-            'profile_picture' => ['required', 'string'],
+            'profile_picture' => ['string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],
             'organization' => ['required', 'array'],
