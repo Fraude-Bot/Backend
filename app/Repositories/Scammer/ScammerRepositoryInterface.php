@@ -31,7 +31,7 @@ interface ScammerRepositoryInterface
 
     public function loadDetails(Scammer $scammer): Scammer;
 
-    public function firstOrCreate(string $name): Scammer;
+    public function firstOrCreate(string $name, ?string $profilePicturePath): Scammer;
 
     /**
      * @param  array<string, mixed>  $attributes

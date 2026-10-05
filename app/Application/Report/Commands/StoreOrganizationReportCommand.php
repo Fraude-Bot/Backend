@@ -40,8 +40,11 @@ final readonly class StoreOrganizationReportCommand
                 continue;
             }
 
+            $profilePicture = $scammer['profile_picture_path'] ?? null;
+
             $scammers[] = new OrganizationReportScammerInput(
                 name: (string) ($scammer['name'] ?? ''),
+                profilePicture: is_string($profilePicture) && $profilePicture !== '' ? $profilePicture : null,
                 contacts: self::contactsFrom($scammer['contacts'] ?? []),
                 paymentMethods: self::paymentMethodsFrom($scammer['payment_methods'] ?? []),
             );

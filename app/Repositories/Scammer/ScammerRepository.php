@@ -220,7 +220,7 @@ class ScammerRepository implements ScammerRepositoryInterface
         return $scammer->load(['contacts', 'paymentMethods', 'organizations']);
     }
 
-    public function firstOrCreate(string $name): Scammer
+    public function firstOrCreate(string $name, ?string $profilePicturePath): Scammer
     {
         $existing = $this->findByName($name);
 
@@ -231,6 +231,7 @@ class ScammerRepository implements ScammerRepositoryInterface
         try {
             return DB::transaction(fn (): Scammer => Scammer::query()->create([
                 'name' => $name,
+                'profile_picture_path' => $profilePicturePath,
                 'is_active' => true,
             ]));
         } catch (UniqueConstraintViolationException $exception) {
