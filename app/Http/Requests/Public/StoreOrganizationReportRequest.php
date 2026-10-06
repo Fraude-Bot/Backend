@@ -6,6 +6,7 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreOrganizationReportRequest extends FormRequest
 {
@@ -89,10 +90,10 @@ class StoreOrganizationReportRequest extends FormRequest
             'proofs.*' => ['required', 'string'],
             'organization' => ['required', 'array'],
             'organization.name' => ['required', 'string', 'max:100'],
-            'contacts' => ['required', 'array', 'min:1'],
+            'contacts' => ['sometimes', 'array'],
             'contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'contacts.*.reference' => ['required', 'string', 'max:255'],
-            'payment_methods' => ['required', 'array', 'min:1'],
+            'payment_methods' => ['sometimes', 'array'],
             'payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'payment_methods.*.reference' => ['required', 'string', 'max:255'],
             'products' => ['required', 'array', 'min:1'],
@@ -107,6 +108,19 @@ class StoreOrganizationReportRequest extends FormRequest
             'scammers.*.payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'scammers.*.payment_methods.*.reference' => ['required', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->hasContactOrPaymentMethod()) {
+                return;
+            }
+
+            $message = 'A contact or a payment method is required.';
+            $validator->errors()->add('contacts', $message);
+            $validator->errors()->add('payment_methods', $message);
+        });
     }
 
     /**
@@ -142,5 +156,14 @@ class StoreOrganizationReportRequest extends FormRequest
 
             return $item;
         }, $items);
+    }
+
+    private function hasContactOrPaymentMethod(): bool
+    {
+        $contacts = $this->input('contacts', []);
+        $paymentMethods = $this->input('payment_methods', []);
+
+        return (is_array($contacts) && $contacts !== [])
+            || (is_array($paymentMethods) && $paymentMethods !== []);
     }
 }

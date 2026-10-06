@@ -768,7 +768,7 @@ components:
             - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
     CreateOrganizationReportRequest:
       type: object
-      required: [title, description, profile_picture, organization, contacts, payment_methods, products]
+      required: [title, description, profile_picture, organization, products]
       properties:
         title:
           type: string
@@ -799,7 +799,7 @@ components:
               example: Tienda Falsa
         contacts:
           type: array
-          minItems: 1
+          description: At least one contact or one payment method is required.
           items:
             type: object
             required: [platform, reference]
@@ -826,7 +826,7 @@ components:
                 maxLength: 255
         payment_methods:
           type: array
-          minItems: 1
+          description: At least one contact or one payment method is required.
           items:
             type: object
             required: [type, reference]
@@ -946,7 +946,7 @@ components:
             minimum: 1
     CreateScammerReportRequest:
       type: object
-      required: [title, description, profile_picture, scammer, contacts, payment_methods, products]
+      required: [title, description, profile_picture, scammer, products]
       properties:
         title:
           type: string
@@ -977,7 +977,7 @@ components:
               example: Juan Perez
         contacts:
           type: array
-          minItems: 1
+          description: At least one contact or one payment method is required.
           items:
             type: object
             required: [platform, reference]
@@ -1004,7 +1004,7 @@ components:
                 maxLength: 255
         payment_methods:
           type: array
-          minItems: 1
+          description: At least one contact or one payment method is required.
           items:
             type: object
             required: [type, reference]

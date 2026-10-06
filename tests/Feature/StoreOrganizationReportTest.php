@@ -632,6 +632,62 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertSame($expected, $files);
     }
 
+    public function test_accepts_contacts_or_payment_methods_but_not_neither(): void
+    {
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+        $payload = [
+            'title' => 'Fake store took my money',
+            'description' => 'They never shipped the order.',
+            'profile_picture' => $profile,
+            'organization' => ['name' => 'Tienda Falsa'],
+            'products' => ['Crypto'],
+        ];
+
+        $neither = $this->postJson('/api/public/reports/organizations', $payload);
+        $neither->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+        $details = $neither->json('error.details');
+        $this->assertArrayHasKey('contacts', $details);
+        $this->assertArrayHasKey('payment_methods', $details);
+
+        $empty = $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'contacts' => [],
+            'payment_methods' => [],
+        ]);
+        $empty->assertStatus(422);
+        $this->assertArrayHasKey('contacts', $empty->json('error.details'));
+        $this->assertArrayHasKey('payment_methods', $empty->json('error.details'));
+        $this->assertSame(0, Organization::query()->count());
+
+        $contactsOnly = $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+        ]);
+        $contactsOnly->assertCreated();
+        $contactsOnly->assertJsonPath('payment_method_ids', []);
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(0, PaymentMethod::query()->count());
+        $this->assertSame(1, Organization::query()->first()->contacts()->count());
+
+        $paymentsOnly = $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'organization' => ['name' => 'Otra Tienda'],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+        ]);
+        $paymentsOnly->assertCreated();
+        $paymentsOnly->assertJsonPath('contact_ids', []);
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(1, PaymentMethod::query()->count());
+        $paymentOrganization = Organization::query()->where('name', 'Otra Tienda')->first();
+        $this->assertNotNull($paymentOrganization);
+        $this->assertSame(0, $paymentOrganization->contacts()->count());
+        $this->assertSame(1, $paymentOrganization->paymentMethods()->count());
+    }
+
     public function test_requires_every_field_except_proofs(): void
     {
         $response = $this->postJson('/api/public/reports/organizations', [

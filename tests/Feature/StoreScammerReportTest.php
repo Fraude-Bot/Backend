@@ -570,6 +570,62 @@ class StoreScammerReportTest extends TestCase
         $this->assertSame($expected, $files);
     }
 
+    public function test_accepts_contacts_or_payment_methods_but_not_neither(): void
+    {
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+        $payload = [
+            'title' => 'Called me about a prize',
+            'description' => 'They asked for a transfer to release the prize.',
+            'profile_picture' => $profile,
+            'scammer' => ['name' => 'Juan Perez'],
+            'products' => ['Crypto'],
+        ];
+
+        $neither = $this->postJson('/api/public/reports/scammers', $payload);
+        $neither->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
+        $details = $neither->json('error.details');
+        $this->assertArrayHasKey('contacts', $details);
+        $this->assertArrayHasKey('payment_methods', $details);
+
+        $empty = $this->postJson('/api/public/reports/scammers', [
+            ...$payload,
+            'contacts' => [],
+            'payment_methods' => [],
+        ]);
+        $empty->assertStatus(422);
+        $this->assertArrayHasKey('contacts', $empty->json('error.details'));
+        $this->assertArrayHasKey('payment_methods', $empty->json('error.details'));
+        $this->assertSame(0, Scammer::query()->count());
+
+        $contactsOnly = $this->postJson('/api/public/reports/scammers', [
+            ...$payload,
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+        ]);
+        $contactsOnly->assertCreated();
+        $contactsOnly->assertJsonPath('payment_method_ids', []);
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(0, PaymentMethod::query()->count());
+        $this->assertSame(1, Scammer::query()->first()->contacts()->count());
+
+        $paymentsOnly = $this->postJson('/api/public/reports/scammers', [
+            ...$payload,
+            'scammer' => ['name' => 'Ana Lopez'],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+            ],
+        ]);
+        $paymentsOnly->assertCreated();
+        $paymentsOnly->assertJsonPath('contact_ids', []);
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(1, PaymentMethod::query()->count());
+        $paymentScammer = Scammer::query()->where('name', 'Ana Lopez')->first();
+        $this->assertNotNull($paymentScammer);
+        $this->assertSame(0, $paymentScammer->contacts()->count());
+        $this->assertSame(1, $paymentScammer->paymentMethods()->count());
+    }
+
     public function test_requires_every_field_except_proofs(): void
     {
         $response = $this->postJson('/api/public/reports/scammers', [
