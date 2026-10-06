@@ -6,6 +6,7 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreOrganizationReportRequest extends FormRequest
 {
@@ -84,7 +85,7 @@ class StoreOrganizationReportRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:50'],
             'description' => ['required', 'string'],
-            'profile_picture' => ['required', 'string'],
+            'profile_picture' => ['string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],
             'organization' => ['required', 'array'],
@@ -99,6 +100,7 @@ class StoreOrganizationReportRequest extends FormRequest
             'products.*' => ['required', 'string', 'max:75'],
             'scammers' => ['sometimes', 'array'],
             'scammers.*.name' => ['required', 'string', 'max:100'],
+            'scammers.*.profile_picture_path' => ['sometimes', 'nullable', 'string'],
             'scammers.*.contacts' => ['sometimes', 'array'],
             'scammers.*.contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'scammers.*.contacts.*.reference' => ['required', 'string', 'max:255'],
@@ -106,6 +108,19 @@ class StoreOrganizationReportRequest extends FormRequest
             'scammers.*.payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'scammers.*.payment_methods.*.reference' => ['required', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->hasContactOrPaymentMethod()) {
+                return;
+            }
+
+            $message = 'A contact or a payment method is required.';
+            $validator->errors()->add('contacts', $message);
+            $validator->errors()->add('payment_methods', $message);
+        });
     }
 
     /**
@@ -141,5 +156,14 @@ class StoreOrganizationReportRequest extends FormRequest
 
             return $item;
         }, $items);
+    }
+
+    private function hasContactOrPaymentMethod(): bool
+    {
+        $contacts = $this->input('contacts', []);
+        $paymentMethods = $this->input('payment_methods', []);
+
+        return (is_array($contacts) && $contacts !== [])
+            || (is_array($paymentMethods) && $paymentMethods !== []);
     }
 }

@@ -110,6 +110,8 @@ class ReportUsecase implements ReportUsecaseInterface
                 $proofPaths[] = $path;
             }
 
+            $scammerPayloads = $this->copyScammerPictures($scammerPayloads, $copied);
+
             return DB::transaction(function () use (
                 $command,
                 $avatarPath,
@@ -156,7 +158,7 @@ class ReportUsecase implements ReportUsecaseInterface
                     $paymentMethodIds[] = $model->id;
                 }
 
-                $scammerIds = $this->attachScammers($organization, $scammerPayloads);
+                $scammerIds = $this->attachScammers($organization, $scammerPayloads, $copied);
 
                 return [
                     'id' => $report->id,
@@ -315,7 +317,7 @@ class ReportUsecase implements ReportUsecaseInterface
 
     /**
      * @param  list<OrganizationReportScammerInput>  $scammers
-     * @return list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     * @return list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
      */
     private function normalizeScammers(array $scammers): array
     {
@@ -324,6 +326,7 @@ class ReportUsecase implements ReportUsecaseInterface
         foreach ($scammers as $index => $scammer) {
             $normalized[] = [
                 'name' => $scammer->name,
+                'profile_picture' => $scammer->profilePicture,
                 'contacts' => $this->normalizeContacts($scammer->contacts, "scammers.{$index}.contacts"),
                 'payment_methods' => $this->normalizePaymentMethods($scammer->paymentMethods, "scammers.{$index}.payment_methods"),
             ];
@@ -333,15 +336,46 @@ class ReportUsecase implements ReportUsecaseInterface
     }
 
     /**
-     * @param  list<array{name: string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $scammers
+     * @param  list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $scammers
+     * @param  list<string>  $copied
+     * @return list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>
+     */
+    private function copyScammerPictures(array $scammers, array &$copied): array
+    {
+        foreach ($scammers as $index => $scammer) {
+            $picture = $scammer['profile_picture'];
+
+            if (! is_string($picture) || $picture === '') {
+                $scammers[$index]['profile_picture'] = null;
+
+                continue;
+            }
+
+            $path = $this->copyTemporary(
+                $picture,
+                TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
+                self::SCAMMER_PROFILE_DIRECTORY,
+                "scammers.{$index}.profile_picture_path",
+            );
+            $copied[] = $path;
+            $scammers[$index]['profile_picture'] = $path;
+        }
+
+        return $scammers;
+    }
+
+    /**
+     * @param  list<array{name: string, profile_picture: ?string, contacts: list<array{platform: PlatformType, reference: string}>, payment_methods: list<array{type: PaymentMethodType, reference: string}>}>  $scammers
+     * @param  list<string>  $copied
      * @return list<int>
      */
-    private function attachScammers(Organization $organization, array $scammers): array
+    private function attachScammers(Organization $organization, array $scammers, array &$copied): array
     {
         $scammerIds = [];
 
         foreach ($scammers as $scammer) {
-            $model = $this->scammers->firstOrCreate($scammer['name']);
+            $model = $this->scammers->firstOrCreate($scammer['name'], $scammer['profile_picture']);
+            $this->discardUnusedAvatar($scammer['profile_picture'], $model->profile_picture_path, $copied);
             $this->organizations->attachScammer($organization, $model);
 
             foreach ($scammer['contacts'] as $contact) {

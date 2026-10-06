@@ -6,6 +6,7 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreScammerReportRequest extends FormRequest
 {
@@ -84,7 +85,7 @@ class StoreScammerReportRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:50'],
             'description' => ['required', 'string'],
-            'profile_picture' => ['required', 'string'],
+            'profile_picture' => ['string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],
             'scammer' => ['required', 'array'],
@@ -107,6 +108,19 @@ class StoreScammerReportRequest extends FormRequest
             'organizations.*.payment_methods.*.type' => ['required', Rule::enum(PaymentMethodType::class)],
             'organizations.*.payment_methods.*.reference' => ['required', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->hasContactOrPaymentMethod()) {
+                return;
+            }
+
+            $message = 'A contact or a payment method is required.';
+            $validator->errors()->add('contacts', $message);
+            $validator->errors()->add('payment_methods', $message);
+        });
     }
 
     /**
@@ -142,5 +156,14 @@ class StoreScammerReportRequest extends FormRequest
 
             return $item;
         }, $items);
+    }
+
+    private function hasContactOrPaymentMethod(): bool
+    {
+        $contacts = $this->input('contacts', []);
+        $paymentMethods = $this->input('payment_methods', []);
+
+        return (is_array($contacts) && $contacts !== [])
+            || (is_array($paymentMethods) && $paymentMethods !== []);
     }
 }
