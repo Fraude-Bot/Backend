@@ -40,7 +40,7 @@ final readonly class StoreScammerReportCommand
                 continue;
             }
 
-            $profilePicture = $organization['profile_picture_path'] ?? null;
+            $profilePicture = $organization['profile_picture'] ?? null;
 
             $organizations[] = new ScammerReportOrganizationInput(
                 name: (string) ($organization['name'] ?? ''),

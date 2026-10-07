@@ -355,7 +355,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $picture,
                 TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
                 self::SCAMMER_PROFILE_DIRECTORY,
-                "scammers.{$index}.profile_picture_path",
+                "scammers.{$index}.profile_picture",
             );
             $copied[] = $path;
             $scammers[$index]['profile_picture'] = $path;
@@ -444,7 +444,7 @@ class ReportUsecase implements ReportUsecaseInterface
                 $picture,
                 TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
                 self::ORGANIZATION_PROFILE_DIRECTORY,
-                "organizations.{$index}.profile_picture_path",
+                "organizations.{$index}.profile_picture",
             );
             $copied[] = $path;
             $organizations[$index]['profile_picture'] = $path;

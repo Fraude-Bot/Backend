@@ -504,8 +504,8 @@ class StoreScammerReportTest extends TestCase
             ],
             'products' => ['Crypto'],
             'organizations' => [
-                ['name' => 'Banco Fantasma', 'profile_picture_path' => $newPicture],
-                ['name' => 'tienda falsa', 'profile_picture_path' => $unusedPicture],
+                ['name' => 'Banco Fantasma', 'profile_picture' => $newPicture],
+                ['name' => 'tienda falsa', 'profile_picture' => $unusedPicture],
             ],
         ]);
 
@@ -541,22 +541,22 @@ class StoreScammerReportTest extends TestCase
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['platform' => 'cellphone', 'reference' => '5511112222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['type' => 'clabe', 'reference' => '012345678901234567'],
             ],
             'products' => ['Crypto'],
             'organizations' => [
                 [
                     'name' => 'Banco Fantasma',
-                    'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+                    'profile_picture' => $this->storagePath('other/avatar.jpg'),
                 ],
             ],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
-        $this->assertArrayHasKey('organizations.0.profile_picture_path', $response->json('error.details'));
+        $this->assertArrayHasKey('organizations.0.profile_picture', $response->json('error.details'));
         $this->assertSame(0, Scammer::query()->count());
         $this->assertSame(0, Organization::query()->count());
 
@@ -600,7 +600,7 @@ class StoreScammerReportTest extends TestCase
         $contactsOnly = $this->postJson('/api/public/reports/scammers', [
             ...$payload,
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['platform' => 'cellphone', 'reference' => '5511112222'],
             ],
         ]);
         $contactsOnly->assertCreated();
@@ -613,7 +613,7 @@ class StoreScammerReportTest extends TestCase
             ...$payload,
             'scammer' => ['name' => 'Ana Lopez'],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['type' => 'clabe', 'reference' => '012345678901234567'],
             ],
         ]);
         $paymentsOnly->assertCreated();
@@ -626,7 +626,7 @@ class StoreScammerReportTest extends TestCase
         $this->assertSame(1, $paymentScammer->paymentMethods()->count());
     }
 
-    public function test_requires_every_field_except_proofs(): void
+    public function test_requires_every_field_except_proofs_and_profile_picture(): void
     {
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'A title',
@@ -637,7 +637,7 @@ class StoreScammerReportTest extends TestCase
 
         $details = $response->json('error.details');
 
-        foreach (['description', 'profile_picture', 'contacts', 'payment_methods', 'products'] as $field) {
+        foreach (['description', 'contacts', 'payment_methods', 'products'] as $field) {
             $this->assertArrayHasKey($field, $details);
         }
 
