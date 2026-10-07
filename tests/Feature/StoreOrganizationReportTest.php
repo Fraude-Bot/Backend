@@ -566,8 +566,8 @@ class StoreOrganizationReportTest extends TestCase
             ],
             'products' => ['Crypto'],
             'scammers' => [
-                ['name' => 'Ana Lopez', 'profile_picture_path' => $newPicture],
-                ['name' => 'juan perez', 'profile_picture_path' => $unusedPicture],
+                ['name' => 'Ana Lopez', 'profile_picture' => $newPicture],
+                ['name' => 'juan perez', 'profile_picture' => $unusedPicture],
             ],
         ]);
 
@@ -612,13 +612,13 @@ class StoreOrganizationReportTest extends TestCase
             'scammers' => [
                 [
                     'name' => 'Ana Lopez',
-                    'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+                    'profile_picture' => $this->storagePath('other/avatar.jpg'),
                 ],
             ],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
-        $this->assertArrayHasKey('scammers.0.profile_picture_path', $response->json('error.details'));
+        $this->assertArrayHasKey('scammers.0.profile_picture', $response->json('error.details'));
         $this->assertSame(0, Organization::query()->count());
         $this->assertSame(0, Scammer::query()->count());
 

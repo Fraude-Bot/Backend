@@ -100,7 +100,7 @@ class StoreScammerReportRequest extends FormRequest
             'products.*' => ['required', 'string', 'max:75'],
             'organizations' => ['sometimes', 'array'],
             'organizations.*.name' => ['required', 'string', 'max:100'],
-            'organizations.*.profile_picture_path' => ['sometimes', 'nullable', 'string'],
+            'organizations.*.profile_picture' => ['sometimes', 'nullable', 'string'],
             'organizations.*.contacts' => ['sometimes', 'array'],
             'organizations.*.contacts.*.platform' => ['required', Rule::enum(PlatformType::class)],
             'organizations.*.contacts.*.reference' => ['required', 'string', 'max:255'],

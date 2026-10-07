@@ -4,7 +4,7 @@ required:
   - id
   - name
   - reports
-  - profile_picture_path
+  - profile_picture
   - products
   - status
   - created_at
@@ -23,12 +23,12 @@ properties:
     minimum: 0
     description: Number of active reports.
     example: 4
-  profile_picture_path:
+  profile_picture:
     type:
       - string
       - "null"
-    description: Public URL of the profile picture, or null when none is set.
-    example: https://cdn.example.com/avatars/1.png
+    description: Stored public-disk path of the profile picture, or null when none is set.
+    example: reports/organizations/profiles/8f3c1a.jpg
   products:
     type: array
     description: Distinct product categories from active reports.

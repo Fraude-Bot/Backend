@@ -504,8 +504,8 @@ class StoreScammerReportTest extends TestCase
             ],
             'products' => ['Crypto'],
             'organizations' => [
-                ['name' => 'Banco Fantasma', 'profile_picture_path' => $newPicture],
-                ['name' => 'tienda falsa', 'profile_picture_path' => $unusedPicture],
+                ['name' => 'Banco Fantasma', 'profile_picture' => $newPicture],
+                ['name' => 'tienda falsa', 'profile_picture' => $unusedPicture],
             ],
         ]);
 
@@ -550,13 +550,13 @@ class StoreScammerReportTest extends TestCase
             'organizations' => [
                 [
                     'name' => 'Banco Fantasma',
-                    'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+                    'profile_picture' => $this->storagePath('other/avatar.jpg'),
                 ],
             ],
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
-        $this->assertArrayHasKey('organizations.0.profile_picture_path', $response->json('error.details'));
+        $this->assertArrayHasKey('organizations.0.profile_picture', $response->json('error.details'));
         $this->assertSame(0, Scammer::query()->count());
         $this->assertSame(0, Organization::query()->count());
 
