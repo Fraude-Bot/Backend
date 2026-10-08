@@ -463,6 +463,7 @@ paths:
         contacts, payment methods, and products. A contact that already exists for the same
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
+        Each submitted product name is title-cased before it is created or reused: the first letter of each word is capitalized and the rest is lowercase.
         A product whose name already exists is reused, including a difference in letter case.
         The stored spelling is kept.
         Every field is required except `proofs`.
@@ -522,6 +523,7 @@ paths:
         contacts, payment methods, and products. A contact that already exists for the same
         platform and reference is reused, and a payment method that already exists
         for the same type and reference is reused. A trashed match is restored.
+        Each submitted product name is title-cased before it is created or reused: the first letter of each word is capitalized and the rest is lowercase.
         A product whose name already exists is reused, including a difference in letter case.
         The stored spelling is kept.
         Every field is required except `proofs`.
@@ -848,7 +850,7 @@ components:
             type: string
             maxLength: 75
             example: Crypto
-          description: Product names to create or reuse and attach to the report.
+          description: Product names to create or reuse and attach to the report. Each name is title-cased before matching, and an existing match keeps its stored spelling.
         scammers:
           type: array
           description: Optional scammers to create or reuse by name and link to the organization. Contacts and payment methods belong to the scammer.
@@ -1026,7 +1028,7 @@ components:
             type: string
             maxLength: 75
             example: Crypto
-          description: Product names to create or reuse and attach to the report.
+          description: Product names to create or reuse and attach to the report. Each name is title-cased before matching, and an existing match keeps its stored spelling.
         organizations:
           type: array
           description: Optional organizations to create or reuse by name and link to the scammer. Contacts and payment methods belong to the organization. The report is not filed against these organizations.

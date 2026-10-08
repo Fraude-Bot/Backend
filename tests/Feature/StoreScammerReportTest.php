@@ -193,6 +193,29 @@ class StoreScammerReportTest extends TestCase
         );
     }
 
+    public function test_stores_new_product_names_in_title_case(): void
+    {
+        $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $response = $this->postJson('/api/public/reports/scammers', [
+            'title' => 'Sold me a loan',
+            'description' => 'They sold a personal loan.',
+            'profile_picture' => $profile,
+            'scammer' => ['name' => 'Juan Perez'],
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+            ],
+            'products' => ['  crédito PERSONAL  ', 'crédito personal'],
+        ]);
+
+        $response->assertCreated();
+
+        $product = Product::query()->where('name', 'Crédito Personal')->first();
+        $this->assertNotNull($product);
+        $this->assertSame(1, Product::query()->count());
+        $response->assertJsonPath('product_ids', [$product->id]);
+    }
+
     public function test_rejects_an_unknown_platform(): void
     {
         $response = $this->postJson('/api/public/reports/scammers', [
