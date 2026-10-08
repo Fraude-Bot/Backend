@@ -26,6 +26,10 @@ class StoreOrganizationReportRequest extends FormRequest
             $merge['title'] = trim($this->input('title'));
         }
 
+        if (is_string($this->input('email'))) {
+            $merge['email'] = trim($this->input('email'));
+        }
+
         $organization = $this->input('organization');
 
         if (is_array($organization)) {
@@ -85,6 +89,7 @@ class StoreOrganizationReportRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:50'],
             'description' => ['required', 'string'],
+            'email' => ['required', 'email:rfc', 'max:255'],
             'profile_picture' => ['string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],

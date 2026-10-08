@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Report;
 use App\Models\ReportProof;
 use App\Models\Scammer;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -34,6 +35,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'proofs' => $proofs,
@@ -66,7 +68,9 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertNotNull($report);
         $this->assertSame($report->id, $response->json('id'));
         $this->assertSame($organization->id, $response->json('organization_id'));
-        $this->assertNull($report->user_id);
+        $user = User::query()->where('email', 'reporter@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertSame($user->id, $report->user_id);
         $this->assertTrue($report->is_active);
         $this->assertSame('Fake store took my money', $report->title);
         $this->assertSame('They never shipped the order.', $report->description);
@@ -126,6 +130,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Called me again',
+            'email' => 'reporter@example.com',
             'description' => 'They called again.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Another shop'],
@@ -150,7 +155,9 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertSame(1, Contact::withTrashed()->count());
         $this->assertSame(1, PaymentMethod::withTrashed()->count());
         $this->assertNull($contact->fresh()->deleted_at);
-        $this->assertNull(Report::query()->first()->user_id);
+        $user = User::query()->where('email', 'reporter@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertSame($user->id, Report::query()->first()->user_id);
 
         $organization = Organization::query()->first();
         $this->assertStringStartsWith('reports/organizations/profiles/', $organization->profile_picture_path);
@@ -165,6 +172,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Sold me crypto',
+            'email' => 'reporter@example.com',
             'description' => 'They sold a token.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -197,6 +205,7 @@ class StoreOrganizationReportTest extends TestCase
     {
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'profile_picture' => '/storage/tmp/reports/profile/avatar.jpg',
             'organization' => ['name' => 'Shop'],
@@ -221,6 +230,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $this->storagePath('other/avatar.jpg'),
@@ -245,6 +255,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Shop'],
@@ -273,6 +284,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $profile,
@@ -301,6 +313,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -332,6 +345,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -431,6 +445,7 @@ class StoreOrganizationReportTest extends TestCase
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
         $payload = [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -482,6 +497,7 @@ class StoreOrganizationReportTest extends TestCase
         $firstPicture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
         $first = $this->postJson('/api/public/reports/organizations', [
             'title' => 'First report',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $firstPicture,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -503,6 +519,7 @@ class StoreOrganizationReportTest extends TestCase
         $secondPicture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'other.jpg', 'other');
         $second = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Second report',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for another transfer.',
             'profile_picture' => $secondPicture,
             'organization' => ['name' => 'tienda falsa'],
@@ -555,6 +572,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -599,6 +617,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -637,6 +656,7 @@ class StoreOrganizationReportTest extends TestCase
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
         $payload = [
             'title' => 'Fake store took my money',
+            'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
@@ -699,13 +719,44 @@ class StoreOrganizationReportTest extends TestCase
 
         $details = $response->json('error.details');
 
-        foreach (['description', 'contacts', 'payment_methods', 'products'] as $field) {
+        foreach (['email', 'description', 'contacts', 'payment_methods', 'products'] as $field) {
             $this->assertArrayHasKey($field, $details);
         }
 
         $this->assertArrayNotHasKey('proofs', $details);
         $this->assertArrayNotHasKey('scammers', $details);
         $this->assertSame(0, Organization::query()->count());
+    }
+
+    public function test_reuses_an_existing_reporter_for_the_same_email(): void
+    {
+        $payload = [
+            'email' => 'reporter@example.com',
+            'description' => 'They never shipped the order.',
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '5511112222'],
+            ],
+            'products' => ['Crypto'],
+        ];
+
+        $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'title' => 'First report',
+            'organization' => ['name' => 'Tienda Falsa'],
+        ])->assertCreated();
+
+        $this->postJson('/api/public/reports/organizations', [
+            ...$payload,
+            'title' => 'Second report',
+            'organization' => ['name' => 'Otra Tienda'],
+        ])->assertCreated();
+
+        $this->assertSame(1, User::query()->count());
+        $userId = User::query()->value('id');
+        $this->assertSame(
+            [$userId, $userId],
+            Report::query()->orderBy('id')->pluck('user_id')->all(),
+        );
     }
 
     private function publishTemporary(string $directory, string $filename, string $contents): string

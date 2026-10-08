@@ -17,6 +17,7 @@ final readonly class StoreScammerReportCommand
     public function __construct(
         public string $title,
         public ?string $description,
+        public string $email,
         public ?string $profilePicture,
         public array $proofs,
         public array $productNames,
@@ -70,6 +71,7 @@ final readonly class StoreScammerReportCommand
         return new self(
             title: (string) ($input['title'] ?? ''),
             description: is_string($input['description'] ?? null) ? $input['description'] : null,
+            email: (string) ($input['email'] ?? ''),
             profilePicture: is_string($profilePicture) && $profilePicture !== '' ? $profilePicture : null,
             proofs: $proofs,
             productNames: $productNames,
