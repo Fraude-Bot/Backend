@@ -40,7 +40,9 @@ class StoreOrganizationReportRequest extends FormRequest
 
         if (is_array($products)) {
             $merge['products'] = array_map(
-                fn (mixed $name): mixed => is_string($name) ? trim($name) : $name,
+                fn (mixed $name): mixed => is_string($name)
+                    ? mb_convert_case(trim($name), MB_CASE_TITLE, 'UTF-8')
+                    : $name,
                 $products,
             );
         }
