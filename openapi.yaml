@@ -470,7 +470,8 @@ paths:
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
-        The report is stored without a user and is active.
+        The report belongs to the user for that email and is active.
+        A user is created when the email is new, and an existing user is reused.
       requestBody:
         required: true
         content:
@@ -478,6 +479,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateOrganizationReportRequest"
             example:
+              email: reporter@example.com
               title: Fake store took my money
               description: They never shipped the order.
               profile_picture: /storage/tmp/reports/profiles/8f3c1a.jpg
@@ -530,7 +532,8 @@ paths:
         `profile_picture` and `proofs` are public-disk paths previously returned by
         the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
-        The report is stored without a user and is active.
+        The report belongs to the user for that email and is active.
+        A user is created when the email is new, and an existing user is reused.
       requestBody:
         required: true
         content:
@@ -538,6 +541,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateScammerReportRequest"
             example:
+              email: reporter@example.com
               title: Called me about a prize
               description: They asked for a transfer to release the prize.
               profile_picture: /storage/tmp/reports/profiles/8f3c1a.jpg
@@ -770,8 +774,13 @@ components:
             - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
     CreateOrganizationReportRequest:
       type: object
-      required: [title, description, profile_picture, organization, products]
+      required: [email, title, description, profile_picture, organization, products]
       properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: reporter@example.com
         title:
           type: string
           maxLength: 50
@@ -948,8 +957,13 @@ components:
             minimum: 1
     CreateScammerReportRequest:
       type: object
-      required: [title, description, profile_picture, scammer, products]
+      required: [email, title, description, profile_picture, scammer, products]
       properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: reporter@example.com
         title:
           type: string
           maxLength: 50

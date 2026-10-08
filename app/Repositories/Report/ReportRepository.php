@@ -10,10 +10,10 @@ use App\Repositories\Search\SearchCache;
 
 class ReportRepository implements ReportRepositoryInterface
 {
-    public function create(string $title, ?string $description): Report
+    public function create(string $title, ?string $description, int $userId): Report
     {
         return Report::create([
-            'user_id' => null,
+            'user_id' => $userId,
             'title' => $title,
             'description' => $description,
             'is_active' => true,

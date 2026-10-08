@@ -6,12 +6,10 @@ use App\Models\User;
 
 class UserRepository implements UserRepositoryInterface
 {
-    public function createReporter(string $username, string $email, string $password): User
+    public function createReporter(string $email): User
     {
         return User::create([
-            'username' => $username,
             'email' => $email,
-            'password' => $password,
             'role' => 'reporter',
             'is_active' => true,
         ]);

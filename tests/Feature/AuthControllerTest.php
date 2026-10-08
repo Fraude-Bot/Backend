@@ -3,41 +3,45 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class AuthControllerTest extends TestCase
 {
-    public function test_reporter_can_register_and_receive_scoped_token(): void
+    public function test_user_register_creates_active_reporter_and_prints_token(): void
     {
-        $response = $this->postJson('/api/auth/register', [
-            'username' => 'reporter',
-            'email' => 'reporter@example.com',
-            'password' => 'secure-pass-123',
-            'password_confirmation' => 'secure-pass-123',
-        ]);
+        $exit = Artisan::call('user:register', ['email' => 'reporter@example.com']);
 
-        $response->assertCreated()
-            ->assertJsonPath('user.role', 'reporter')
-            ->assertJsonStructure(['token', 'expires_at', 'user']);
+        $this->assertSame(0, $exit);
 
-        $this->assertDatabaseHas('users', [
-            'email' => 'reporter@example.com',
-            'role' => 'reporter',
-        ]);
+        $token = trim(Artisan::output());
+        $this->assertMatchesRegularExpression('/^\d+\|.+/', $token);
+
+        $user = User::query()->where('email', 'reporter@example.com')->first();
+
+        $this->assertNotNull($user);
+        $this->assertTrue($user->is_active);
+        $this->assertSame('reporter', $user->role);
+
+        [$id, $plain] = explode('|', $token, 2);
+        $accessToken = $user->tokens()->first();
+
+        $this->assertNotNull($accessToken);
+        $this->assertSame($id, (string) $accessToken->getKey());
+        $this->assertSame(hash('sha256', $plain), $accessToken->token);
+        $this->assertSame('cli', $accessToken->name);
     }
 
-    public function test_inactive_user_cannot_login(): void
+    public function test_user_register_rejects_duplicate_email(): void
     {
-        User::factory()->create([
-            'email' => 'inactive@example.com',
-            'password' => 'secure-pass-123',
-            'is_active' => false,
-        ]);
+        $this->assertSame(0, Artisan::call('user:register', ['email' => 'reporter@example.com']));
+        $this->assertSame(1, Artisan::call('user:register', ['email' => 'reporter@example.com']));
+        $this->assertSame(1, User::query()->where('email', 'reporter@example.com')->count());
+    }
 
-        $this->postJson('/api/auth/login', [
-            'email' => 'inactive@example.com',
-            'password' => 'secure-pass-123',
-        ])->assertUnprocessable()
-            ->assertJsonPath('error.code', 'validation_failed');
+    public function test_public_register_and_login_routes_are_absent(): void
+    {
+        $this->postJson('/api/auth/register', ['email' => 'reporter@example.com'])->assertNotFound();
+        $this->postJson('/api/auth/login', ['email' => 'reporter@example.com'])->assertNotFound();
     }
 }

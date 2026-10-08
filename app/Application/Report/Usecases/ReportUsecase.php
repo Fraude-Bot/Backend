@@ -30,6 +30,7 @@ use App\Repositories\Product\ProductRepositoryInterface;
 use App\Repositories\Report\ReportRepositoryInterface;
 use App\Repositories\Scammer\ScammerRepositoryInterface;
 use App\Repositories\Search\SearchRepositoryInterface;
+use App\Repositories\User\UserRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -54,6 +55,7 @@ class ReportUsecase implements ReportUsecaseInterface
         private ContactRepositoryInterface $contacts,
         private PaymentMethodRepositoryInterface $paymentMethods,
         private ProductRepositoryInterface $products,
+        private UserRepositoryInterface $users,
     ) {}
 
     public function search(SearchReportsCommand $command): CardSearchResult
@@ -124,7 +126,8 @@ class ReportUsecase implements ReportUsecaseInterface
                 $organization = $this->organizations->firstOrCreate($command->organizationName, $avatarPath);
                 $this->discardUnusedAvatar($avatarPath, $organization->profile_picture_path, $copied);
 
-                $report = $this->reports->create($command->title, $command->description);
+                $user = $this->users->findByEmail($command->email) ?? $this->users->createReporter($command->email);
+                $report = $this->reports->create($command->title, $command->description, $user->id);
                 $this->reports->attachToOrganization($organization, $report);
                 $productIds = $this->attachProducts($report, $command->productNames);
 
@@ -229,7 +232,8 @@ class ReportUsecase implements ReportUsecaseInterface
                     'is_active' => true,
                 ]);
 
-                $report = $this->reports->create($command->title, $command->description);
+                $user = $this->users->findByEmail($command->email) ?? $this->users->createReporter($command->email);
+                $report = $this->reports->create($command->title, $command->description, $user->id);
                 $this->reports->attachToScammer($scammer, $report);
                 $productIds = $this->attachProducts($report, $command->productNames);
 

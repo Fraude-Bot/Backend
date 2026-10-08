@@ -26,6 +26,10 @@ class StoreScammerReportRequest extends FormRequest
             $merge['title'] = trim($this->input('title'));
         }
 
+        if (is_string($this->input('email'))) {
+            $merge['email'] = trim($this->input('email'));
+        }
+
         $scammer = $this->input('scammer');
 
         if (is_array($scammer)) {
@@ -87,6 +91,7 @@ class StoreScammerReportRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:50'],
             'description' => ['required', 'string'],
+            'email' => ['required', 'email:rfc', 'max:255'],
             'profile_picture' => ['string'],
             'proofs' => ['sometimes', 'array'],
             'proofs.*' => ['required', 'string'],

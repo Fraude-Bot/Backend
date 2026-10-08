@@ -6,7 +6,7 @@ use App\Models\User;
 
 interface UserRepositoryInterface
 {
-    public function createReporter(string $username, string $email, string $password): User;
+    public function createReporter(string $email): User;
 
     public function findByEmail(string $email): ?User;
 

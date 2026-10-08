@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Report;
 use App\Models\ReportProof;
 use App\Models\Scammer;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -34,6 +35,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'proofs' => $proofs,
@@ -66,7 +68,9 @@ class StoreScammerReportTest extends TestCase
         $this->assertNotNull($report);
         $this->assertSame($report->id, $response->json('id'));
         $this->assertSame($scammer->id, $response->json('scammer_id'));
-        $this->assertNull($report->user_id);
+        $user = User::query()->where('email', 'reporter@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertSame($user->id, $report->user_id);
         $this->assertTrue($report->is_active);
         $this->assertSame('Called me about a prize', $report->title);
         $this->assertSame('They asked for a transfer to release the prize.', $report->description);
@@ -126,6 +130,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Called me again',
+            'email' => 'reporter@example.com',
             'description' => 'They called again.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Another person'],
@@ -150,7 +155,9 @@ class StoreScammerReportTest extends TestCase
         $this->assertSame(1, Contact::withTrashed()->count());
         $this->assertSame(1, PaymentMethod::withTrashed()->count());
         $this->assertNull($contact->fresh()->deleted_at);
-        $this->assertNull(Report::query()->first()->user_id);
+        $user = User::query()->where('email', 'reporter@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertSame($user->id, Report::query()->first()->user_id);
 
         $scammer = Scammer::query()->first();
         $this->assertStringStartsWith('reports/scammers/profiles/', $scammer->profile_picture_path);
@@ -165,6 +172,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Sold me crypto',
+            'email' => 'reporter@example.com',
             'description' => 'They sold a token.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -220,6 +228,7 @@ class StoreScammerReportTest extends TestCase
     {
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'profile_picture' => '/storage/tmp/reports/profile/avatar.jpg',
             'scammer' => ['name' => 'Person'],
@@ -244,6 +253,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'scammer' => ['name' => 'Person'],
             'profile_picture' => $this->storagePath('other/avatar.jpg'),
@@ -268,6 +278,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Person'],
@@ -296,6 +307,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'A title',
+            'email' => 'reporter@example.com',
             'description' => 'A description',
             'scammer' => ['name' => 'Person'],
             'profile_picture' => $profile,
@@ -324,6 +336,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -355,6 +368,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -456,6 +470,7 @@ class StoreScammerReportTest extends TestCase
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
         $payload = [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -516,6 +531,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -560,6 +576,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -598,6 +615,7 @@ class StoreScammerReportTest extends TestCase
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
         $payload = [
             'title' => 'Called me about a prize',
+            'email' => 'reporter@example.com',
             'description' => 'They asked for a transfer to release the prize.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
@@ -660,13 +678,44 @@ class StoreScammerReportTest extends TestCase
 
         $details = $response->json('error.details');
 
-        foreach (['description', 'contacts', 'payment_methods', 'products'] as $field) {
+        foreach (['email', 'description', 'contacts', 'payment_methods', 'products'] as $field) {
             $this->assertArrayHasKey($field, $details);
         }
 
         $this->assertArrayNotHasKey('proofs', $details);
         $this->assertArrayNotHasKey('organizations', $details);
         $this->assertSame(0, Scammer::query()->count());
+    }
+
+    public function test_reuses_an_existing_reporter_for_the_same_email(): void
+    {
+        $payload = [
+            'email' => 'reporter@example.com',
+            'description' => 'They asked for a transfer to release the prize.',
+            'contacts' => [
+                ['platform' => 'cellphone', 'reference' => '5511112222'],
+            ],
+            'products' => ['Crypto'],
+        ];
+
+        $this->postJson('/api/public/reports/scammers', [
+            ...$payload,
+            'title' => 'First report',
+            'scammer' => ['name' => 'Juan Perez'],
+        ])->assertCreated();
+
+        $this->postJson('/api/public/reports/scammers', [
+            ...$payload,
+            'title' => 'Second report',
+            'scammer' => ['name' => 'Ana Lopez'],
+        ])->assertCreated();
+
+        $this->assertSame(1, User::query()->count());
+        $userId = User::query()->value('id');
+        $this->assertSame(
+            [$userId, $userId],
+            Report::query()->orderBy('id')->pluck('user_id')->all(),
+        );
     }
 
     private function publishTemporary(string $directory, string $filename, string $contents): string

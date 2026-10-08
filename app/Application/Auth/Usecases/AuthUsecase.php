@@ -2,12 +2,10 @@
 
 namespace App\Application\Auth\Usecases;
 
-use App\Application\Auth\Commands\LoginCommand;
 use App\Application\Auth\Commands\LogoutCommand;
 use App\Application\Auth\Commands\RegisterCommand;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryInterface;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthUsecase implements AuthUsecaseInterface
@@ -16,20 +14,15 @@ class AuthUsecase implements AuthUsecaseInterface
 
     public function register(RegisterCommand $command): array
     {
-        $user = $this->users->createReporter($command->username, $command->email, $command->password);
-
-        return $this->tokenResponse($user, 'registration');
-    }
-
-    public function login(LoginCommand $command): array
-    {
-        $user = $this->users->findByEmail($command->email);
-
-        if (! $user || ! $user->is_active || ! Hash::check($command->password, $user->password)) {
-            throw ValidationException::withMessages(['email' => ['The provided credentials are invalid.']]);
+        if ($this->users->findByEmail($command->email) !== null) {
+            throw ValidationException::withMessages([
+                'email' => ['The email has already been taken.'],
+            ]);
         }
 
-        return $this->tokenResponse($user, $command->deviceName);
+        $user = $this->users->createReporter($command->email);
+
+        return $this->tokenResponse($user);
     }
 
     public function logout(LogoutCommand $command): void
@@ -40,14 +33,14 @@ class AuthUsecase implements AuthUsecaseInterface
     /**
      * @return array{token: string, expires_at: string|null, user: array<string, mixed>}
      */
-    private function tokenResponse(User $user, string $deviceName): array
+    private function tokenResponse(User $user): array
     {
         $abilities = in_array($user->role, ['admin', 'moderator'], true)
             ? ['admin:write']
             : [];
 
         $token = $user->createToken(
-            $deviceName,
+            'cli',
             $abilities,
             now()->addMinutes((int) config('sanctum.expiration')),
         );
@@ -55,7 +48,7 @@ class AuthUsecase implements AuthUsecaseInterface
         return [
             'token' => $token->plainTextToken,
             'expires_at' => $token->accessToken->expires_at?->toISOString(),
-            'user' => $user->only(['id', 'username', 'email', 'role']),
+            'user' => $user->only(['id', 'email', 'role']),
         ];
     }
 }

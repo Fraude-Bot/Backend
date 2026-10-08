@@ -8,7 +8,7 @@ use App\Models\Scammer;
 
 interface ReportRepositoryInterface
 {
-    public function create(string $title, ?string $description): Report;
+    public function create(string $title, ?string $description, int $userId): Report;
 
     public function attachToOrganization(Organization $organization, Report $report): void;
 
