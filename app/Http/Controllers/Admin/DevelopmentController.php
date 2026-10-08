@@ -15,11 +15,9 @@ class DevelopmentController
 
         $user = User::firstOrCreate(
             [
-                'username' => 'Anonymous',
                 'email' => 'anon@example.com',
             ],
             [
-                'password' => bcrypt('test123'),
                 'role' => 'admin',
             ]
         );
@@ -33,6 +31,6 @@ class DevelopmentController
             now()->addHour(),
         )->plainTextToken;
 
-        return response()->json(['user' => $user->username, 'email' => $user->email, 'token' => $token]);
+        return response()->json(['email' => $user->email, 'token' => $token]);
     }
 }

@@ -21,9 +21,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'username',
         'email',
-        'password',
         'is_active',
         'role',
     ];
@@ -34,7 +32,6 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'password',
         'remember_token',
     ];
 
@@ -47,7 +44,6 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'is_active' => 'boolean',
         ];
     }
@@ -67,7 +63,6 @@ class User extends Authenticatable
     {
         return new UserEntity(
             id: $this->id,
-            username: $this->username,
             email: $this->email,
         );
     }

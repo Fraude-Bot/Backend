@@ -8,7 +8,6 @@ class UserEntity extends Entity
 {
     public function __construct(
         public readonly ?int $id,
-        public string $username,
         public string $email,
     ) {
         parent::__construct();
@@ -28,7 +27,6 @@ class UserEntity extends Entity
     {
         return [
             'id' => $this->id,
-            'username' => $this->username,
             'email' => $this->email,
         ];
     }
