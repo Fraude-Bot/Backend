@@ -207,6 +207,7 @@ class StoreScammerReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/scammers', [
             'title' => 'Sold me a loan',
+            'email' => 'reporter@example.com',
             'description' => 'They sold a personal loan.',
             'profile_picture' => $profile,
             'scammer' => ['name' => 'Juan Perez'],
