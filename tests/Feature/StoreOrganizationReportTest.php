@@ -207,6 +207,7 @@ class StoreOrganizationReportTest extends TestCase
 
         $response = $this->postJson('/api/public/reports/organizations', [
             'title' => 'Sold me a loan',
+            'email' => 'reporter@example.com',
             'description' => 'They sold a personal loan.',
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
