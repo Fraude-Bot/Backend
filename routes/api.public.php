@@ -3,6 +3,7 @@
 use App\Http\Controllers\Public\OrganizationController;
 use App\Http\Controllers\Public\ReportController;
 use App\Http\Controllers\Public\ScammerController;
+use App\Http\Controllers\Public\SeoController;
 use App\Http\Middleware\AuditApiRequest;
 use App\OpenApi\OpenApiDocument;
 use Illuminate\Support\Facades\Cache;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('public')->middleware('throttle:public-api')->group(function () {
+    Route::get('seo/profiles', [SeoController::class, 'index']);
+
     Route::get('organizations/suggest', [OrganizationController::class, 'suggest']);
     Route::get('organizations/{id}', [OrganizationController::class, 'show']);
     Route::get('organizations/{id}/calendar/{year}', [OrganizationController::class, 'calendar']);
@@ -30,7 +33,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
 
     Route::post('reports/media/profiles', [ReportController::class, 'storeTemporaryProfilePicture']);
     Route::post('reports/media/proofs', [ReportController::class, 'storeTemporaryProof']);
-    
+
     Route::post('reports/organizations', [ReportController::class, 'storeOrganization']);
     Route::post('reports/scammers', [ReportController::class, 'storeScammer']);
 

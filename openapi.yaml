@@ -13,7 +13,9 @@ info:
     Contact `platform` query values are lowercase enum names (`whatsapp`);
     responses return the formatted label (`Whatsapp`).
 
-    Dates use `YYYY-MM-DD`. Report search and administrative endpoints are not included.
+    Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
+    (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
+    Report search and administrative endpoints are not included.
 servers:
   - url: /api
 tags:
@@ -21,6 +23,8 @@ tags:
     description: Public scammer profiles, contacts, reports, report calendars, and name suggestions.
   - name: Organizations
     description: Public organization profiles, contacts, reports, report calendars, and name suggestions.
+  - name: Seo
+    description: Cached index of active scammer and organization profiles.
   - name: Reports
     description: Public report uploads.
   - name: Health
@@ -575,6 +579,37 @@ paths:
                 report_proof_ids: [6, 7]
         "422":
           $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/seo/profiles:
+    get:
+      tags: [Seo]
+      operationId: listSeoProfiles
+      summary: List SEO profile indexes
+      description: |
+        Returns every active, non-deleted scammer and organization.
+        Inactive and soft-deleted profiles are omitted.
+        Profiles are ordered with scammers first, then organizations, each by id.
+        `updatedAt` is a UTC timestamp with no fractional seconds (`2026-08-24T00:00:00Z`).
+        The response is cached for 7 days and is refreshed when a scammer or organization
+        is created, updated, deleted, or restored.
+      responses:
+        "200":
+          description: Active profile index.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeoProfiles"
+              example:
+                data:
+                  - id: 1
+                    type: scammer
+                    updatedAt: "2026-08-24T00:00:00Z"
+                  - id: 4
+                    type: organization
+                    updatedAt: "2026-08-24T15:30:00Z"
+                total: 2
+                count: 2
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/healthcheck:
@@ -1158,3 +1193,7 @@ components:
       $ref: ./schemas/Scammer.yaml
     Organization:
       $ref: ./schemas/Organization.yaml
+    SeoProfile:
+      $ref: ./schemas/SeoProfile.yaml
+    SeoProfiles:
+      $ref: ./schemas/SeoProfiles.yaml
