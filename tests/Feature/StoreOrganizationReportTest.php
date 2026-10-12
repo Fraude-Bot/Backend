@@ -206,6 +206,7 @@ class StoreOrganizationReportTest extends TestCase
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
 
         $response = $this->postJson('/api/public/reports/organizations', [
+            'email' => 'reporter@example.com',
             'title' => 'Sold me a loan',
             'description' => 'They sold a personal loan.',
             'profile_picture' => $profile,
