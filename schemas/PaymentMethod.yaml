@@ -1,0 +1,37 @@
+type: object
+description: A public payment method attached to a scammer or organization.
+required:
+  - id
+  - reference
+  - type
+  - created_at
+  - is_active
+properties:
+  id:
+    type: integer
+    minimum: 1
+    description: Numeric payment method ID.
+    example: 5
+  reference:
+    type: string
+    description: Card number, CLABE, account number, wallet address, or other reference.
+    example: "012345678901234567"
+  type:
+    type: string
+    description: Payment method label returned by the API (`ucfirst` of the enum name).
+    enum:
+      - Card_number
+      - Clabe
+      - Account_number
+      - Wallet
+      - Other
+    example: Clabe
+  created_at:
+    type: string
+    format: date
+    description: Date the payment method was created (`YYYY-MM-DD`).
+    example: "2026-08-24"
+  is_active:
+    type: boolean
+    description: Whether the payment method is active. Public reads return active payment methods only.
+    example: true

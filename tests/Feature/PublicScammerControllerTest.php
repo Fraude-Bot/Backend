@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Domain\Contact\Enums\PlatformType;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Resources\Public\ContactResource;
+use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
 use App\Http\Resources\Public\ScammerResource;
 use App\Models\Contact;
+use App\Models\PaymentMethod;
 use App\Models\Report;
 use App\Models\Scammer;
 use Illuminate\Support\Str;
@@ -179,6 +182,145 @@ class PublicScammerControllerTest extends TestCase
         $count = 10;
 
         $response = $this->getJson("/api/public/scammers/invalid-scammer-id/contacts?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
+    }
+
+    public function test_find_scammer_payment_methods_by_id(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethods = PaymentMethod::factory()->count(3)->create();
+        $scammer->paymentMethods()->attach($paymentMethods->pluck('id'));
+
+        $page = 1;
+        $count = 10;
+        $expected = [
+            'data' => PaymentMethodResource::collection($paymentMethods)->resolve(),
+            'total' => $paymentMethods->count(),
+            'page' => $page,
+            'count' => $count,
+        ];
+
+        $response = $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods?p={$page}&c={$count}");
+
+        $response->assertStatus(200);
+        $response->assertExactJson($expected);
+        $response->assertJsonPath('data.0.created_at', $paymentMethods->first()->created_at->format('Y-m-d'));
+    }
+
+    public function test_find_scammer_payment_methods_by_id_with_type_query_param(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethods = PaymentMethod::factory()->createMany([
+            [
+                'reference' => '012345678901234567',
+                'type' => PaymentMethodType::CLABE,
+                'is_active' => true,
+            ],
+            [
+                'reference' => '4111111111111111',
+                'type' => PaymentMethodType::CARD_NUMBER,
+                'is_active' => true,
+            ],
+            [
+                'reference' => '0xabc123',
+                'type' => PaymentMethodType::WALLET,
+                'is_active' => true,
+            ],
+        ]);
+        $scammer->paymentMethods()->attach($paymentMethods->pluck('id'));
+
+        $page = 1;
+        $count = 10;
+        $type = 'clabe';
+        $expected = [
+            'data' => PaymentMethodResource::collection($paymentMethods->where('type', PaymentMethodType::CLABE))->resolve(),
+            'total' => $paymentMethods->where('type', PaymentMethodType::CLABE)->count(),
+            'page' => $page,
+            'count' => $count,
+        ];
+
+        $response = $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods?p={$page}&c={$count}&type={$type}");
+
+        $response->assertStatus(200);
+        $response->assertExactJson($expected);
+    }
+
+    public function test_payment_method_total_reflects_all_matching_rows(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethods = PaymentMethod::factory()->count(15)->create();
+        $scammer->paymentMethods()->attach($paymentMethods);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods?p=1&c=10")
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('total', 15);
+    }
+
+    public function test_payment_method_pagination_is_bounded(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods?p=0&c=101")
+            ->assertBadRequest();
+    }
+
+    public function test_payment_method_changes_invalidate_cached_public_payment_methods(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['reference' => 'before-reference']);
+        $scammer->paymentMethods()->attach($paymentMethod);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods")
+            ->assertJsonPath('data.0.reference', 'before-reference');
+
+        $paymentMethod->update(['reference' => 'after-reference']);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods")
+            ->assertJsonPath('data.0.reference', 'after-reference');
+    }
+
+    public function test_find_scammer_payment_methods_by_missing_id_returns404(): void
+    {
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/1/payment-methods?p={$page}&c={$count}");
+
+        $response->assertStatus(404);
+        $response->assertExactJson(['message' => 'Scammer payment methods not found']);
+    }
+
+    public function test_find_scammer_payment_methods_by_id_with_invalid_page_query_param_returns400(): void
+    {
+        $page = 'invalid-page';
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/1/payment-methods?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
+    }
+
+    public function test_find_scammer_payment_methods_by_id_with_invalid_count_query_param_returns400(): void
+    {
+        $page = 1;
+        $count = 'invalid-count';
+
+        $response = $this->getJson("/api/public/scammers/1/payment-methods?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
+    }
+
+    public function test_find_scammer_payment_methods_by_id_with_invalid_scammer_id_param_returns400(): void
+    {
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/invalid-scammer-id/payment-methods?p={$page}&c={$count}");
 
         $response->assertStatus(400);
         $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);

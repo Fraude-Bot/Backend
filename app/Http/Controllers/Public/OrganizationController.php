@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Application\Organization\Commands\ListOrganizationContactsCommand;
+use App\Application\Organization\Commands\ListOrganizationPaymentMethodsCommand;
 use App\Application\Organization\Commands\ListOrganizationReportsCommand;
 use App\Application\Organization\Commands\OrganizationCalendarCommand;
 use App\Application\Organization\Commands\OrganizationMapCommand;
@@ -12,6 +13,7 @@ use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
+use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
 use Illuminate\Http\Request;
 
@@ -91,6 +93,46 @@ class OrganizationController extends Controller
         return response()->json([
             'data' => ContactResource::collection($contacts->items)->resolve(),
             'total' => $contacts->total,
+            'page' => (int) $page,
+            'count' => (int) $count,
+        ]);
+    }
+
+    public function paymentMethods(Request $request, string $id)
+    {
+        $page = $request->input('p', 1);
+        $count = $request->input('c', 10);
+        $type = $request->input('type', null);
+
+        if (is_string($type) && $type !== '') {
+            $type = strtolower($type);
+        }
+
+        if (! is_string($type)) {
+            $type = null;
+        }
+
+        if (
+            filter_var($id, FILTER_VALIDATE_INT) === false ||
+            filter_var($page, FILTER_VALIDATE_INT) === false ||
+            filter_var($count, FILTER_VALIDATE_INT) === false ||
+            (int) $page < 1 ||
+            (int) $page > 100000 ||
+            (int) $count < 1 ||
+            (int) $count > 100
+        ) {
+            return response()->json(['message' => 'Invalid organization ID, page or count'], 400);
+        }
+
+        $paymentMethods = $this->organizations->paymentMethods(new ListOrganizationPaymentMethodsCommand((int) $id, (int) $page, (int) $count, $type));
+
+        if (! $paymentMethods) {
+            return response()->json(['message' => 'Organization payment methods not found'], 404);
+        }
+
+        return response()->json([
+            'data' => PaymentMethodResource::collection($paymentMethods->items)->resolve(),
+            'total' => $paymentMethods->total,
             'page' => (int) $page,
             'count' => (int) $count,
         ]);

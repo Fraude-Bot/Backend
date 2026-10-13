@@ -8,6 +8,7 @@ use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand
 use App\Application\Organization\Commands\DeleteOrganizationCommand;
 use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\ListOrganizationContactsCommand;
+use App\Application\Organization\Commands\ListOrganizationPaymentMethodsCommand;
 use App\Application\Organization\Commands\ListOrganizationReportsCommand;
 use App\Application\Organization\Commands\ListOrganizationScammersCommand;
 use App\Application\Organization\Commands\ListOrganizationsCommand;
@@ -47,6 +48,11 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
     public function contacts(ListOrganizationContactsCommand $command): ?PaginatedResult
     {
         return $this->organizations->findPaginatedContactsById($command->id, $command->page, $command->count, $command->platform);
+    }
+
+    public function paymentMethods(ListOrganizationPaymentMethodsCommand $command): ?PaginatedResult
+    {
+        return $this->organizations->findPaginatedPaymentMethodsById($command->id, $command->page, $command->count, $command->type);
     }
 
     public function reports(ListOrganizationReportsCommand $command): ?PaginatedResult

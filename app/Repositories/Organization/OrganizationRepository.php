@@ -8,6 +8,7 @@ use App\Domain\Map\ValueObjects\Edge;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Map\ValueObjects\PaymentMethodNode;
 use App\Domain\Map\ValueObjects\ScammerNode;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
 use App\Models\Organization;
@@ -95,6 +96,40 @@ class OrganizationRepository implements OrganizationRepositoryInterface
                 }
 
                 $query->where('platform', $platformType);
+            }
+
+            $total = (clone $query)->count();
+            $items = $query->forPage($page, $count)->get();
+
+            return new PaginatedResult($items, $total);
+        });
+    }
+
+    public function findPaginatedPaymentMethodsById(int $id, int $page, int $count, ?string $type = null): ?PaginatedResult
+    {
+        $cacheKey = "public:organization:{$id}:payment-methods:{$page}:{$count}";
+
+        if ($type) {
+            $cacheKey .= "_type_{$type}";
+        }
+
+        return Cache::remember(SearchCache::key($cacheKey), self::CACHE_TTL_SECONDS, function () use ($id, $page, $count, $type) {
+            $organization = Organization::query()->where('is_active', true)->find($id);
+
+            if (! $organization) {
+                return null;
+            }
+
+            $query = $organization->paymentMethods()->where('is_active', true);
+
+            if ($type) {
+                $paymentMethodType = PaymentMethodType::tryFromInput($type);
+
+                if (! $paymentMethodType) {
+                    return PaginatedResult::empty();
+                }
+
+                $query->where('type', $paymentMethodType);
             }
 
             $total = (clone $query)->count();
