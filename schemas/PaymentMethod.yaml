@@ -1,5 +1,5 @@
 type: object
-description: A public payment method attached to a scammer.
+description: A public payment method attached to a scammer or organization.
 required:
   - id
   - reference

@@ -18,6 +18,8 @@ interface OrganizationRepositoryInterface
 
     public function findPaginatedContactsById(int $id, int $page, int $count, ?string $platform = null): ?PaginatedResult;
 
+    public function findPaginatedPaymentMethodsById(int $id, int $page, int $count, ?string $type = null): ?PaginatedResult;
+
     public function findPaginatedReportsById(int $id, int $page, int $count): ?PaginatedResult;
 
     public function findMapById(int $id): ?MapResult;

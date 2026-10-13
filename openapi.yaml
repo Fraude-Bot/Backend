@@ -343,6 +343,42 @@ paths:
                 message: Organization contacts not found
         "429":
           $ref: "#/components/responses/RateLimited"
+  /public/organizations/{id}/payment-methods:
+    get:
+      tags: [Organizations]
+      operationId: listOrganizationPaymentMethods
+      summary: List organization payment methods
+      description: Returns a paginated list of active payment methods for an active organization.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Count"
+        - $ref: "#/components/parameters/PaymentMethodType"
+      responses:
+        "200":
+          description: Paginated organization payment methods.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPaymentMethods"
+        "400":
+          description: The organization ID, page, or count is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid organization ID, page or count
+        "404":
+          description: The organization does not exist or is inactive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Organization payment methods not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}/reports:
     get:
       tags: [Organizations]
