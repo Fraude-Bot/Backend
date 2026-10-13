@@ -206,6 +206,7 @@ class StoreScammerReportTest extends TestCase
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
 
         $response = $this->postJson('/api/public/reports/scammers', [
+            'email' => 'reporter@example.com',
             'title' => 'Sold me a loan',
             'email' => 'reporter@example.com',
             'description' => 'They sold a personal loan.',

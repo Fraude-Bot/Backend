@@ -13,6 +13,8 @@ use App\Application\Report\Usecases\ReportUsecase;
 use App\Application\Report\Usecases\ReportUsecaseInterface;
 use App\Application\Scammer\Usecases\ScammerUsecase;
 use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
+use App\Application\Seo\Usecases\SeoUsecase;
+use App\Application\Seo\Usecases\SeoUsecaseInterface;
 use App\Domain\Contact\PlatformProfileExtractorInterface;
 use App\Infrastructure\Contact\PlatformProfileExtractor;
 use App\Infrastructure\Facebook\FacebookService;
@@ -44,6 +46,8 @@ use App\Repositories\Scammer\ScammerRepository;
 use App\Repositories\Scammer\ScammerRepositoryInterface;
 use App\Repositories\Search\PublicSearchRepository;
 use App\Repositories\Search\SearchRepositoryInterface;
+use App\Repositories\Seo\SeoProfileRepository;
+use App\Repositories\Seo\SeoProfileRepositoryInterface;
 use App\Repositories\User\UserRepository;
 use App\Repositories\User\UserRepositoryInterface;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -87,9 +91,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ReportRepositoryInterface::class, ReportRepository::class);
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(SearchRepositoryInterface::class, PublicSearchRepository::class);
+        $this->app->bind(SeoProfileRepositoryInterface::class, SeoProfileRepository::class);
 
         $this->app->bind(OrganizationUsecaseInterface::class, OrganizationUsecase::class);
         $this->app->bind(ScammerUsecaseInterface::class, ScammerUsecase::class);
+        $this->app->bind(SeoUsecaseInterface::class, SeoUsecase::class);
         $this->app->bind(ReportUsecaseInterface::class, ReportUsecase::class);
         $this->app->bind(AuthUsecaseInterface::class, AuthUsecase::class);
 

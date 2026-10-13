@@ -1,0 +1,22 @@
+type: object
+description: Unpaginated index of active scammer and organization profiles. Cached for 7 days.
+required:
+  - data
+  - total
+  - count
+properties:
+  data:
+    type: array
+    description: Active profiles, scammers first, then organizations, each ordered by id.
+    items:
+      $ref: ./SeoProfile.yaml
+  total:
+    type: integer
+    minimum: 0
+    description: Number of profiles in `data`.
+    example: 2
+  count:
+    type: integer
+    minimum: 0
+    description: Number of profiles in `data`.
+    example: 2
