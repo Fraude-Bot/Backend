@@ -7,6 +7,7 @@ use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\DeleteScammerCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\ListScammerContactsCommand;
+use App\Application\Scammer\Commands\ListScammerPaymentMethodsCommand;
 use App\Application\Scammer\Commands\ListScammerReportsCommand;
 use App\Application\Scammer\Commands\ListScammersCommand;
 use App\Application\Scammer\Commands\LoadScammerCommand;
@@ -32,6 +33,8 @@ interface ScammerUsecaseInterface
     public function calendar(ScammerCalendarCommand $command): ?Collection;
 
     public function contacts(ListScammerContactsCommand $command): ?PaginatedResult;
+
+    public function paymentMethods(ListScammerPaymentMethodsCommand $command): ?PaginatedResult;
 
     public function reports(ListScammerReportsCommand $command): ?PaginatedResult;
 

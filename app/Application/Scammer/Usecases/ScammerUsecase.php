@@ -7,6 +7,7 @@ use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\DeleteScammerCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\ListScammerContactsCommand;
+use App\Application\Scammer\Commands\ListScammerPaymentMethodsCommand;
 use App\Application\Scammer\Commands\ListScammerReportsCommand;
 use App\Application\Scammer\Commands\ListScammersCommand;
 use App\Application\Scammer\Commands\LoadScammerCommand;
@@ -52,6 +53,11 @@ class ScammerUsecase implements ScammerUsecaseInterface
     public function contacts(ListScammerContactsCommand $command): ?PaginatedResult
     {
         return $this->scammers->findPaginatedContactsById($command->id, $command->page, $command->count, $command->platform);
+    }
+
+    public function paymentMethods(ListScammerPaymentMethodsCommand $command): ?PaginatedResult
+    {
+        return $this->scammers->findPaginatedPaymentMethodsById($command->id, $command->page, $command->count, $command->type);
     }
 
     public function reports(ListScammerReportsCommand $command): ?PaginatedResult
