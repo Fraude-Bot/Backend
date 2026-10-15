@@ -133,7 +133,7 @@ class ScammerController extends Controller
         if ($this->scammers->hasPaymentMethod(new HasScammerPaymentMethodCommand($scammer, $type, (string) $data['reference']))) {
             return response()->json(['error' => 'Payment method with the same reference already exists for this scammer'], 422);
         }
-
+ 
         $paymentMethodModel = $this->scammers->createPaymentMethod(CreateScammerPaymentMethodCommand::fromValidated($scammer, $data));
 
         $response = $paymentMethodModel->only(['id', 'reference', 'type_name', 'is_active', 'created_at']);
