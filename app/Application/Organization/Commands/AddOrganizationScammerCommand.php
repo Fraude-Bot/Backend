@@ -3,12 +3,22 @@
 namespace App\Application\Organization\Commands;
 
 use App\Models\Organization;
-use App\Models\Scammer;
 
 final readonly class AddOrganizationScammerCommand
 {
     public function __construct(
         public Organization $organization,
-        public Scammer $scammer,
+        public int $scammerId,
     ) {}
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function fromValidated(Organization $organization, array $attributes): self
+    {
+        return new self(
+            organization: $organization,
+            scammerId: (int) $attributes['scammer_id'],
+        );
+    }
 }

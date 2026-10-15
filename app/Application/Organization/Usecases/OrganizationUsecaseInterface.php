@@ -4,6 +4,7 @@ namespace App\Application\Organization\Usecases;
 
 use App\Application\Organization\Commands\AddOrganizationScammerCommand;
 use App\Application\Organization\Commands\CreateOrganizationCommand;
+use App\Application\Organization\Commands\CreateOrganizationContactCommand;
 use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\DeleteOrganizationCommand;
 use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
@@ -21,6 +22,7 @@ use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Commands\UpdateOrganizationCommand;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
+use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\PaymentMethod;
 use Illuminate\Support\Collection;
@@ -63,4 +65,6 @@ interface OrganizationUsecaseInterface
     public function hasPaymentMethod(HasOrganizationPaymentMethodCommand $command): bool;
 
     public function createPaymentMethod(CreateOrganizationPaymentMethodCommand $command): PaymentMethod;
+
+    public function createContact(CreateOrganizationContactCommand $command): Contact;
 }

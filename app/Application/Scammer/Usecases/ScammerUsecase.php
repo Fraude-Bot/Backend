@@ -87,39 +87,10 @@ class ScammerUsecase implements ScammerUsecaseInterface
 
     public function store(StoreScammerCommand $command): Scammer
     {
-        return DB::transaction(function () use ($command): Scammer {
-            $scammer = $this->scammers->create([
-                'name' => trim($command->name),
-                'is_active' => $command->isActive,
-            ]);
-
-            foreach ($command->contacts as $contactData) {
-                $entity = new ContactEntity(
-                    id: null,
-                    platformType: $contactData->platform,
-                    reference: $contactData->reference,
-                    isActive: $contactData->isActive,
-                );
-                $values = $entity->toArray();
-                $contact = $this->contacts->firstOrCreate(
-                    $values['platform'],
-                    $values['reference'],
-                    $values['is_active'],
-                );
-                $this->scammers->attachContact($scammer, $contact->id);
-            }
-
-            foreach ($command->paymentMethods as $paymentMethodData) {
-                $paymentMethod = $this->paymentMethods->firstOrCreate(
-                    $paymentMethodData->type,
-                    trim($paymentMethodData->reference),
-                    $paymentMethodData->isActive,
-                );
-                $this->scammers->attachPaymentMethod($scammer, $paymentMethod->id);
-            }
-
-            return $this->scammers->loadStored($scammer);
-        });
+        return $this->scammers->create([
+            'name' => trim($command->name),
+            'is_active' => $command->isActive,
+        ]);
     }
 
     public function update(UpdateScammerCommand $command): Scammer

@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Domain\Contact\Enums\PlatformType;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Models\Contact;
+use App\Models\Organization;
+use App\Models\PaymentMethod;
 use App\Models\Scammer;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
@@ -30,7 +33,7 @@ class AdminSecurityTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_nested_validation_is_atomic(): void
+    public function test_store_ignores_nested_contacts_and_payment_methods(): void
     {
         $this->actingAsAdmin();
 
@@ -41,13 +44,14 @@ class AdminSecurityTest extends TestCase
                 'reference' => 'valid@example.com',
             ]],
             'paymentMethods' => [[
-                'type' => 999,
-                'reference' => 'invalid',
+                'type' => 1,
+                'reference' => '4111111111111111',
             ]],
-        ])->assertUnprocessable();
+        ])->assertCreated();
 
-        $this->assertDatabaseMissing('scammers', ['name' => 'Atomic Scammer']);
+        $this->assertDatabaseHas('scammers', ['name' => 'Atomic Scammer']);
         $this->assertDatabaseMissing('contacts', ['reference' => 'valid@example.com']);
+        $this->assertDatabaseMissing('payment_methods', ['reference' => '4111111111111111']);
     }
 
     public function test_restore_routes_bind_the_deleted_entity_identifier(): void
@@ -76,6 +80,97 @@ class AdminSecurityTest extends TestCase
         ])->assertNotFound();
 
         $this->assertDatabaseMissing('contacts', ['id' => $contact->id, 'reference' => 'unauthorized@example.com']);
+    }
+
+    public function test_organization_contact_is_created_and_attached(): void
+    {
+        $this->actingAsAdmin();
+        $organization = Organization::factory()->create();
+
+        $this->postJson("/api/admin/organizations/{$organization->id}/contacts", [
+            'platform' => PlatformType::EMAIL->value,
+            'reference' => 'desk@example.com',
+        ])->assertCreated()
+            ->assertJsonPath('platform', 'Email')
+            ->assertJsonPath('reference', 'desk@example.com');
+
+        $contact = Contact::query()->where('reference', 'desk@example.com')->first();
+        $this->assertNotNull($contact);
+        $this->assertDatabaseHas('organizations_contacts', [
+            'organization_id' => $organization->id,
+            'contact_id' => $contact->id,
+        ]);
+    }
+
+    public function test_payment_method_routes_use_the_plural_path(): void
+    {
+        $this->actingAsAdmin();
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create();
+
+        $this->postJson("/api/admin/organizations/{$organization->id}/payment-methods", [
+            'type' => PaymentMethodType::CARD_NUMBER->value,
+            'reference' => '4111111111111111',
+        ])->assertCreated();
+
+        $organizationPaymentMethod = PaymentMethod::query()->where('reference', '4111111111111111')->first();
+        $this->assertNotNull($organizationPaymentMethod);
+        $this->assertDatabaseHas('organizations_payment_methods', [
+            'organization_id' => $organization->id,
+            'payment_method_id' => $organizationPaymentMethod->id,
+        ]);
+
+        $this->postJson("/api/admin/scammers/{$scammer->id}/payment-methods", [
+            'type' => PaymentMethodType::CLABE->value,
+            'reference' => '012345678901234567',
+        ])->assertCreated();
+
+        $scammerPaymentMethod = PaymentMethod::query()->where('reference', '012345678901234567')->first();
+        $this->assertNotNull($scammerPaymentMethod);
+        $this->assertDatabaseHas('scammers_payment_methods', [
+            'scammer_id' => $scammer->id,
+            'payment_method_id' => $scammerPaymentMethod->id,
+        ]);
+    }
+
+    public function test_organization_scammer_link_reads_the_scammer_id_from_the_body(): void
+    {
+        $this->actingAsAdmin();
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create();
+
+        $this->postJson("/api/admin/organizations/{$organization->id}/scammers", [
+            'scammer_id' => $scammer->id,
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('scammers_organizations', [
+            'organization_id' => $organization->id,
+            'scammer_id' => $scammer->id,
+        ]);
+
+        $this->postJson("/api/admin/organizations/{$organization->id}/scammers", [])
+            ->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['scammer_id']]]);
+    }
+
+    public function test_replaced_admin_link_paths_are_not_registered(): void
+    {
+        $this->actingAsAdmin();
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create();
+
+        $this->postJson("/api/admin/organizations/{$organization->id}/payment", [
+            'type' => PaymentMethodType::CARD_NUMBER->value,
+            'reference' => '4222222222222222',
+        ])->assertNotFound();
+
+        $this->postJson("/api/admin/scammers/{$scammer->id}/payment", [
+            'type' => PaymentMethodType::CARD_NUMBER->value,
+            'reference' => '4333333333333333',
+        ])->assertNotFound();
+
+        $this->postJson("/api/admin/organizations/{$organization->id}/scammer/{$scammer->id}")
+            ->assertNotFound();
     }
 
     private function actingAsAdmin(): User

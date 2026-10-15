@@ -12,6 +12,8 @@ interface ScammerRepositoryInterface
 {
     public function findScammerById(int $id): ?Scammer;
 
+    public function findById(int $id): Scammer;
+
     public function findCalendarByScammerIdAndYear(int $id, int $year): ?Collection;
 
     public function findContactsById(int $id): ?Collection;
@@ -48,8 +50,6 @@ interface ScammerRepositoryInterface
     public function delete(Scammer $scammer): void;
 
     public function restore(int $id): Scammer;
-
-    public function loadStored(Scammer $scammer): Scammer;
 
     public function attachContact(Scammer $scammer, int $contactId): void;
 

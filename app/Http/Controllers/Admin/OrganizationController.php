@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Application\Organization\Commands\AddOrganizationScammerCommand;
 use App\Application\Organization\Commands\CreateOrganizationCommand;
+use App\Application\Organization\Commands\CreateOrganizationContactCommand;
 use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\DeleteOrganizationCommand;
 use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
@@ -15,6 +16,8 @@ use App\Application\Organization\Commands\UpdateOrganizationCommand;
 use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AddOrganizationScammerRequest;
+use App\Http\Requests\Admin\ContactRequest;
 use App\Http\Requests\Admin\PaymentMethodRequest;
 use App\Http\Requests\Admin\StoreOrganizationRequest;
 use App\Http\Requests\Admin\UpdateOrganizationRequest;
@@ -22,7 +25,6 @@ use App\Http\Resources\Admin\BasicOrganizationResource;
 use App\Http\Resources\Admin\BasicPaymentMethodResource;
 use App\Http\Resources\Admin\BasicScammerResource;
 use App\Models\Organization;
-use App\Models\Scammer;
 
 class OrganizationController extends Controller
 {
@@ -100,9 +102,9 @@ class OrganizationController extends Controller
     /**
      * Add a scammer to the given organization.
      */
-    public function addScammer(Organization $organization, Scammer $scammer)
+    public function addScammer(AddOrganizationScammerRequest $request, Organization $organization)
     {
-        $this->organizations->addScammer(new AddOrganizationScammerCommand($organization, $scammer));
+        $this->organizations->addScammer(AddOrganizationScammerCommand::fromValidated($organization, $request->validated()));
 
         return response()->json(['message' => 'Scammer added successfully'], 201);
     }
@@ -122,6 +124,20 @@ class OrganizationController extends Controller
         $resource = new BasicPaymentMethodResource($paymentMethod);
 
         return response()->json($resource, 201);
+    }
+
+    public function createContact(ContactRequest $request, Organization $organization)
+    {
+        $contact = $this->organizations->createContact(CreateOrganizationContactCommand::fromValidated($organization, $request->validated()));
+
+        return response()->json([
+            'id' => $contact->id,
+            'platform' => $contact->platform_name,
+            'reference' => $contact->reference,
+            'is_active' => $contact->is_active,
+            'created_at' => $contact->created_at,
+            'updated_at' => $contact->updated_at,
+        ], 201);
     }
 
     /**

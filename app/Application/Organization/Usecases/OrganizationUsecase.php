@@ -4,6 +4,7 @@ namespace App\Application\Organization\Usecases;
 
 use App\Application\Organization\Commands\AddOrganizationScammerCommand;
 use App\Application\Organization\Commands\CreateOrganizationCommand;
+use App\Application\Organization\Commands\CreateOrganizationContactCommand;
 use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\DeleteOrganizationCommand;
 use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
@@ -19,12 +20,16 @@ use App\Application\Organization\Commands\RestoreOrganizationCommand;
 use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Commands\UpdateOrganizationCommand;
+use App\Domain\Contact\Entities\ContactEntity;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
+use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\PaymentMethod;
+use App\Repositories\Contact\ContactRepositoryInterface;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
 use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
+use App\Repositories\Scammer\ScammerRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +38,8 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
     public function __construct(
         private OrganizationRepositoryInterface $organizations,
         private PaymentMethodRepositoryInterface $paymentMethods,
+        private ScammerRepositoryInterface $scammers,
+        private ContactRepositoryInterface $contacts,
     ) {}
 
     public function show(ShowOrganizationCommand $command): ?Organization
@@ -107,7 +114,8 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
 
     public function addScammer(AddOrganizationScammerCommand $command): void
     {
-        $this->organizations->attachScammer($command->organization, $command->scammer);
+        $scammer = $this->scammers->findById($command->scammerId);
+        $this->organizations->attachScammer($command->organization, $scammer);
     }
 
     public function hasPaymentMethod(HasOrganizationPaymentMethodCommand $command): bool
@@ -126,6 +134,27 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
             $this->organizations->attachPaymentMethod($command->organization, $paymentMethod->id);
 
             return $paymentMethod;
+        });
+    }
+
+    public function createContact(CreateOrganizationContactCommand $command): Contact
+    {
+        return DB::transaction(function () use ($command): Contact {
+            $entity = new ContactEntity(
+                id: null,
+                platformType: $command->platform,
+                reference: $command->reference,
+                isActive: $command->isActive,
+            );
+            $values = $entity->toArray();
+            $contact = $this->contacts->firstOrCreate(
+                $values['platform'],
+                $values['reference'],
+                $values['is_active'],
+            );
+            $this->organizations->attachContact($command->organization, $contact->id);
+
+            return $contact;
         });
     }
 }
