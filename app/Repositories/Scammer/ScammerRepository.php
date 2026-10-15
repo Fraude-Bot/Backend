@@ -38,6 +38,11 @@ class ScammerRepository implements ScammerRepositoryInterface
         );
     }
 
+    public function findById(int $id): Scammer
+    {
+        return Scammer::query()->findOrFail($id);
+    }
+
     public function findCalendarByScammerIdAndYear(int $id, int $year): ?Collection
     {
         return Cache::remember(SearchCache::key("public:scammer:{$id}:calendar:{$year}"), self::CACHE_TTL_SECONDS, function () use ($id, $year) {
@@ -299,11 +304,6 @@ class ScammerRepository implements ScammerRepositoryInterface
         $scammer->restore();
 
         return $scammer;
-    }
-
-    public function loadStored(Scammer $scammer): Scammer
-    {
-        return $scammer->load(['contacts', 'paymentMethods']);
     }
 
     public function attachContact(Scammer $scammer, int $contactId): void

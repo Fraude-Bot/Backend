@@ -8,15 +8,16 @@ use App\Http\Middleware\EnsureUserIsActive;
 
 Route::prefix('admin')->middleware(['auth:sanctum', EnsureUserIsActive::class, 'abilities:admin:write', 'can:manage-fraud-data', 'throttle:admin', AuditApiRequest::class])->group(function () {
     Route::get('organizations/{organization}/scammers', [OrganizationController::class, 'getScammers']);
-    Route::post('organizations/{organization}/scammer/{scammer}', [OrganizationController::class, 'addScammer']);
-    Route::post('organizations/{organization}/payment', [OrganizationController::class, 'createPaymentMethod']);
+    Route::post('organizations/{organization}/scammers', [OrganizationController::class, 'addScammer']);
+    Route::post('organizations/{organization}/payment-methods', [OrganizationController::class, 'createPaymentMethod']);
+    Route::post('organizations/{organization}/contacts', [OrganizationController::class, 'createContact']);
 
     Route::post('scammers/{scammer}/restore', [ScammerController::class, 'restore']);
     Route::post('organizations/{organization}/restore', [OrganizationController::class, 'restore']);
 
     Route::put('scammers/{scammer}/contacts/{contact}', [ScammerController::class, 'updateContact']);
     Route::post('scammers/{scammer}/contacts', [ScammerController::class, 'createContact']);
-    Route::post('scammers/{scammer}/payment', [ScammerController::class, 'createPaymentMethod']);
+    Route::post('scammers/{scammer}/payment-methods', [ScammerController::class, 'createPaymentMethod']);
 
     Route::apiResource('scammers', ScammerController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::apiResource('organizations', OrganizationController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
