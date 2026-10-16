@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Application\Organization\Commands\CreateOrganizationContactCommand;
 use App\Application\Organization\Commands\ListOrganizationContactsCommand;
 use App\Application\Organization\Commands\ListOrganizationPaymentMethodsCommand;
 use App\Application\Organization\Commands\ListOrganizationReportsCommand;
@@ -11,11 +12,14 @@ use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreOrganizationContactRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class OrganizationController extends Controller
 {
@@ -96,6 +100,32 @@ class OrganizationController extends Controller
             'page' => (int) $page,
             'count' => (int) $count,
         ]);
+    }
+
+    public function createContact(StoreOrganizationContactRequest $request, string $id)
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid organization ID'], 400);
+        }
+
+        $organization = $this->organizations->show(new ShowOrganizationCommand((int) $id));
+
+        if (! $organization) {
+            return response()->json(['message' => 'Organization not found'], 404);
+        }
+
+        try {
+            $contact = $this->organizations->createContact(CreateOrganizationContactCommand::fromValidated(
+                $organization,
+                $request->validated(),
+            ));
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'reference' => [$exception->getMessage()],
+            ]);
+        }
+
+        return response()->json((new ContactResource($contact))->resolve(), 201);
     }
 
     public function paymentMethods(Request $request, string $id)

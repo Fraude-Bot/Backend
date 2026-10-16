@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Application\Scammer\Commands\CreateScammerContactCommand;
 use App\Application\Scammer\Commands\ListScammerContactsCommand;
 use App\Application\Scammer\Commands\ListScammerPaymentMethodsCommand;
 use App\Application\Scammer\Commands\ListScammerReportsCommand;
@@ -11,11 +12,14 @@ use App\Application\Scammer\Commands\ShowScammerCommand;
 use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreScammerContactRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
 use App\Http\Resources\Public\ScammerResource;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class ScammerController extends Controller
 {
@@ -94,6 +98,32 @@ class ScammerController extends Controller
             'page' => (int) $page,
             'count' => (int) $count,
         ]);
+    }
+
+    public function createContact(StoreScammerContactRequest $request, string $id)
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid scammer ID'], 400);
+        }
+
+        $scammer = $this->scammers->show(new ShowScammerCommand((int) $id));
+
+        if (! $scammer) {
+            return response()->json(['message' => 'Scammer not found'], 404);
+        }
+
+        try {
+            $contact = $this->scammers->createContact(CreateScammerContactCommand::fromValidated(
+                $scammer,
+                $request->validated(),
+            ));
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'reference' => [$exception->getMessage()],
+            ]);
+        }
+
+        return response()->json((new ContactResource($contact))->resolve(), 201);
     }
 
     public function paymentMethods(Request $request, string $id)
