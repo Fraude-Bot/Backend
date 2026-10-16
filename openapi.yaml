@@ -15,6 +15,9 @@ info:
     `POST /public/scammers/{id}/contacts` adds a contact to an active scammer.
     `POST /public/organizations/{id}/contacts` adds a contact to an active organization.
     Each body sends that platform name and a reference, and the response is the stored contact.
+    `POST /public/scammers/{id}/payment-methods` adds a payment method to an active scammer.
+    `POST /public/organizations/{id}/payment-methods` adds a payment method to an active organization.
+    Each body sends a type and a reference. A payment method already linked to that record is rejected.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -227,6 +230,73 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Scammer payment methods not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [Scammers]
+      operationId: createScammerPaymentMethod
+      summary: Add a payment method to a scammer
+      description: |
+        Attaches a payment method to an active scammer. A payment method that already exists
+        for the same type and reference is reused, and a trashed match is restored.
+        A link that already exists for this scammer is rejected.
+        The payment method is stored active. `is_active` is not accepted.
+        The reference is trimmed.
+      parameters:
+        - $ref: "#/components/parameters/ScammerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentMethodRequest"
+            example:
+              type: clabe
+              reference: "012345678901234567"
+      responses:
+        "201":
+          description: The payment method was created or reused and attached to the scammer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+              example:
+                id: 5
+                reference: "012345678901234567"
+                type: Clabe
+                created_at: "2026-08-24"
+                is_active: true
+        "400":
+          description: The scammer ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid scammer ID
+        "404":
+          description: No active scammer exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Scammer not found
+        "422":
+          description: |
+            The request data is invalid, or this scammer already has a payment method
+            with the same type and reference.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/HttpError"
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                        example: Payment method with the same reference already exists for this scammer
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/scammers/{id}/reports:
@@ -490,6 +560,73 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Organization payment methods not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [Organizations]
+      operationId: createOrganizationPaymentMethod
+      summary: Add a payment method to an organization
+      description: |
+        Attaches a payment method to an active organization. A payment method that already exists
+        for the same type and reference is reused, and a trashed match is restored.
+        A link that already exists for this organization is rejected.
+        The payment method is stored active. `is_active` is not accepted.
+        The reference is trimmed.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentMethodRequest"
+            example:
+              type: clabe
+              reference: "012345678901234567"
+      responses:
+        "201":
+          description: The payment method was created or reused and attached to the organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+              example:
+                id: 5
+                reference: "012345678901234567"
+                type: Clabe
+                created_at: "2026-08-24"
+                is_active: true
+        "400":
+          description: The organization ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid organization ID
+        "404":
+          description: No active organization exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Organization not found
+        "422":
+          description: |
+            The request data is invalid, or this organization already has a payment method
+            with the same type and reference.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/HttpError"
+                  - type: object
+                    required: [error]
+                    properties:
+                      error:
+                        type: string
+                        example: Payment method already exists for this organization
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}/reports:
@@ -1062,6 +1199,29 @@ components:
           maxLength: 255
           description: Phone number, email, URL, profile, username, or other handle.
           example: "525511112222"
+    CreatePaymentMethodRequest:
+      type: object
+      required: [type, reference]
+      properties:
+        type:
+          description: Payment method type enum value or lowercase enum name.
+          oneOf:
+            - type: integer
+              minimum: 1
+              maximum: 5
+            - type: string
+              enum:
+                - card_number
+                - clabe
+                - account_number
+                - wallet
+                - other
+          example: clabe
+        reference:
+          type: string
+          maxLength: 255
+          description: Card number, CLABE, account number, wallet address, or other reference.
+          example: "012345678901234567"
     CreateOrganizationReportRequest:
       type: object
       required: [email, title, description, profile_picture, organization, products]

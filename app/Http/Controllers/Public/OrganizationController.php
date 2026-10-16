@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Public;
 
 use App\Application\Organization\Commands\CreateOrganizationContactCommand;
+use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
+use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\ListOrganizationContactsCommand;
 use App\Application\Organization\Commands\ListOrganizationPaymentMethodsCommand;
 use App\Application\Organization\Commands\ListOrganizationReportsCommand;
@@ -11,8 +13,10 @@ use App\Application\Organization\Commands\OrganizationMapCommand;
 use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationContactRequest;
+use App\Http\Requests\Public\StorePaymentMethodRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
 use App\Http\Resources\Public\PaymentMethodResource;
@@ -166,6 +170,29 @@ class OrganizationController extends Controller
             'page' => (int) $page,
             'count' => (int) $count,
         ]);
+    }
+
+    public function createPaymentMethod(StorePaymentMethodRequest $request, string $id)
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid organization ID'], 400);
+        }
+
+        $organization = $this->organizations->show(new ShowOrganizationCommand((int) $id));
+
+        if (! $organization) {
+            return response()->json(['message' => 'Organization not found'], 404);
+        }
+
+        $data = $request->validated();
+        $type = PaymentMethodType::from((int) $data['type']);
+        if ($this->organizations->hasPaymentMethod(new HasOrganizationPaymentMethodCommand($organization, $type, (string) $data['reference']))) {
+            return response()->json(['error' => 'Payment method already exists for this organization'], 422);
+        }
+
+        $paymentMethod = $this->organizations->createPaymentMethod(CreateOrganizationPaymentMethodCommand::fromValidated($organization, $data));
+
+        return response()->json((new PaymentMethodResource($paymentMethod))->resolve(), 201);
     }
 
     public function reports(Request $request, string $id)

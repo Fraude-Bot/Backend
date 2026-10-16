@@ -683,4 +683,184 @@ class PublicScammerControllerTest extends TestCase
 
         $this->assertTrue(Contact::query()->first()->is_active);
     }
+
+    public function test_create_payment_method_for_an_active_scammer(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $response = $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ]);
+
+        $paymentMethod = PaymentMethod::query()->first();
+        $this->assertNotNull($paymentMethod);
+        $this->assertSame(PaymentMethodType::CLABE, $paymentMethod->type);
+        $this->assertSame('012345678901234567', $paymentMethod->reference);
+        $this->assertTrue($paymentMethod->is_active);
+        $this->assertTrue($scammer->paymentMethods()->whereKey($paymentMethod->id)->exists());
+
+        $response->assertCreated();
+        $response->assertExactJson(PaymentMethodResource::make($paymentMethod)->resolve());
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/payment-methods")
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $paymentMethod->id)
+            ->assertJsonPath('data.0.reference', '012345678901234567');
+    }
+
+    public function test_create_payment_method_accepts_an_integer_type(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $response = $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
+            'type' => PaymentMethodType::CLABE->value,
+            'reference' => ' 012345678901234567 ',
+        ]);
+
+        $paymentMethod = PaymentMethod::query()->first();
+        $this->assertNotNull($paymentMethod);
+        $this->assertSame(PaymentMethodType::CLABE, $paymentMethod->type);
+        $this->assertSame('012345678901234567', $paymentMethod->reference);
+
+        $response->assertCreated();
+        $response->assertExactJson(PaymentMethodResource::make($paymentMethod)->resolve());
+    }
+
+    public function test_create_payment_method_reuses_an_existing_row_and_attaches_it(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '012345678901234567',
+        ]);
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ])->assertCreated()
+            ->assertJsonPath('id', $paymentMethod->id);
+
+        $this->assertSame(1, PaymentMethod::query()->count());
+        $this->assertTrue($scammer->paymentMethods()->whereKey($paymentMethod->id)->exists());
+    }
+
+    public function test_create_payment_method_restores_a_trashed_payment_method(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '012345678901234567',
+        ]);
+        $paymentMethod->delete();
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ])->assertCreated()
+            ->assertJsonPath('id', $paymentMethod->id);
+
+        $this->assertNull($paymentMethod->fresh()->deleted_at);
+        $this->assertTrue($scammer->paymentMethods()->whereKey($paymentMethod->id)->exists());
+        $this->assertSame(1, PaymentMethod::withTrashed()->count());
+    }
+
+    public function test_create_payment_method_returns_422_when_already_linked(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '012345678901234567',
+        ]);
+        $scammer->paymentMethods()->attach($paymentMethod);
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ])->assertUnprocessable()
+            ->assertExactJson(['error' => 'Payment method with the same reference already exists for this scammer']);
+
+        $this->assertSame(1, PaymentMethod::query()->count());
+        $this->assertSame(1, $scammer->paymentMethods()->count());
+    }
+
+    public function test_create_payment_method_returns_404_when_scammer_is_missing_inactive_or_trashed(): void
+    {
+        $payload = [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ];
+
+        $this->postJson('/api/public/scammers/0/payment-methods', $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+
+        $inactive = Scammer::factory()->inactive()->create();
+
+        $this->postJson("/api/public/scammers/{$inactive->id}/payment-methods", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+
+        $trashed = Scammer::factory()->create();
+        $trashed->delete();
+
+        $this->postJson("/api/public/scammers/{$trashed->id}/payment-methods", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+
+        $this->assertSame(0, PaymentMethod::query()->count());
+    }
+
+    public function test_create_payment_method_returns_400_for_an_invalid_scammer_id(): void
+    {
+        $this->postJson('/api/public/scammers/not-an-id/payment-methods', [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ])->assertBadRequest()
+            ->assertExactJson(['message' => 'Invalid scammer ID']);
+    }
+
+    public function test_create_payment_method_validates_type_and_reference(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $url = "/api/public/scammers/{$scammer->id}/payment-methods";
+
+        $this->postJson($url, [])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['type', 'reference']]]);
+
+        $this->postJson($url, [
+            'type' => 'wire',
+            'reference' => '012345678901234567',
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['type']]]);
+
+        $this->postJson($url, [
+            'type' => 'clabe',
+            'reference' => '   ',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.details.reference.0', 'The reference field is required.');
+
+        $this->assertSame(0, PaymentMethod::query()->count());
+    }
+
+    public function test_create_payment_method_ignores_is_active(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+            'is_active' => false,
+        ])->assertCreated()
+            ->assertJsonPath('is_active', true);
+
+        $this->assertTrue(PaymentMethod::query()->first()->is_active);
+    }
 }
