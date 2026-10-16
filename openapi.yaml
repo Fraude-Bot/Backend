@@ -13,7 +13,8 @@ info:
     Contact `platform` values are lowercase enum names (`whatsapp`);
     responses return the formatted label (`Whatsapp`).
     `POST /public/scammers/{id}/contacts` adds a contact to an active scammer.
-    The body sends that platform name and a reference, and the response is the stored contact.
+    `POST /public/organizations/{id}/contacts` adds a contact to an active organization.
+    Each body sends that platform name and a reference, and the response is the stored contact.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
