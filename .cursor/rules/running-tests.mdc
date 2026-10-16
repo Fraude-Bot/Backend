@@ -1,5 +1,5 @@
 ---
-description: How to run PHPUnit tests and the architecture check in Docker for this Laravel backend
+description: How to run PHPUnit tests, architecture check and PHP static analysis tool in Docker for this Laravel backend
 globs: tests/**/*.php, phpunit.xml
 alwaysApply: false
 ---
@@ -36,6 +36,9 @@ cd ../docker && docker compose exec -T -w /var/www/backend backend composer run 
 
 # Architecture check when the stack is stopped
 cd ../docker && docker compose run --rm --no-deps backend composer run check:architecture
+
+# PHP Static Analysis check. Run with the suite after tests and architecture were a succeed
+cd ../docker && docker compose run --rm --no-deps backend composer run analyse
 ```
 
 ## VS Code tasks (human workflow)
@@ -54,6 +57,6 @@ Configured in `.vscode/settings.json` via `.vscode/run-phpunit-in-docker.sh`. Re
 
 ## Agent checklist
 
-1. After changing PHP or test code, run the filtered or full suite command above, then `composer run check:architecture`.
-2. Report pass/fail from both command outputs; do not assume green without running them.
+1. After changing PHP or test code, run the filtered or full suite command above, then `composer run check:architecture` and `composer analyse`.
+2. Report pass/fail from these three command outputs; do not assume green without running them.
 3. If `exec` fails because the container is down, use `docker compose run --rm --no-deps` instead.
