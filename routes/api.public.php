@@ -17,6 +17,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::get('organizations/{id}', [OrganizationController::class, 'show']);
     Route::get('organizations/{id}/calendar/{year}', [OrganizationController::class, 'calendar']);
     Route::get('organizations/{id}/contacts', [OrganizationController::class, 'contacts']);
+    Route::post('organizations/{id}/contacts', [OrganizationController::class, 'createContact']);
     Route::get('organizations/{id}/payment-methods', [OrganizationController::class, 'paymentMethods']);
     Route::get('organizations/{id}/reports', [OrganizationController::class, 'reports']);
     Route::get('organizations/{id}/map', [OrganizationController::class, 'map']);

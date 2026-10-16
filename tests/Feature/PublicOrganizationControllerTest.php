@@ -574,4 +574,178 @@ class PublicOrganizationControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertExactJson(['Acme A', 'Acme B', 'Acme C', 'Acme D', 'Acme E']);
     }
+
+    public function test_create_contact_for_an_active_organization(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->getJson("/api/public/organizations/{$organization->id}/contacts")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
+            'platform' => 'email',
+            'reference' => 'seller@example.com',
+        ]);
+
+        $contact = Contact::query()->first();
+        $this->assertNotNull($contact);
+        $this->assertSame(PlatformType::EMAIL, $contact->platform);
+        $this->assertTrue($contact->is_active);
+        $this->assertTrue($organization->contacts()->whereKey($contact->id)->exists());
+
+        $response->assertCreated();
+        $response->assertExactJson(ContactResource::make($contact)->resolve());
+
+        $this->getJson("/api/public/organizations/{$organization->id}/contacts")
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $contact->id)
+            ->assertJsonPath('data.0.reference', 'seller@example.com');
+    }
+
+    public function test_create_contact_accepts_an_integer_platform_and_normalizes_a_cellphone(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
+            'platform' => PlatformType::CELLPHONE->value,
+            'reference' => '+52 55 1111 2222',
+        ]);
+
+        $contact = Contact::query()->first();
+        $this->assertNotNull($contact);
+        $this->assertSame(PlatformType::CELLPHONE, $contact->platform);
+        $this->assertSame('525511112222', $contact->reference);
+
+        $response->assertCreated();
+        $response->assertExactJson(ContactResource::make($contact)->resolve());
+    }
+
+    public function test_create_contact_reuses_an_existing_contact_and_reattaches(): void
+    {
+        $organization = Organization::factory()->create();
+        $contact = Contact::factory()->create([
+            'platform' => PlatformType::EMAIL,
+            'reference' => 'seller@example.com',
+        ]);
+        $organization->contacts()->attach($contact);
+
+        $payload = [
+            'platform' => 'email',
+            'reference' => 'seller@example.com',
+        ];
+
+        $this->postJson("/api/public/organizations/{$organization->id}/contacts", $payload)
+            ->assertCreated()
+            ->assertJsonPath('id', $contact->id);
+
+        $this->postJson("/api/public/organizations/{$organization->id}/contacts", $payload)
+            ->assertCreated()
+            ->assertJsonPath('id', $contact->id);
+
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(1, $organization->contacts()->count());
+    }
+
+    public function test_create_contact_restores_a_trashed_contact(): void
+    {
+        $organization = Organization::factory()->create();
+        $contact = Contact::factory()->create([
+            'platform' => PlatformType::EMAIL,
+            'reference' => 'seller@example.com',
+        ]);
+        $contact->delete();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
+            'platform' => 'email',
+            'reference' => 'seller@example.com',
+        ])->assertCreated()
+            ->assertJsonPath('id', $contact->id);
+
+        $this->assertNull($contact->fresh()->deleted_at);
+        $this->assertTrue($organization->contacts()->whereKey($contact->id)->exists());
+        $this->assertSame(1, Contact::withTrashed()->count());
+    }
+
+    public function test_create_contact_returns_404_when_organization_is_missing_inactive_or_trashed(): void
+    {
+        $payload = [
+            'platform' => 'email',
+            'reference' => 'seller@example.com',
+        ];
+
+        $this->postJson('/api/public/organizations/0/contacts', $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $inactive = Organization::factory()->inactive()->create();
+
+        $this->postJson("/api/public/organizations/{$inactive->id}/contacts", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $trashed = Organization::factory()->create();
+        $trashed->delete();
+
+        $this->postJson("/api/public/organizations/{$trashed->id}/contacts", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $this->assertSame(0, Contact::query()->count());
+    }
+
+    public function test_create_contact_returns_400_for_an_invalid_organization_id(): void
+    {
+        $this->postJson('/api/public/organizations/not-an-id/contacts', [
+            'platform' => 'email',
+            'reference' => 'seller@example.com',
+        ])->assertBadRequest()
+            ->assertExactJson(['message' => 'Invalid organization ID']);
+    }
+
+    public function test_create_contact_validates_platform_and_reference(): void
+    {
+        $organization = Organization::factory()->create();
+        $url = "/api/public/organizations/{$organization->id}/contacts";
+
+        $this->postJson($url, [])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['platform', 'reference']]]);
+
+        $this->postJson($url, [
+            'platform' => 'carrier',
+            'reference' => 'seller@example.com',
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['platform']]]);
+
+        $this->postJson($url, [
+            'platform' => 'email',
+            'reference' => '   ',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.details.reference.0', 'The reference field is required.');
+
+        $this->postJson($url, [
+            'platform' => 'cellphone',
+            'reference' => 'abc',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.details.reference.0', 'Reference cannot be empty');
+
+        $this->assertSame(0, Contact::query()->count());
+    }
+
+    public function test_create_contact_ignores_is_active(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
+            'platform' => 'email',
+            'reference' => 'seller@example.com',
+            'is_active' => false,
+        ])->assertCreated()
+            ->assertJsonPath('is_active', true);
+
+        $this->assertTrue(Contact::query()->first()->is_active);
+    }
 }
