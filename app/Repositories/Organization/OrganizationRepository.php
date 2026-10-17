@@ -161,6 +161,29 @@ class OrganizationRepository implements OrganizationRepositoryInterface
         });
     }
 
+    public function findPaginatedScammersById(int $id, int $page, int $count): ?PaginatedResult
+    {
+        $cacheKey = "public:organization:{$id}:scammers:{$page}:{$count}";
+
+        return Cache::remember(SearchCache::key($cacheKey), self::CACHE_TTL_SECONDS, function () use ($id, $page, $count) {
+            $organization = Organization::query()->where('is_active', true)->find($id);
+
+            if (! $organization) {
+                return null;
+            }
+
+            $query = $organization->scammers()
+                ->where('scammers.is_active', true)
+                ->orderBy('scammers.name')
+                ->orderBy('scammers.id');
+
+            $total = (clone $query)->count();
+            $items = $query->forPage($page, $count)->get();
+
+            return new PaginatedResult($items, $total);
+        });
+    }
+
     public function findMapById(int $id): ?MapResult
     {
         $organization = Organization::query()

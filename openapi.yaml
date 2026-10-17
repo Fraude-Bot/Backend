@@ -29,7 +29,7 @@ tags:
   - name: Scammers
     description: Public scammer profiles, contacts, organizations, reports, report calendars, and name suggestions.
   - name: Organizations
-    description: Public organization profiles, contacts, reports, report calendars, and name suggestions.
+    description: Public organization profiles, contacts, scammers, reports, report calendars, and name suggestions.
   - name: Seo
     description: Cached index of active scammer and organization profiles.
   - name: Reports
@@ -710,6 +710,41 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Organization reports not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/organizations/{id}/scammers:
+    get:
+      tags: [Organizations]
+      operationId: listOrganizationScammers
+      summary: List organization scammers
+      description: Returns a paginated list of active scammers linked to an active organization.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Count"
+      responses:
+        "200":
+          description: Paginated organization scammers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedScammers"
+        "400":
+          description: The organization ID, page, or count is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid organization ID, page or count
+        "404":
+          description: The organization does not exist or is inactive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Organization scammers not found
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}/calendar/{year}:
@@ -1512,6 +1547,10 @@ components:
       $ref: ./schemas/ScammerOrganization.yaml
     PaginatedOrganizations:
       $ref: ./schemas/PaginatedOrganizations.yaml
+    OrganizationScammer:
+      $ref: ./schemas/OrganizationScammer.yaml
+    PaginatedScammers:
+      $ref: ./schemas/PaginatedScammers.yaml
     MonthlyReportCalendar:
       $ref: ./schemas/MonthlyReportCalendar.yaml
     ReportedEntity:

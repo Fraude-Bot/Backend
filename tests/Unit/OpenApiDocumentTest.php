@@ -77,6 +77,7 @@ YAML);
         $this->assertSame('createOrganizationPaymentMethod', $document['paths']['/public/organizations/{id}/payment-methods']['post']['operationId']);
         $this->assertSame('createOrganizationContact', $document['paths']['/public/organizations/{id}/contacts']['post']['operationId']);
         $this->assertSame('listOrganizationReports', $document['paths']['/public/organizations/{id}/reports']['get']['operationId']);
+        $this->assertSame('listOrganizationScammers', $document['paths']['/public/organizations/{id}/scammers']['get']['operationId']);
         $this->assertSame('suggestOrganizationNames', $document['paths']['/public/organizations/suggest']['get']['operationId']);
         $this->assertSame('object', $document['components']['schemas']['Contact']['type']);
         $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['Contact']);
@@ -90,6 +91,9 @@ YAML);
         $this->assertSame('object', $document['components']['schemas']['ScammerOrganization']['type']);
         $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['ScammerOrganization']);
         $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['PaginatedOrganizations']['properties']['data']['items']);
+        $this->assertSame('object', $document['components']['schemas']['OrganizationScammer']['type']);
+        $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['OrganizationScammer']);
+        $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['PaginatedScammers']['properties']['data']['items']);
         $this->assertArrayNotHasKey('/public/reports', $document['paths']);
         $this->assertSame(
             'storeOrganizationReport',
