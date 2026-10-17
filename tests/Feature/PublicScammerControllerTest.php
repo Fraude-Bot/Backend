@@ -519,13 +519,12 @@ class PublicScammerControllerTest extends TestCase
             ->assertJsonPath('total', 0);
 
         $response = $this->postJson("/api/public/scammers/{$scammer->id}/contacts", [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ]);
 
         $contact = Contact::query()->first();
         $this->assertNotNull($contact);
-        $this->assertSame(PlatformType::EMAIL, $contact->platform);
+        $this->assertSame(PlatformType::OTHER, $contact->platform);
         $this->assertTrue($contact->is_active);
         $this->assertTrue($scammer->contacts()->whereKey($contact->id)->exists());
 
@@ -539,12 +538,11 @@ class PublicScammerControllerTest extends TestCase
             ->assertJsonPath('data.0.reference', 'seller@example.com');
     }
 
-    public function test_create_contact_accepts_an_integer_platform_and_normalizes_a_cellphone(): void
+    public function test_create_contact_infers_a_cellphone_and_normalizes_it(): void
     {
         $scammer = Scammer::factory()->create();
 
         $response = $this->postJson("/api/public/scammers/{$scammer->id}/contacts", [
-            'platform' => PlatformType::CELLPHONE->value,
             'reference' => '+52 55 1111 2222',
         ]);
 
@@ -561,13 +559,12 @@ class PublicScammerControllerTest extends TestCase
     {
         $scammer = Scammer::factory()->create();
         $contact = Contact::factory()->create([
-            'platform' => PlatformType::EMAIL,
+            'platform' => PlatformType::OTHER,
             'reference' => 'seller@example.com',
         ]);
         $scammer->contacts()->attach($contact);
 
         $payload = [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ];
 
@@ -587,13 +584,12 @@ class PublicScammerControllerTest extends TestCase
     {
         $scammer = Scammer::factory()->create();
         $contact = Contact::factory()->create([
-            'platform' => PlatformType::EMAIL,
+            'platform' => PlatformType::OTHER,
             'reference' => 'seller@example.com',
         ]);
         $contact->delete();
 
         $this->postJson("/api/public/scammers/{$scammer->id}/contacts", [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ])->assertCreated()
             ->assertJsonPath('id', $contact->id);
@@ -606,7 +602,6 @@ class PublicScammerControllerTest extends TestCase
     public function test_create_contact_returns_404_when_scammer_is_missing_inactive_or_trashed(): void
     {
         $payload = [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ];
 
@@ -633,13 +628,12 @@ class PublicScammerControllerTest extends TestCase
     public function test_create_contact_returns_400_for_an_invalid_scammer_id(): void
     {
         $this->postJson('/api/public/scammers/not-an-id/contacts', [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ])->assertBadRequest()
             ->assertExactJson(['message' => 'Invalid scammer ID']);
     }
 
-    public function test_create_contact_validates_platform_and_reference(): void
+    public function test_create_contact_validates_reference(): void
     {
         $scammer = Scammer::factory()->create();
         $url = "/api/public/scammers/{$scammer->id}/contacts";
@@ -647,25 +641,18 @@ class PublicScammerControllerTest extends TestCase
         $this->postJson($url, [])
             ->assertUnprocessable()
             ->assertJsonPath('error.code', 'validation_failed')
-            ->assertJsonStructure(['error' => ['details' => ['platform', 'reference']]]);
+            ->assertJsonStructure(['error' => ['details' => ['reference']]]);
 
         $this->postJson($url, [
-            'platform' => 'carrier',
+            'platform' => 'email',
             'reference' => 'seller@example.com',
         ])->assertUnprocessable()
             ->assertJsonStructure(['error' => ['details' => ['platform']]]);
 
         $this->postJson($url, [
-            'platform' => 'email',
             'reference' => '   ',
         ])->assertUnprocessable()
             ->assertJsonPath('error.details.reference.0', 'The reference field is required.');
-
-        $this->postJson($url, [
-            'platform' => 'cellphone',
-            'reference' => 'abc',
-        ])->assertUnprocessable()
-            ->assertJsonPath('error.details.reference.0', 'Reference cannot be empty');
 
         $this->assertSame(0, Contact::query()->count());
     }
@@ -675,7 +662,6 @@ class PublicScammerControllerTest extends TestCase
         $scammer = Scammer::factory()->create();
 
         $this->postJson("/api/public/scammers/{$scammer->id}/contacts", [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
             'is_active' => false,
         ])->assertCreated()
@@ -693,7 +679,6 @@ class PublicScammerControllerTest extends TestCase
             ->assertJsonPath('total', 0);
 
         $response = $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
         ]);
 
@@ -714,12 +699,11 @@ class PublicScammerControllerTest extends TestCase
             ->assertJsonPath('data.0.reference', '012345678901234567');
     }
 
-    public function test_create_payment_method_accepts_an_integer_type(): void
+    public function test_create_payment_method_trims_the_reference_and_infers_clabe(): void
     {
         $scammer = Scammer::factory()->create();
 
         $response = $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
-            'type' => PaymentMethodType::CLABE->value,
             'reference' => ' 012345678901234567 ',
         ]);
 
@@ -741,7 +725,6 @@ class PublicScammerControllerTest extends TestCase
         ]);
 
         $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
         ])->assertCreated()
             ->assertJsonPath('id', $paymentMethod->id);
@@ -760,7 +743,6 @@ class PublicScammerControllerTest extends TestCase
         $paymentMethod->delete();
 
         $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
         ])->assertCreated()
             ->assertJsonPath('id', $paymentMethod->id);
@@ -780,7 +762,6 @@ class PublicScammerControllerTest extends TestCase
         $scammer->paymentMethods()->attach($paymentMethod);
 
         $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
         ])->assertUnprocessable()
             ->assertExactJson(['error' => 'Payment method with the same reference already exists for this scammer']);
@@ -792,7 +773,6 @@ class PublicScammerControllerTest extends TestCase
     public function test_create_payment_method_returns_404_when_scammer_is_missing_inactive_or_trashed(): void
     {
         $payload = [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
         ];
 
@@ -819,13 +799,12 @@ class PublicScammerControllerTest extends TestCase
     public function test_create_payment_method_returns_400_for_an_invalid_scammer_id(): void
     {
         $this->postJson('/api/public/scammers/not-an-id/payment-methods', [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
         ])->assertBadRequest()
             ->assertExactJson(['message' => 'Invalid scammer ID']);
     }
 
-    public function test_create_payment_method_validates_type_and_reference(): void
+    public function test_create_payment_method_validates_reference(): void
     {
         $scammer = Scammer::factory()->create();
         $url = "/api/public/scammers/{$scammer->id}/payment-methods";
@@ -833,16 +812,15 @@ class PublicScammerControllerTest extends TestCase
         $this->postJson($url, [])
             ->assertUnprocessable()
             ->assertJsonPath('error.code', 'validation_failed')
-            ->assertJsonStructure(['error' => ['details' => ['type', 'reference']]]);
+            ->assertJsonStructure(['error' => ['details' => ['reference']]]);
 
         $this->postJson($url, [
-            'type' => 'wire',
+            'type' => 'clabe',
             'reference' => '012345678901234567',
         ])->assertUnprocessable()
             ->assertJsonStructure(['error' => ['details' => ['type']]]);
 
         $this->postJson($url, [
-            'type' => 'clabe',
             'reference' => '   ',
         ])->assertUnprocessable()
             ->assertJsonPath('error.details.reference.0', 'The reference field is required.');
@@ -855,7 +833,6 @@ class PublicScammerControllerTest extends TestCase
         $scammer = Scammer::factory()->create();
 
         $this->postJson("/api/public/scammers/{$scammer->id}/payment-methods", [
-            'type' => 'clabe',
             'reference' => '012345678901234567',
             'is_active' => false,
         ])->assertCreated()

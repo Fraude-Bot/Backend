@@ -43,12 +43,12 @@ class StoreOrganizationReportTest extends TestCase
                 'name' => 'Tienda Falsa',
             ],
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
-                ['platform' => PlatformType::EMAIL->value, 'reference' => 'seller@example.com'],
+                ['reference' => '+52 55 1111 2222'],
+                ['reference' => 'seller@example.com'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
-                ['type' => PaymentMethodType::CARD_NUMBER->value, 'reference' => '4111 1111 1111 1111'],
+                ['reference' => '012 345 678 901 234 567'],
+                ['reference' => '4111 1111 1111 1111'],
             ],
             'products' => ['Crypto'],
         ]);
@@ -100,13 +100,16 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertSame($contacts->pluck('id')->all(), $response->json('contact_ids'));
         $this->assertSame(PlatformType::CELLPHONE, $contacts[0]->platform);
         $this->assertSame('525511112222', $contacts[0]->reference);
+        $this->assertSame(PlatformType::OTHER, $contacts[1]->platform);
         $this->assertSame('seller@example.com', $contacts[1]->reference);
         $this->assertEqualsCanonicalizing($contacts->modelKeys(), $organization->contacts()->pluck('contacts.id')->all());
 
         $paymentMethods = PaymentMethod::query()->orderBy('id')->get();
         $this->assertCount(2, $paymentMethods);
         $this->assertSame($paymentMethods->pluck('id')->all(), $response->json('payment_method_ids'));
+        $this->assertSame(PaymentMethodType::CLABE, $paymentMethods[0]->type);
         $this->assertSame('012345678901234567', $paymentMethods[0]->reference);
+        $this->assertSame(PaymentMethodType::CARD_NUMBER, $paymentMethods[1]->type);
         $this->assertSame('4111111111111111', $paymentMethods[1]->reference);
         $this->assertEqualsCanonicalizing($paymentMethods->modelKeys(), $organization->paymentMethods()->pluck('payment_methods.id')->all());
     }
@@ -135,10 +138,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Another shop'],
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '+52 155 1234 5678'],
+                ['reference' => '+52 155 1234 5678'],
             ],
             'payment_methods' => [
-                ['type' => 'CLABE', 'reference' => '032 180 0001 1835 9719'],
+                ['reference' => '032 180 0001 1835 9719'],
             ],
             'products' => ['Crypto'],
         ]);
@@ -177,10 +180,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['  Crypto  ', 'crypto', 'Banking', 'Banking'],
         ]);
@@ -213,7 +216,7 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['reference' => '+52 55 1111 2222'],
             ],
             'products' => ['  crédito PERSONAL  ', 'crédito personal'],
         ]);
@@ -238,7 +241,7 @@ class StoreOrganizationReportTest extends TestCase
                 ['platform' => 'myspace', 'reference' => 'seller'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
         ]);
@@ -260,10 +263,10 @@ class StoreOrganizationReportTest extends TestCase
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $this->storagePath('other/avatar.jpg'),
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
         ]);
@@ -274,7 +277,7 @@ class StoreOrganizationReportTest extends TestCase
         $this->assertSame(['other/avatar.jpg'], Storage::disk('public')->allFiles());
     }
 
-    public function test_rejects_an_invalid_clabe(): void
+    public function test_rejects_an_explicit_payment_method_type(): void
     {
         $profile = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
 
@@ -285,7 +288,7 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Shop'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
                 ['type' => 'clabe', 'reference' => '12345'],
@@ -294,7 +297,7 @@ class StoreOrganizationReportTest extends TestCase
         ]);
 
         $response->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
-        $this->assertArrayHasKey('payment_methods.0.reference', $response->json('error.details'));
+        $this->assertArrayHasKey('payment_methods.0.type', $response->json('error.details'));
         $this->assertSame(0, Organization::query()->count());
         $this->assertSame(0, PaymentMethod::query()->count());
         $this->assertSame(
@@ -314,10 +317,10 @@ class StoreOrganizationReportTest extends TestCase
             'organization' => ['name' => 'Shop'],
             'profile_picture' => $profile,
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
             'proofs' => [$this->storagePath(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/avatar.jpg')],
@@ -343,10 +346,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
             'scammers' => [],
@@ -375,10 +378,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
             'scammers' => [
@@ -386,16 +389,16 @@ class StoreOrganizationReportTest extends TestCase
                 [
                     'name' => 'Ana Lopez',
                     'contacts' => [
-                        ['name' => 'Ana', 'platform' => 'cellphone', 'reference' => '+52 55 9999 8888'],
+                        ['name' => 'Ana', 'reference' => '+52 55 9999 8888'],
                     ],
                     'payment_methods' => [
-                        ['type' => 'clabe', 'reference' => '032180000118359719'],
+                        ['reference' => '032180000118359719'],
                     ],
                 ],
                 [
                     'name' => 'ana lopez',
                     'contacts' => [
-                        ['name' => 'Ana Mail', 'platform' => 'email', 'reference' => 'ana@example.com'],
+                        ['name' => 'Ana Mail', 'reference' => 'ana@example.com'],
                     ],
                 ],
                 [
@@ -475,10 +478,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
         ];
@@ -494,7 +497,6 @@ class StoreOrganizationReportTest extends TestCase
         $missingFields->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
         $details = $missingFields->json('error.details');
         $this->assertArrayHasKey('scammers.0.name', $details);
-        $this->assertArrayHasKey('scammers.1.contacts.0.platform', $details);
         $this->assertArrayHasKey('scammers.1.contacts.0.reference', $details);
         $this->assertSame(0, Organization::query()->count());
         $this->assertSame(0, Scammer::query()->count());
@@ -512,7 +514,7 @@ class StoreOrganizationReportTest extends TestCase
         ]);
 
         $invalidClabe->assertStatus(422)->assertJsonPath('error.code', 'validation_failed');
-        $this->assertArrayHasKey('scammers.0.payment_methods.0.reference', $invalidClabe->json('error.details'));
+        $this->assertArrayHasKey('scammers.0.payment_methods.0.type', $invalidClabe->json('error.details'));
         $this->assertSame(0, Organization::query()->count());
         $this->assertSame(0, Scammer::query()->count());
     }
@@ -527,10 +529,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $firstPicture,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['name' => 'Seller', 'platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['name' => 'Seller', 'reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
         ]);
@@ -549,10 +551,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $secondPicture,
             'organization' => ['name' => 'tienda falsa'],
             'contacts' => [
-                ['name' => 'Other seller', 'platform' => 'email', 'reference' => 'other@example.com'],
+                ['name' => 'Other seller', 'reference' => 'other@example.com'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '032180000118359719'],
+                ['reference' => '032180000118359719'],
             ],
             'products' => ['Banking'],
         ]);
@@ -602,10 +604,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '+52 55 1111 2222'],
+                ['reference' => '+52 55 1111 2222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012 345 678 901 234 567'],
+                ['reference' => '012 345 678 901 234 567'],
             ],
             'products' => ['Crypto'],
             'scammers' => [
@@ -647,10 +649,10 @@ class StoreOrganizationReportTest extends TestCase
             'profile_picture' => $profile,
             'organization' => ['name' => 'Tienda Falsa'],
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '5511112222'],
+                ['reference' => '5511112222'],
             ],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012345678901234567'],
+                ['reference' => '012345678901234567'],
             ],
             'products' => ['Crypto'],
             'scammers' => [
@@ -707,7 +709,7 @@ class StoreOrganizationReportTest extends TestCase
         $contactsOnly = $this->postJson('/api/public/reports/organizations', [
             ...$payload,
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '5511112222'],
+                ['reference' => '5511112222'],
             ],
         ]);
         $contactsOnly->assertCreated();
@@ -720,7 +722,7 @@ class StoreOrganizationReportTest extends TestCase
             ...$payload,
             'organization' => ['name' => 'Otra Tienda'],
             'payment_methods' => [
-                ['type' => 'clabe', 'reference' => '012345678901234567'],
+                ['reference' => '012345678901234567'],
             ],
         ]);
         $paymentsOnly->assertCreated();
@@ -759,7 +761,7 @@ class StoreOrganizationReportTest extends TestCase
             'email' => 'reporter@example.com',
             'description' => 'They never shipped the order.',
             'contacts' => [
-                ['platform' => 'cellphone', 'reference' => '5511112222'],
+                ['reference' => '5511112222'],
             ],
             'products' => ['Crypto'],
         ];

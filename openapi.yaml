@@ -10,14 +10,15 @@ info:
     Public routes are rate-limited to 120 requests per minute per IP.
 
     Pagination uses `p` (page, 1–100000, default 1) and `c` (page size, 1–100, default 10).
-    Contact `platform` values are lowercase enum names (`whatsapp`);
-    responses return the formatted label (`Whatsapp`).
+    Contact `platform` and payment method `type` are inferred from `reference`.
+    Responses return the formatted label (`Cellphone`, `Clabe`).
+    List filters still accept `platform` and `type`.
     `POST /public/scammers/{id}/contacts` adds a contact to an active scammer.
     `POST /public/organizations/{id}/contacts` adds a contact to an active organization.
-    Each body sends that platform name and a reference, and the response is the stored contact.
+    Each body sends a reference, and the response is the stored contact.
     `POST /public/scammers/{id}/payment-methods` adds a payment method to an active scammer.
     `POST /public/organizations/{id}/payment-methods` adds a payment method to an active organization.
-    Each body sends a type and a reference. A payment method already linked to that record is rejected.
+    Each body sends a reference. A payment method already linked to that record is rejected.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -146,9 +147,13 @@ paths:
       operationId: createScammerContact
       summary: Add a contact to a scammer
       description: |
-        Attaches a contact to an active scammer. A contact that already exists for the same
-        platform and reference is reused, and a trashed match is restored. Attaching an
-        existing link again leaves that link unchanged.
+        Attaches a contact to an active scammer. The platform is inferred from the reference
+        and is not accepted in the body. A phone number is a cellphone. A link on
+        instagram.com, facebook.com, fb.com, fb.me, youtube.com, youtu.be, tiktok.com,
+        whatsapp.com, wa.me, t.me, telegram.me, or telegram.org uses that platform.
+        Anything else, including an email or a generic URL, is other.
+        A contact that already exists for the same platform and reference is reused, and a
+        trashed match is restored. Attaching an existing link again leaves that link unchanged.
         The contact is stored active. `is_active` is not accepted.
         The reference is trimmed. A cellphone reference keeps digits only.
         A URL reference keeps the profile handle for that platform.
@@ -161,8 +166,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateScammerContactRequest"
             example:
-              platform: whatsapp
-              reference: "525511112222"
+              reference: "+52 55 1111 2222"
       responses:
         "201":
           description: The contact was created or reused and attached to the scammer.
@@ -173,7 +177,7 @@ paths:
               example:
                 id: 12
                 reference: "525511112222"
-                platform: Whatsapp
+                platform: Cellphone
                 created_at: "2026-08-24"
                 is_active: true
         "400":
@@ -237,8 +241,12 @@ paths:
       operationId: createScammerPaymentMethod
       summary: Add a payment method to a scammer
       description: |
-        Attaches a payment method to an active scammer. A payment method that already exists
-        for the same type and reference is reused, and a trashed match is restored.
+        Attaches a payment method to an active scammer. The type is inferred from the
+        reference and is not accepted in the body. Sixteen digits is a card number,
+        eighteen a CLABE, and ten an account number. A crypto address is a wallet.
+        Anything else is other.
+        A payment method that already exists for the same type and reference is reused,
+        and a trashed match is restored.
         A link that already exists for this scammer is rejected.
         The payment method is stored active. `is_active` is not accepted.
         The reference is trimmed.
@@ -251,7 +259,6 @@ paths:
             schema:
               $ref: "#/components/schemas/CreatePaymentMethodRequest"
             example:
-              type: clabe
               reference: "012345678901234567"
       responses:
         "201":
@@ -476,9 +483,13 @@ paths:
       operationId: createOrganizationContact
       summary: Add a contact to an organization
       description: |
-        Attaches a contact to an active organization. A contact that already exists for the same
-        platform and reference is reused, and a trashed match is restored. Attaching an
-        existing link again leaves that link unchanged.
+        Attaches a contact to an active organization. The platform is inferred from the reference
+        and is not accepted in the body. A phone number is a cellphone. A link on
+        instagram.com, facebook.com, fb.com, fb.me, youtube.com, youtu.be, tiktok.com,
+        whatsapp.com, wa.me, t.me, telegram.me, or telegram.org uses that platform.
+        Anything else, including an email or a generic URL, is other.
+        A contact that already exists for the same platform and reference is reused, and a
+        trashed match is restored. Attaching an existing link again leaves that link unchanged.
         The contact is stored active. `is_active` is not accepted.
         The reference is trimmed. A cellphone reference keeps digits only.
         A URL reference keeps the profile handle for that platform.
@@ -491,8 +502,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateOrganizationContactRequest"
             example:
-              platform: whatsapp
-              reference: "525511112222"
+              reference: "+52 55 1111 2222"
       responses:
         "201":
           description: The contact was created or reused and attached to the organization.
@@ -503,7 +513,7 @@ paths:
               example:
                 id: 12
                 reference: "525511112222"
-                platform: Whatsapp
+                platform: Cellphone
                 created_at: "2026-08-24"
                 is_active: true
         "400":
@@ -567,8 +577,12 @@ paths:
       operationId: createOrganizationPaymentMethod
       summary: Add a payment method to an organization
       description: |
-        Attaches a payment method to an active organization. A payment method that already exists
-        for the same type and reference is reused, and a trashed match is restored.
+        Attaches a payment method to an active organization. The type is inferred from the
+        reference and is not accepted in the body. Sixteen digits is a card number,
+        eighteen a CLABE, and ten an account number. A crypto address is a wallet.
+        Anything else is other.
+        A payment method that already exists for the same type and reference is reused,
+        and a trashed match is restored.
         A link that already exists for this organization is rejected.
         The payment method is stored active. `is_active` is not accepted.
         The reference is trimmed.
@@ -581,7 +595,6 @@ paths:
             schema:
               $ref: "#/components/schemas/CreatePaymentMethodRequest"
             example:
-              type: clabe
               reference: "012345678901234567"
       responses:
         "201":
@@ -815,11 +828,9 @@ paths:
               organization:
                 name: Tienda Falsa
               contacts:
-                - platform: whatsapp
-                  reference: "+525511112222"
+                - reference: "+525511112222"
               payment_methods:
-                - type: clabe
-                  reference: "012345678901234567"
+                - reference: "012345678901234567"
               products:
                 - Crypto
                 - Banking
@@ -877,11 +888,9 @@ paths:
               scammer:
                 name: Juan Perez
               contacts:
-                - platform: whatsapp
-                  reference: "+525511112222"
+                - reference: "+525511112222"
               payment_methods:
-                - type: clabe
-                  reference: "012345678901234567"
+                - reference: "012345678901234567"
               products:
                 - Crypto
                 - Banking
@@ -1145,82 +1154,30 @@ components:
             - http://localhost:9000/storage/tmp/reports/proofs/9a4d2b.png
     CreateScammerContactRequest:
       type: object
-      required: [platform, reference]
+      required: [reference]
       properties:
-        platform:
-          description: Platform enum value or lowercase enum name.
-          oneOf:
-            - type: integer
-              minimum: 1
-              maximum: 10
-            - type: string
-              enum:
-                - whatsapp
-                - facebook
-                - youtube
-                - tiktok
-                - email
-                - cellphone
-                - telegram
-                - instagram
-                - url
-                - other
-          example: whatsapp
         reference:
           type: string
           maxLength: 255
-          description: Phone number, email, URL, profile, username, or other handle.
-          example: "525511112222"
+          description: Phone number, email, URL, profile, username, or other handle. The platform is inferred from this value.
+          example: "+52 55 1111 2222"
     CreateOrganizationContactRequest:
       type: object
-      required: [platform, reference]
+      required: [reference]
       properties:
-        platform:
-          description: Platform enum value or lowercase enum name.
-          oneOf:
-            - type: integer
-              minimum: 1
-              maximum: 10
-            - type: string
-              enum:
-                - whatsapp
-                - facebook
-                - youtube
-                - tiktok
-                - email
-                - cellphone
-                - telegram
-                - instagram
-                - url
-                - other
-          example: whatsapp
         reference:
           type: string
           maxLength: 255
-          description: Phone number, email, URL, profile, username, or other handle.
-          example: "525511112222"
+          description: Phone number, email, URL, profile, username, or other handle. The platform is inferred from this value.
+          example: "+52 55 1111 2222"
     CreatePaymentMethodRequest:
       type: object
-      required: [type, reference]
+      required: [reference]
       properties:
-        type:
-          description: Payment method type enum value or lowercase enum name.
-          oneOf:
-            - type: integer
-              minimum: 1
-              maximum: 5
-            - type: string
-              enum:
-                - card_number
-                - clabe
-                - account_number
-                - wallet
-                - other
-          example: clabe
         reference:
           type: string
           maxLength: 255
-          description: Card number, CLABE, account number, wallet address, or other reference.
+          description: Card number, CLABE, account number, wallet address, or other reference. The type is inferred from this value.
           example: "012345678901234567"
     CreateOrganizationReportRequest:
       type: object
@@ -1263,45 +1220,23 @@ components:
           description: At least one contact or one payment method is required.
           items:
             type: object
-            required: [platform, reference]
+            required: [reference]
             properties:
-              platform:
-                oneOf:
-                  - type: integer
-                    minimum: 1
-                    maximum: 10
-                  - type: string
-                    enum:
-                      - whatsapp
-                      - facebook
-                      - youtube
-                      - tiktok
-                      - email
-                      - cellphone
-                      - telegram
-                      - instagram
-                      - url
-                      - other
               reference:
                 type: string
                 maxLength: 255
+                description: The platform is inferred from this value.
         payment_methods:
           type: array
           description: At least one contact or one payment method is required.
           items:
             type: object
-            required: [type, reference]
+            required: [reference]
             properties:
-              type:
-                oneOf:
-                  - type: integer
-                    minimum: 1
-                    maximum: 5
-                  - type: string
-                    enum: [card_number, clabe, account_number, wallet, other]
               reference:
                 type: string
                 maxLength: 255
+                description: The type is inferred from this value.
         products:
           type: array
           minItems: 1
@@ -1329,44 +1264,22 @@ components:
                 type: array
                 items:
                   type: object
-                  required: [platform, reference]
+                  required: [reference]
                   properties:
-                    platform:
-                      oneOf:
-                        - type: integer
-                          minimum: 1
-                          maximum: 10
-                        - type: string
-                          enum:
-                            - whatsapp
-                            - facebook
-                            - youtube
-                            - tiktok
-                            - email
-                            - cellphone
-                            - telegram
-                            - instagram
-                            - url
-                            - other
                     reference:
                       type: string
                       maxLength: 255
+                      description: The platform is inferred from this value.
               payment_methods:
                 type: array
                 items:
                   type: object
-                  required: [type, reference]
+                  required: [reference]
                   properties:
-                    type:
-                      oneOf:
-                        - type: integer
-                          minimum: 1
-                          maximum: 5
-                        - type: string
-                          enum: [card_number, clabe, account_number, wallet, other]
                     reference:
                       type: string
                       maxLength: 255
+                      description: The type is inferred from this value.
     OrganizationReportCreated:
       type: object
       required: [id, organization_id, contact_ids, payment_method_ids, product_ids, scammer_ids, report_proof_ids]
@@ -1446,45 +1359,23 @@ components:
           description: At least one contact or one payment method is required.
           items:
             type: object
-            required: [platform, reference]
+            required: [reference]
             properties:
-              platform:
-                oneOf:
-                  - type: integer
-                    minimum: 1
-                    maximum: 10
-                  - type: string
-                    enum:
-                      - whatsapp
-                      - facebook
-                      - youtube
-                      - tiktok
-                      - email
-                      - cellphone
-                      - telegram
-                      - instagram
-                      - url
-                      - other
               reference:
                 type: string
                 maxLength: 255
+                description: The platform is inferred from this value.
         payment_methods:
           type: array
           description: At least one contact or one payment method is required.
           items:
             type: object
-            required: [type, reference]
+            required: [reference]
             properties:
-              type:
-                oneOf:
-                  - type: integer
-                    minimum: 1
-                    maximum: 5
-                  - type: string
-                    enum: [card_number, clabe, account_number, wallet, other]
               reference:
                 type: string
                 maxLength: 255
+                description: The type is inferred from this value.
         products:
           type: array
           minItems: 1
@@ -1512,44 +1403,22 @@ components:
                 type: array
                 items:
                   type: object
-                  required: [platform, reference]
+                  required: [reference]
                   properties:
-                    platform:
-                      oneOf:
-                        - type: integer
-                          minimum: 1
-                          maximum: 10
-                        - type: string
-                          enum:
-                            - whatsapp
-                            - facebook
-                            - youtube
-                            - tiktok
-                            - email
-                            - cellphone
-                            - telegram
-                            - instagram
-                            - url
-                            - other
                     reference:
                       type: string
                       maxLength: 255
+                      description: The platform is inferred from this value.
               payment_methods:
                 type: array
                 items:
                   type: object
-                  required: [type, reference]
+                  required: [reference]
                   properties:
-                    type:
-                      oneOf:
-                        - type: integer
-                          minimum: 1
-                          maximum: 5
-                        - type: string
-                          enum: [card_number, clabe, account_number, wallet, other]
                     reference:
                       type: string
                       maxLength: 255
+                      description: The type is inferred from this value.
     ScammerReportCreated:
       type: object
       required: [id, scammer_id, contact_ids, payment_method_ids, product_ids, organization_ids, report_proof_ids]

@@ -21,7 +21,7 @@ final readonly class CreateOrganizationPaymentMethodCommand
     {
         return new self(
             organization: $organization,
-            type: PaymentMethodType::from((int) $data['type']),
+            type: PaymentMethodType::fromReference((string) $data['reference']),
             reference: (string) $data['reference'],
             isActive: (bool) ($data['is_active'] ?? true),
         );

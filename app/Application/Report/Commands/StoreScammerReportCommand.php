@@ -98,9 +98,10 @@ final readonly class StoreScammerReportCommand
                 continue;
             }
 
+            $reference = (string) ($contact['reference'] ?? '');
             $inputs[] = new ContactInput(
-                platform: PlatformType::from((int) ($contact['platform'] ?? 0)),
-                reference: (string) ($contact['reference'] ?? ''),
+                platform: PlatformType::fromReference($reference),
+                reference: $reference,
             );
         }
 
@@ -123,9 +124,10 @@ final readonly class StoreScammerReportCommand
                 continue;
             }
 
+            $reference = (string) ($paymentMethod['reference'] ?? '');
             $inputs[] = new PaymentMethodInput(
-                type: PaymentMethodType::from((int) ($paymentMethod['type'] ?? 0)),
-                reference: (string) ($paymentMethod['reference'] ?? ''),
+                type: PaymentMethodType::fromReference($reference),
+                reference: $reference,
             );
         }
 
