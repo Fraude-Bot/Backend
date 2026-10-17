@@ -23,7 +23,7 @@ servers:
   - url: /api
 tags:
   - name: Scammers
-    description: Public scammer profiles, contacts, reports, report calendars, and name suggestions.
+    description: Public scammer profiles, contacts, organizations, reports, report calendars, and name suggestions.
   - name: Organizations
     description: Public organization profiles, contacts, reports, report calendars, and name suggestions.
   - name: Seo
@@ -262,6 +262,41 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Scammer reports not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/scammers/{id}/organizations:
+    get:
+      tags: [Scammers]
+      operationId: listScammerOrganizations
+      summary: List scammer organizations
+      description: Returns a paginated list of active organizations linked to an active scammer.
+      parameters:
+        - $ref: "#/components/parameters/ScammerId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Count"
+      responses:
+        "200":
+          description: Paginated scammer organizations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedOrganizations"
+        "400":
+          description: The scammer ID, page, or count is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid scammer ID, page or count
+        "404":
+          description: The scammer does not exist or is inactive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Scammer organizations not found
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/scammers/{id}/calendar/{year}:
@@ -1444,6 +1479,10 @@ components:
       $ref: ./schemas/Report.yaml
     PaginatedReports:
       $ref: ./schemas/PaginatedReports.yaml
+    ScammerOrganization:
+      $ref: ./schemas/ScammerOrganization.yaml
+    PaginatedOrganizations:
+      $ref: ./schemas/PaginatedOrganizations.yaml
     MonthlyReportCalendar:
       $ref: ./schemas/MonthlyReportCalendar.yaml
     ReportedEntity:
