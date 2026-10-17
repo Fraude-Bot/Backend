@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Public;
 
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
 use App\Application\Scammer\Commands\ListPublicScammerOrganizationsCommand;
+use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
+use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\ListScammerContactsCommand;
 use App\Application\Scammer\Commands\ListScammerPaymentMethodsCommand;
 use App\Application\Scammer\Commands\ListScammerReportsCommand;
@@ -12,7 +14,9 @@ use App\Application\Scammer\Commands\ScammerMapCommand;
 use App\Application\Scammer\Commands\ShowScammerCommand;
 use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StorePaymentMethodRequest;
 use App\Http\Requests\Public\StoreScammerContactRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\PaymentMethodResource;
@@ -166,6 +170,29 @@ class ScammerController extends Controller
             'page' => (int) $page,
             'count' => (int) $count,
         ]);
+    }
+
+    public function createPaymentMethod(StorePaymentMethodRequest $request, string $id)
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid scammer ID'], 400);
+        }
+
+        $scammer = $this->scammers->show(new ShowScammerCommand((int) $id));
+
+        if (! $scammer) {
+            return response()->json(['message' => 'Scammer not found'], 404);
+        }
+
+        $data = $request->validated();
+        $type = PaymentMethodType::fromReference((string) $data['reference']);
+        if ($this->scammers->hasPaymentMethod(new HasScammerPaymentMethodCommand($scammer, $type, (string) $data['reference']))) {
+            return response()->json(['error' => 'Payment method with the same reference already exists for this scammer'], 422);
+        }
+
+        $paymentMethod = $this->scammers->createPaymentMethod(CreateScammerPaymentMethodCommand::fromValidated($scammer, $data));
+
+        return response()->json((new PaymentMethodResource($paymentMethod))->resolve(), 201);
     }
 
     public function reports(Request $request, string $id)

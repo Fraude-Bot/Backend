@@ -584,13 +584,12 @@ class PublicOrganizationControllerTest extends TestCase
             ->assertJsonPath('total', 0);
 
         $response = $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ]);
 
         $contact = Contact::query()->first();
         $this->assertNotNull($contact);
-        $this->assertSame(PlatformType::EMAIL, $contact->platform);
+        $this->assertSame(PlatformType::OTHER, $contact->platform);
         $this->assertTrue($contact->is_active);
         $this->assertTrue($organization->contacts()->whereKey($contact->id)->exists());
 
@@ -604,12 +603,11 @@ class PublicOrganizationControllerTest extends TestCase
             ->assertJsonPath('data.0.reference', 'seller@example.com');
     }
 
-    public function test_create_contact_accepts_an_integer_platform_and_normalizes_a_cellphone(): void
+    public function test_create_contact_infers_a_cellphone_and_normalizes_it(): void
     {
         $organization = Organization::factory()->create();
 
         $response = $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
-            'platform' => PlatformType::CELLPHONE->value,
             'reference' => '+52 55 1111 2222',
         ]);
 
@@ -626,13 +624,12 @@ class PublicOrganizationControllerTest extends TestCase
     {
         $organization = Organization::factory()->create();
         $contact = Contact::factory()->create([
-            'platform' => PlatformType::EMAIL,
+            'platform' => PlatformType::OTHER,
             'reference' => 'seller@example.com',
         ]);
         $organization->contacts()->attach($contact);
 
         $payload = [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ];
 
@@ -652,13 +649,12 @@ class PublicOrganizationControllerTest extends TestCase
     {
         $organization = Organization::factory()->create();
         $contact = Contact::factory()->create([
-            'platform' => PlatformType::EMAIL,
+            'platform' => PlatformType::OTHER,
             'reference' => 'seller@example.com',
         ]);
         $contact->delete();
 
         $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ])->assertCreated()
             ->assertJsonPath('id', $contact->id);
@@ -671,7 +667,6 @@ class PublicOrganizationControllerTest extends TestCase
     public function test_create_contact_returns_404_when_organization_is_missing_inactive_or_trashed(): void
     {
         $payload = [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ];
 
@@ -698,13 +693,12 @@ class PublicOrganizationControllerTest extends TestCase
     public function test_create_contact_returns_400_for_an_invalid_organization_id(): void
     {
         $this->postJson('/api/public/organizations/not-an-id/contacts', [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
         ])->assertBadRequest()
             ->assertExactJson(['message' => 'Invalid organization ID']);
     }
 
-    public function test_create_contact_validates_platform_and_reference(): void
+    public function test_create_contact_validates_reference(): void
     {
         $organization = Organization::factory()->create();
         $url = "/api/public/organizations/{$organization->id}/contacts";
@@ -712,25 +706,18 @@ class PublicOrganizationControllerTest extends TestCase
         $this->postJson($url, [])
             ->assertUnprocessable()
             ->assertJsonPath('error.code', 'validation_failed')
-            ->assertJsonStructure(['error' => ['details' => ['platform', 'reference']]]);
+            ->assertJsonStructure(['error' => ['details' => ['reference']]]);
 
         $this->postJson($url, [
-            'platform' => 'carrier',
+            'platform' => 'email',
             'reference' => 'seller@example.com',
         ])->assertUnprocessable()
             ->assertJsonStructure(['error' => ['details' => ['platform']]]);
 
         $this->postJson($url, [
-            'platform' => 'email',
             'reference' => '   ',
         ])->assertUnprocessable()
             ->assertJsonPath('error.details.reference.0', 'The reference field is required.');
-
-        $this->postJson($url, [
-            'platform' => 'cellphone',
-            'reference' => 'abc',
-        ])->assertUnprocessable()
-            ->assertJsonPath('error.details.reference.0', 'Reference cannot be empty');
 
         $this->assertSame(0, Contact::query()->count());
     }
@@ -740,12 +727,182 @@ class PublicOrganizationControllerTest extends TestCase
         $organization = Organization::factory()->create();
 
         $this->postJson("/api/public/organizations/{$organization->id}/contacts", [
-            'platform' => 'email',
             'reference' => 'seller@example.com',
             'is_active' => false,
         ])->assertCreated()
             ->assertJsonPath('is_active', true);
 
         $this->assertTrue(Contact::query()->first()->is_active);
+    }
+
+    public function test_create_payment_method_for_an_active_organization(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->getJson("/api/public/organizations/{$organization->id}/payment-methods")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/payment-methods", [
+            'reference' => '012345678901234567',
+        ]);
+
+        $paymentMethod = PaymentMethod::query()->first();
+        $this->assertNotNull($paymentMethod);
+        $this->assertSame(PaymentMethodType::CLABE, $paymentMethod->type);
+        $this->assertSame('012345678901234567', $paymentMethod->reference);
+        $this->assertTrue($paymentMethod->is_active);
+        $this->assertTrue($organization->paymentMethods()->whereKey($paymentMethod->id)->exists());
+
+        $response->assertCreated();
+        $response->assertExactJson(PaymentMethodResource::make($paymentMethod)->resolve());
+
+        $this->getJson("/api/public/organizations/{$organization->id}/payment-methods")
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $paymentMethod->id)
+            ->assertJsonPath('data.0.reference', '012345678901234567');
+    }
+
+    public function test_create_payment_method_trims_the_reference_and_infers_clabe(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/payment-methods", [
+            'reference' => ' 012345678901234567 ',
+        ]);
+
+        $paymentMethod = PaymentMethod::query()->first();
+        $this->assertNotNull($paymentMethod);
+        $this->assertSame(PaymentMethodType::CLABE, $paymentMethod->type);
+        $this->assertSame('012345678901234567', $paymentMethod->reference);
+
+        $response->assertCreated();
+        $response->assertExactJson(PaymentMethodResource::make($paymentMethod)->resolve());
+    }
+
+    public function test_create_payment_method_reuses_an_existing_row_and_attaches_it(): void
+    {
+        $organization = Organization::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '012345678901234567',
+        ]);
+
+        $this->postJson("/api/public/organizations/{$organization->id}/payment-methods", [
+            'reference' => '012345678901234567',
+        ])->assertCreated()
+            ->assertJsonPath('id', $paymentMethod->id);
+
+        $this->assertSame(1, PaymentMethod::query()->count());
+        $this->assertTrue($organization->paymentMethods()->whereKey($paymentMethod->id)->exists());
+    }
+
+    public function test_create_payment_method_restores_a_trashed_payment_method(): void
+    {
+        $organization = Organization::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '012345678901234567',
+        ]);
+        $paymentMethod->delete();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/payment-methods", [
+            'reference' => '012345678901234567',
+        ])->assertCreated()
+            ->assertJsonPath('id', $paymentMethod->id);
+
+        $this->assertNull($paymentMethod->fresh()->deleted_at);
+        $this->assertTrue($organization->paymentMethods()->whereKey($paymentMethod->id)->exists());
+        $this->assertSame(1, PaymentMethod::withTrashed()->count());
+    }
+
+    public function test_create_payment_method_returns_422_when_already_linked(): void
+    {
+        $organization = Organization::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '012345678901234567',
+        ]);
+        $organization->paymentMethods()->attach($paymentMethod);
+
+        $this->postJson("/api/public/organizations/{$organization->id}/payment-methods", [
+            'reference' => '012345678901234567',
+        ])->assertUnprocessable()
+            ->assertExactJson(['error' => 'Payment method already exists for this organization']);
+
+        $this->assertSame(1, PaymentMethod::query()->count());
+        $this->assertSame(1, $organization->paymentMethods()->count());
+    }
+
+    public function test_create_payment_method_returns_404_when_organization_is_missing_inactive_or_trashed(): void
+    {
+        $payload = [
+            'reference' => '012345678901234567',
+        ];
+
+        $this->postJson('/api/public/organizations/0/payment-methods', $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $inactive = Organization::factory()->inactive()->create();
+
+        $this->postJson("/api/public/organizations/{$inactive->id}/payment-methods", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $trashed = Organization::factory()->create();
+        $trashed->delete();
+
+        $this->postJson("/api/public/organizations/{$trashed->id}/payment-methods", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $this->assertSame(0, PaymentMethod::query()->count());
+    }
+
+    public function test_create_payment_method_returns_400_for_an_invalid_organization_id(): void
+    {
+        $this->postJson('/api/public/organizations/not-an-id/payment-methods', [
+            'reference' => '012345678901234567',
+        ])->assertBadRequest()
+            ->assertExactJson(['message' => 'Invalid organization ID']);
+    }
+
+    public function test_create_payment_method_validates_reference(): void
+    {
+        $organization = Organization::factory()->create();
+        $url = "/api/public/organizations/{$organization->id}/payment-methods";
+
+        $this->postJson($url, [])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['reference']]]);
+
+        $this->postJson($url, [
+            'type' => 'clabe',
+            'reference' => '012345678901234567',
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['type']]]);
+
+        $this->postJson($url, [
+            'reference' => '   ',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.details.reference.0', 'The reference field is required.');
+
+        $this->assertSame(0, PaymentMethod::query()->count());
+    }
+
+    public function test_create_payment_method_ignores_is_active(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/payment-methods", [
+            'reference' => '012345678901234567',
+            'is_active' => false,
+        ])->assertCreated()
+            ->assertJsonPath('is_active', true);
+
+        $this->assertTrue(PaymentMethod::query()->first()->is_active);
     }
 }

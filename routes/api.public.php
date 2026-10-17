@@ -19,6 +19,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::get('organizations/{id}/contacts', [OrganizationController::class, 'contacts']);
     Route::post('organizations/{id}/contacts', [OrganizationController::class, 'createContact']);
     Route::get('organizations/{id}/payment-methods', [OrganizationController::class, 'paymentMethods']);
+    Route::post('organizations/{id}/payment-methods', [OrganizationController::class, 'createPaymentMethod']);
     Route::get('organizations/{id}/reports', [OrganizationController::class, 'reports']);
     Route::get('organizations/{id}/map', [OrganizationController::class, 'map']);
 
@@ -28,6 +29,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::get('scammers/{id}/contacts', [ScammerController::class, 'contacts']);
     Route::post('scammers/{id}/contacts', [ScammerController::class, 'createContact']);
     Route::get('scammers/{id}/payment-methods', [ScammerController::class, 'paymentMethods']);
+    Route::post('scammers/{id}/payment-methods', [ScammerController::class, 'createPaymentMethod']);
     Route::get('scammers/{id}/reports', [ScammerController::class, 'reports']);
     Route::get('scammers/{id}/organizations', [ScammerController::class, 'organizations']);
     Route::get('scammers/{id}/map', [ScammerController::class, 'map']);

@@ -21,7 +21,7 @@ final readonly class CreateOrganizationContactCommand
     {
         return new self(
             organization: $organization,
-            platform: PlatformType::from((int) $data['platform']),
+            platform: PlatformType::fromReference((string) $data['reference']),
             reference: (string) $data['reference'],
             isActive: (bool) ($data['is_active'] ?? true),
         );
