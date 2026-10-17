@@ -20,6 +20,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::post('organizations/{id}/contacts', [OrganizationController::class, 'createContact']);
     Route::get('organizations/{id}/payment-methods', [OrganizationController::class, 'paymentMethods']);
     Route::get('organizations/{id}/reports', [OrganizationController::class, 'reports']);
+    Route::get('organizations/{id}/scammers', [OrganizationController::class, 'scammers']);
     Route::get('organizations/{id}/map', [OrganizationController::class, 'map']);
 
     Route::get('scammers/suggest', [ScammerController::class, 'suggest']);

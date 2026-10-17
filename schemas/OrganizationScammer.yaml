@@ -1,0 +1,21 @@
+type: object
+description: A scammer linked to an organization. Public reads return active records only.
+required:
+  - id
+  - name
+  - created_at
+properties:
+  id:
+    type: integer
+    minimum: 1
+    description: Numeric scammer ID.
+    example: 1
+  name:
+    type: string
+    description: Display name.
+    example: Jane Doe
+  created_at:
+    type: string
+    format: date
+    description: Date the scammer was created (`YYYY-MM-DD`).
+    example: "2026-08-24"
