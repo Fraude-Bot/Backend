@@ -24,6 +24,8 @@ interface ScammerRepositoryInterface
 
     public function findPaginatedReportsById(int $id, int $page, int $count): ?PaginatedResult;
 
+    public function findPaginatedOrganizationsById(int $id, int $page, int $count): ?PaginatedResult;
+
     public function findMapById(int $id): ?MapResult;
 
     /**

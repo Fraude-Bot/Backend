@@ -1,0 +1,28 @@
+type: object
+description: Paginated list of organizations linked to a scammer.
+required:
+  - data
+  - total
+  - page
+  - count
+properties:
+  data:
+    type: array
+    description: Organizations on the current page.
+    items:
+      $ref: ./ScammerOrganization.yaml
+  total:
+    type: integer
+    minimum: 0
+    description: Total number of matching organizations.
+    example: 15
+  page:
+    type: integer
+    minimum: 1
+    description: Current page number (`p` query parameter).
+    example: 1
+  count:
+    type: integer
+    minimum: 1
+    description: Page size (`c` query parameter).
+    example: 10

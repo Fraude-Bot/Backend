@@ -166,6 +166,29 @@ class ScammerRepository implements ScammerRepositoryInterface
         });
     }
 
+    public function findPaginatedOrganizationsById(int $id, int $page, int $count): ?PaginatedResult
+    {
+        $cacheKey = "public:scammer:{$id}:organizations:{$page}:{$count}";
+
+        return Cache::remember(SearchCache::key($cacheKey), self::CACHE_TTL_SECONDS, function () use ($id, $page, $count) {
+            $scammer = Scammer::query()->where('is_active', true)->find($id);
+
+            if (! $scammer) {
+                return null;
+            }
+
+            $query = $scammer->organizations()
+                ->where('organizations.is_active', true)
+                ->orderBy('organizations.name')
+                ->orderBy('organizations.id');
+
+            $total = (clone $query)->count();
+            $items = $query->forPage($page, $count)->get();
+
+            return new PaginatedResult($items, $total);
+        });
+    }
+
     public function findMapById(int $id): ?MapResult
     {
         $scammer = Scammer::query()

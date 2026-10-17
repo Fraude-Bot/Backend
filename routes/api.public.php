@@ -32,6 +32,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::get('scammers/{id}/payment-methods', [ScammerController::class, 'paymentMethods']);
     Route::post('scammers/{id}/payment-methods', [ScammerController::class, 'createPaymentMethod']);
     Route::get('scammers/{id}/reports', [ScammerController::class, 'reports']);
+    Route::get('scammers/{id}/organizations', [ScammerController::class, 'organizations']);
     Route::get('scammers/{id}/map', [ScammerController::class, 'map']);
 
     Route::get('reports', [ReportController::class, 'index'])

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
+use App\Application\Scammer\Commands\ListPublicScammerOrganizationsCommand;
 use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\ListScammerContactsCommand;
@@ -20,6 +21,7 @@ use App\Http\Requests\Public\StoreScammerContactRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
+use App\Http\Resources\Public\ScammerOrganizationResource;
 use App\Http\Resources\Public\ScammerResource;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -219,6 +221,37 @@ class ScammerController extends Controller
         return response()->json([
             'data' => ReportResource::collection($reports->items)->resolve(),
             'total' => $reports->total,
+            'page' => (int) $page,
+            'count' => (int) $count,
+        ]);
+    }
+
+    public function organizations(Request $request, string $id)
+    {
+        $page = $request->input('p', 1);
+        $count = $request->input('c', 10);
+
+        if (
+            filter_var($id, FILTER_VALIDATE_INT) === false ||
+            filter_var($page, FILTER_VALIDATE_INT) === false ||
+            filter_var($count, FILTER_VALIDATE_INT) === false ||
+            (int) $page < 1 ||
+            (int) $page > 100000 ||
+            (int) $count < 1 ||
+            (int) $count > 100
+        ) {
+            return response()->json(['message' => 'Invalid scammer ID, page or count'], 400);
+        }
+
+        $organizations = $this->scammers->listOrganizations(new ListPublicScammerOrganizationsCommand((int) $id, (int) $page, (int) $count));
+
+        if (! $organizations) {
+            return response()->json(['message' => 'Scammer organizations not found'], 404);
+        }
+
+        return response()->json([
+            'data' => ScammerOrganizationResource::collection($organizations->items)->resolve(),
+            'total' => $organizations->total,
             'page' => (int) $page,
             'count' => (int) $count,
         ]);

@@ -7,8 +7,10 @@ use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
+use App\Http\Resources\Public\ScammerOrganizationResource;
 use App\Http\Resources\Public\ScammerResource;
 use App\Models\Contact;
+use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Report;
 use App\Models\Scammer;
@@ -448,6 +450,141 @@ class PublicScammerControllerTest extends TestCase
         $count = 10;
 
         $response = $this->getJson("/api/public/scammers/invalid-scammer-id/reports?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
+    }
+
+    public function test_find_scammer_organizations_by_id(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $later = Organization::factory()->create([
+            'name' => 'Zed',
+            'created_at' => '2026-03-02 10:00:00',
+        ]);
+        $earlier = Organization::factory()->create([
+            'name' => 'Ada',
+            'created_at' => '2026-01-15 10:00:00',
+        ]);
+        $scammer->organizations()->attach([$later->id, $earlier->id]);
+
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/{$scammer->id}/organizations?p={$page}&c={$count}");
+
+        $response->assertStatus(200);
+        $response->assertExactJson([
+            'data' => ScammerOrganizationResource::collection([$earlier, $later])->resolve(),
+            'total' => 2,
+            'page' => $page,
+            'count' => $count,
+        ]);
+        $response->assertJsonPath('data.0.created_at', '2026-01-15');
+        $response->assertJsonPath('data.1.name', 'Zed');
+    }
+
+    public function test_scammer_organizations_total_reflects_all_matching_rows(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $organizations = Organization::factory()->count(15)->create();
+        $scammer->organizations()->attach($organizations);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations?p=1&c=10")
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('total', 15);
+    }
+
+    public function test_scammer_organization_pagination_is_bounded(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations?p=0&c=101")
+            ->assertBadRequest();
+    }
+
+    public function test_organization_changes_invalidate_cached_public_scammer_organizations(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $organization = Organization::factory()->create(['name' => 'Before']);
+        $scammer->organizations()->attach($organization);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertJsonPath('data.0.name', 'Before');
+
+        $organization->update(['name' => 'After']);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertJsonPath('data.0.name', 'After');
+    }
+
+    public function test_inactive_and_deleted_scammer_organizations_are_omitted(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $active = Organization::factory()->create(['name' => 'Active organization']);
+        $inactive = Organization::factory()->create(['name' => 'Inactive organization', 'is_active' => false]);
+        $deleted = Organization::factory()->create(['name' => 'Deleted organization']);
+        $scammer->organizations()->attach([$active->id, $inactive->id, $deleted->id]);
+        $deleted->delete();
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Active organization')
+            ->assertJsonPath('total', 1);
+    }
+
+    public function test_find_scammer_organizations_by_id_with_inactive_scammer_returns404(): void
+    {
+        $scammer = Scammer::factory()->create(['is_active' => false]);
+        $organization = Organization::factory()->create();
+        $scammer->organizations()->attach($organization);
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertStatus(404)
+            ->assertExactJson(['message' => 'Scammer organizations not found']);
+    }
+
+    public function test_find_scammer_organizations_by_id_with_missing_scammer_returns404(): void
+    {
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/1/organizations?p={$page}&c={$count}");
+
+        $response->assertStatus(404);
+        $response->assertExactJson(['message' => 'Scammer organizations not found']);
+    }
+
+    public function test_find_scammer_organizations_by_id_with_invalid_page_query_param_returns400(): void
+    {
+        $page = 'invalid-page';
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/1/organizations?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
+    }
+
+    public function test_find_scammer_organizations_by_id_with_invalid_count_query_param_returns400(): void
+    {
+        $page = 1;
+        $count = 'invalid-count';
+
+        $response = $this->getJson("/api/public/scammers/1/organizations?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
+    }
+
+    public function test_find_scammer_organizations_by_id_with_invalid_scammer_id_param_returns400(): void
+    {
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/scammers/invalid-scammer-id/organizations?p={$page}&c={$count}");
 
         $response->assertStatus(400);
         $response->assertExactJson(['message' => 'Invalid scammer ID, page or count']);
