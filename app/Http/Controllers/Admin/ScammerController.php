@@ -90,8 +90,7 @@ class ScammerController extends Controller
         $updated = $this->scammers->updateContact(UpdateScammerContactCommand::fromInput(
             $scammer,
             $contact,
-            $request->all(),
-            $request->has('platform'),
+            $request->validated(),
         ));
 
         if ($updated === null) {
@@ -129,7 +128,7 @@ class ScammerController extends Controller
     public function createPaymentMethod(PaymentMethodRequest $request, Scammer $scammer)
     {
         $data = $request->validated();
-        $type = PaymentMethodType::from((int) $data['type']);
+        $type = PaymentMethodType::fromReference((string) $data['reference']);
         if ($this->scammers->hasPaymentMethod(new HasScammerPaymentMethodCommand($scammer, $type, (string) $data['reference']))) {
             return response()->json(['error' => 'Payment method with the same reference already exists for this scammer'], 422);
         }

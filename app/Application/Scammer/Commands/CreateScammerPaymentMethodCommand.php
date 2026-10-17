@@ -21,7 +21,7 @@ final readonly class CreateScammerPaymentMethodCommand
     {
         return new self(
             scammer: $scammer,
-            type: PaymentMethodType::from((int) $data['type']),
+            type: PaymentMethodType::fromReference((string) $data['reference']),
             reference: (string) $data['reference'],
             isActive: (bool) ($data['is_active'] ?? true),
         );

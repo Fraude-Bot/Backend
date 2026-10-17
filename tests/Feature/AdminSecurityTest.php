@@ -88,10 +88,9 @@ class AdminSecurityTest extends TestCase
         $organization = Organization::factory()->create();
 
         $this->postJson("/api/admin/organizations/{$organization->id}/contacts", [
-            'platform' => PlatformType::EMAIL->value,
             'reference' => 'desk@example.com',
         ])->assertCreated()
-            ->assertJsonPath('platform', 'Email')
+            ->assertJsonPath('platform', 'Other')
             ->assertJsonPath('reference', 'desk@example.com');
 
         $contact = Contact::query()->where('reference', 'desk@example.com')->first();
@@ -109,7 +108,6 @@ class AdminSecurityTest extends TestCase
         $scammer = Scammer::factory()->create();
 
         $this->postJson("/api/admin/organizations/{$organization->id}/payment-methods", [
-            'type' => PaymentMethodType::CARD_NUMBER->value,
             'reference' => '4111111111111111',
         ])->assertCreated();
 
@@ -121,7 +119,6 @@ class AdminSecurityTest extends TestCase
         ]);
 
         $this->postJson("/api/admin/scammers/{$scammer->id}/payment-methods", [
-            'type' => PaymentMethodType::CLABE->value,
             'reference' => '012345678901234567',
         ])->assertCreated();
 

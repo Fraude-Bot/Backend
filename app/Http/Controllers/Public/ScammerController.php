@@ -183,7 +183,7 @@ class ScammerController extends Controller
         }
 
         $data = $request->validated();
-        $type = PaymentMethodType::from((int) $data['type']);
+        $type = PaymentMethodType::fromReference((string) $data['reference']);
         if ($this->scammers->hasPaymentMethod(new HasScammerPaymentMethodCommand($scammer, $type, (string) $data['reference']))) {
             return response()->json(['error' => 'Payment method with the same reference already exists for this scammer'], 422);
         }

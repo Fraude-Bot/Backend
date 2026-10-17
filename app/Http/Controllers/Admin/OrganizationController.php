@@ -114,7 +114,7 @@ class OrganizationController extends Controller
         Organization $organization,
     ) {
         $data = $request->validated();
-        $type = PaymentMethodType::from((int) $data['type']);
+        $type = PaymentMethodType::fromReference((string) $data['reference']);
         if ($this->organizations->hasPaymentMethod(new HasOrganizationPaymentMethodCommand($organization, $type, (string) $data['reference']))) {
             return response()->json(['error' => 'Payment method already exists for this organization'], 422);
         }

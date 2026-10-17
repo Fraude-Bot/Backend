@@ -22,15 +22,18 @@ final readonly class UpdateScammerContactCommand
     /**
      * @param  array<string, mixed>  $input
      */
-    public static function fromInput(Scammer $scammer, Contact $contact, array $input, bool $platformProvided): self
+    public static function fromInput(Scammer $scammer, Contact $contact, array $input): self
     {
+        $referenceProvided = array_key_exists('reference', $input);
+        $reference = $referenceProvided ? (string) $input['reference'] : null;
+
         return new self(
             scammer: $scammer,
             contact: $contact,
-            platform: $platformProvided ? PlatformType::from((int) $input['platform']) : null,
-            platformProvided: $platformProvided,
-            reference: array_key_exists('reference', $input) ? (string) $input['reference'] : null,
-            referenceProvided: array_key_exists('reference', $input),
+            platform: $referenceProvided ? PlatformType::fromReference((string) $reference) : null,
+            platformProvided: $referenceProvided,
+            reference: $reference,
+            referenceProvided: $referenceProvided,
             isActive: array_key_exists('is_active', $input) ? (bool) $input['is_active'] : null,
             isActiveProvided: array_key_exists('is_active', $input),
         );
