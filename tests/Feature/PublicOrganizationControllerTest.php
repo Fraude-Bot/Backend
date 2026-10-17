@@ -7,6 +7,7 @@ use App\Domain\Map\ValueObjects\Edge;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
+use App\Http\Resources\Public\OrganizationScammerResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
 use App\Models\Contact;
@@ -461,6 +462,141 @@ class PublicOrganizationControllerTest extends TestCase
         $count = 10;
 
         $response = $this->getJson("/api/public/organizations/invalid-organization-id/reports?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid organization ID, page or count']);
+    }
+
+    public function test_find_organization_scammers_by_id(): void
+    {
+        $organization = Organization::factory()->create();
+        $later = Scammer::factory()->create([
+            'name' => 'Zed',
+            'created_at' => '2026-03-02 10:00:00',
+        ]);
+        $earlier = Scammer::factory()->create([
+            'name' => 'Ada',
+            'created_at' => '2026-01-15 10:00:00',
+        ]);
+        $organization->scammers()->attach([$later->id, $earlier->id]);
+
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/organizations/{$organization->id}/scammers?p={$page}&c={$count}");
+
+        $response->assertStatus(200);
+        $response->assertExactJson([
+            'data' => OrganizationScammerResource::collection([$earlier, $later])->resolve(),
+            'total' => 2,
+            'page' => $page,
+            'count' => $count,
+        ]);
+        $response->assertJsonPath('data.0.created_at', '2026-01-15');
+        $response->assertJsonPath('data.1.name', 'Zed');
+    }
+
+    public function test_organization_scammers_total_reflects_all_matching_rows(): void
+    {
+        $organization = Organization::factory()->create();
+        $scammers = Scammer::factory()->count(15)->create();
+        $organization->scammers()->attach($scammers);
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers?p=1&c=10")
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('total', 15);
+    }
+
+    public function test_organization_scammer_pagination_is_bounded(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers?p=0&c=101")
+            ->assertBadRequest();
+    }
+
+    public function test_scammer_changes_invalidate_cached_public_organization_scammers(): void
+    {
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create(['name' => 'Before']);
+        $organization->scammers()->attach($scammer);
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertJsonPath('data.0.name', 'Before');
+
+        $scammer->update(['name' => 'After']);
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertJsonPath('data.0.name', 'After');
+    }
+
+    public function test_inactive_and_deleted_organization_scammers_are_omitted(): void
+    {
+        $organization = Organization::factory()->create();
+        $active = Scammer::factory()->create(['name' => 'Active scammer']);
+        $inactive = Scammer::factory()->create(['name' => 'Inactive scammer', 'is_active' => false]);
+        $deleted = Scammer::factory()->create(['name' => 'Deleted scammer']);
+        $organization->scammers()->attach([$active->id, $inactive->id, $deleted->id]);
+        $deleted->delete();
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Active scammer')
+            ->assertJsonPath('total', 1);
+    }
+
+    public function test_find_organization_scammers_by_id_with_inactive_organization_returns404(): void
+    {
+        $organization = Organization::factory()->create(['is_active' => false]);
+        $scammer = Scammer::factory()->create();
+        $organization->scammers()->attach($scammer);
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertStatus(404)
+            ->assertExactJson(['message' => 'Organization scammers not found']);
+    }
+
+    public function test_find_organization_scammers_by_id_with_missing_organization_returns404(): void
+    {
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/organizations/1/scammers?p={$page}&c={$count}");
+
+        $response->assertStatus(404);
+        $response->assertExactJson(['message' => 'Organization scammers not found']);
+    }
+
+    public function test_find_organization_scammers_by_id_with_invalid_page_query_param_returns400(): void
+    {
+        $page = 'invalid-page';
+        $count = 10;
+
+        $response = $this->getJson("/api/public/organizations/1/scammers?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid organization ID, page or count']);
+    }
+
+    public function test_find_organization_scammers_by_id_with_invalid_count_query_param_returns400(): void
+    {
+        $page = 1;
+        $count = 'invalid-count';
+
+        $response = $this->getJson("/api/public/organizations/1/scammers?p={$page}&c={$count}");
+
+        $response->assertStatus(400);
+        $response->assertExactJson(['message' => 'Invalid organization ID, page or count']);
+    }
+
+    public function test_find_organization_scammers_by_id_with_invalid_organization_id_param_returns400(): void
+    {
+        $page = 1;
+        $count = 10;
+
+        $response = $this->getJson("/api/public/organizations/invalid-organization-id/scammers?p={$page}&c={$count}");
 
         $response->assertStatus(400);
         $response->assertExactJson(['message' => 'Invalid organization ID, page or count']);

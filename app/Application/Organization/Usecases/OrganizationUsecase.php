@@ -12,6 +12,7 @@ use App\Application\Organization\Commands\ListOrganizationContactsCommand;
 use App\Application\Organization\Commands\ListOrganizationPaymentMethodsCommand;
 use App\Application\Organization\Commands\ListOrganizationReportsCommand;
 use App\Application\Organization\Commands\ListOrganizationScammersCommand;
+use App\Application\Organization\Commands\ListPublicOrganizationScammersCommand;
 use App\Application\Organization\Commands\ListOrganizationsCommand;
 use App\Application\Organization\Commands\LoadOrganizationCommand;
 use App\Application\Organization\Commands\OrganizationCalendarCommand;
@@ -65,6 +66,11 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
     public function reports(ListOrganizationReportsCommand $command): ?PaginatedResult
     {
         return $this->organizations->findPaginatedReportsById($command->id, $command->page, $command->count);
+    }
+
+    public function listScammers(ListPublicOrganizationScammersCommand $command): ?PaginatedResult
+    {
+        return $this->organizations->findPaginatedScammersById($command->id, $command->page, $command->count);
     }
 
     public function map(OrganizationMapCommand $command): ?MapResult

@@ -12,6 +12,7 @@ use App\Application\Organization\Commands\ListOrganizationContactsCommand;
 use App\Application\Organization\Commands\ListOrganizationPaymentMethodsCommand;
 use App\Application\Organization\Commands\ListOrganizationReportsCommand;
 use App\Application\Organization\Commands\ListOrganizationScammersCommand;
+use App\Application\Organization\Commands\ListPublicOrganizationScammersCommand;
 use App\Application\Organization\Commands\ListOrganizationsCommand;
 use App\Application\Organization\Commands\LoadOrganizationCommand;
 use App\Application\Organization\Commands\OrganizationCalendarCommand;
@@ -38,6 +39,8 @@ interface OrganizationUsecaseInterface
     public function paymentMethods(ListOrganizationPaymentMethodsCommand $command): ?PaginatedResult;
 
     public function reports(ListOrganizationReportsCommand $command): ?PaginatedResult;
+
+    public function listScammers(ListPublicOrganizationScammersCommand $command): ?PaginatedResult;
 
     public function map(OrganizationMapCommand $command): ?MapResult;
 
