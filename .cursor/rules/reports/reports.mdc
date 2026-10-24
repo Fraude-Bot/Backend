@@ -1,0 +1,28 @@
+---
+globs: Report.php
+alwaysApply: false
+---
+# Reports
+
+Fraudebot stores reports submitted by other users. Reports are the way where users can specify the individual/commpany who scammmed them and submit what happened and how. 
+
+## Parts of a Report
+
+A report is made up with the following parts:
+
+- Profile Picture (JPG, PNG, WEBP)
+- Scammer/Organization name
+- Products
+- Title
+- Description
+- Proofs (JPG, PNG, WEBP)
+- Contacts
+- Payment Methods
+- Scammer (for organizations) or Organization (for scammers)
+
+## Codebase
+
+The following files are related to the reports.
+
+@Report.php
+

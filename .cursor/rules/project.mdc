@@ -1,0 +1,17 @@
+---
+description: Fraudebot project explanation
+alwaysApply: true
+---
+
+# Fraudebot
+
+Fraudebot is a platform where users can search if the person they're talking to have reports made by other users, preventing them to be scammed.
+Users can use the implemented search engine to query by using the card number, CLABE (SPEI), crypto wallets, so on. The idea came from the abandoned project [Estafabot] (https://www.facebook.com/estafabotmx/), which featured a search engine along a Whatsapp Bot to search through the database.
+
+As I said earlier, **Estafabot** was abandoned, no reason at all, and lastly the scams about car sales, investments, crypto, loans, general sales, etc, have incremented exponentially on internet, so
+this project presents a solution for this by allowing all users to search through the database at no cost.
+
+# Objectives
+
+- **Report Form**: Allow users to submit reports to scammers/organizations. 
+

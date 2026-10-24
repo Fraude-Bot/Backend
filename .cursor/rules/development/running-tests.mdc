@@ -1,0 +1,34 @@
+---
+description: How to run PHPUnit tests, architecture check and PHP static analysis tool in Docker.
+globs: tests/**/*.php, phpunit.xml
+alwaysApply: false
+---
+
+# Running Backend Tests
+
+PHPUnit **must run inside Docker** (PHP 8.3).
+
+## Prerequisites
+
+- Identify Docker Container name that is using the current Git Worktree/directory.
+- Tests use SQLite in-memory (`phpunit.xml`) — MySQL does not need to be up for unit tests
+
+## Commands (preferred for agents)
+
+Run from repo paths, with Docker available:
+
+```bash
+    # To execute the full suite of tests
+    docker exec <container-name> php artisan test
+
+    # To execute the PHPStan static analysis
+    docker exec <container-name> composer analyse
+
+    # To execute the Phparkitect analyser
+    docker exec <container-name> composer check:architecture
+```
+
+## Agent checklist
+
+1. After changing PHP or test code, run the commands above sequentially.
+2. Report pass/fail from these three command outputs; do not assume green without running them.
