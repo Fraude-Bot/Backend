@@ -1,5 +1,4 @@
 ---
-globs: Report.php
 alwaysApply: false
 ---
 # Reports

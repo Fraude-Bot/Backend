@@ -13,5 +13,7 @@ this project presents a solution for this by allowing all users to search throug
 
 # Objectives
 
-- **Report Form**: Allow users to submit reports to scammers/organizations. 
+- **Report Form**: Allow users to submit reports to scammers/organizations. More about this in domain/reports.mdc
+- **View Scammer/Organization page**: Allow users to view the information of a scammer/organization that was reported before by other users.
+- **Whatsapp Bot**: This is an upcoming project, but we will allow users to search information about scammers/organizations on Whatsapp.
 

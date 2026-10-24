@@ -1,0 +1,138 @@
+---
+description: Step-by-step for adding an HTTP API operation in this Laravel backend.
+alwaysApply: true
+---
+
+# Creating a new API service
+
+Read `architecture.mdc` and `running-tests.mdc` before changing code. One **API service** is one HTTP operation. Add it to an existing controller when the aggregate already has one. Create a controller only for a new aggregate.
+
+Health, readiness, OpenAPI, and the local admin token route are closures. They are not domain use cases.
+
+## Example
+
+`GET /api/public/scammers/suggest?q=Acme` returns up to five scammer names. The pieces below are that operation. Copy the shape, not the query.
+
+Request path: route → controller → command → use case → repository. The controller never calls a repository, Eloquent, or a concrete use case.
+
+## 1. Route
+
+Public routes live in `routes/api.public.php` under the `public` prefix and `throttle:public-api`. Laravel mounts that file at `/api`, so the URL is `/api/public/...`.
+
+```php
+Route::get('scammers/suggest', [ScammerController::class, 'suggest']);
+```
+
+Declare static paths (`scammers/suggest`) before `scammers/{id}`.
+
+Admin routes live in `routes/api.admin.php`. Keep the existing group middleware: `auth:sanctum`, `EnsureUserIsActive`, `abilities:admin:write`, `can:manage-fraud-data`, `throttle:admin`, `AuditApiRequest`. Auth routes live in `routes/api.auth.php`.
+
+## 2. Controller
+
+`app/Http/Controllers/Public/ScammerController.php` type-hints the use-case interface and builds the command.
+
+```php
+public function __construct(private ScammerUsecaseInterface $scammers) {}
+
+public function suggest(Request $request)
+{
+    $query = $request->input('q');
+
+    return response()->json($this->scammers->suggest(new SuggestScammersCommand(is_string($query) ? $query : '')));
+}
+```
+
+Keep status codes and JSON here:
+
+- Invalid path id, page, or count: `400` with `{"message": "..."}`. Check ids with `filter_var($id, FILTER_VALIDATE_INT)`.
+- Missing record: `404` with `{"message": "..."}`.
+- A model: `(new ScammerResource($scammer))->resolve()`.
+- A page: `{"data": ContactResource::collection($result->items)->resolve(), "total", "page", "count"}`. `p` is page (1–100000, default 1). `c` is page size (1–100, default 10).
+- A created record: `201`.
+
+A JSON body uses a `FormRequest` in `app/Http/Requests/{Public|Admin}/`. `StoreScammerContactRequest` is the pattern: `authorize()` returns `true` on public routes, and `rules()` describes the body. The controller passes `$request->validated()` into `CreateScammerContactCommand::fromValidated(...)`. Invalid bodies become `422` through the handler in `bootstrap/app.php` (`error.code = validation_failed`). Do not validate the body again in the use case.
+
+## 3. Command
+
+One readonly command per use-case method, in `app/Application/{Domain}/Commands/`.
+
+```php
+namespace App\Application\Scammer\Commands;
+
+final readonly class SuggestScammersCommand
+{
+    public function __construct(
+        public string $query,
+    ) {}
+}
+```
+
+Constructors take already-parsed values. A `fromValidated` factory belongs on the command when the controller has a validated array, as on `CreateScammerContactCommand`. Commands may use `App\Domain`, other commands, `App\Models`, and vendor classes. They must not use repositories, HTTP, or infrastructure.
+
+## 4. Use case
+
+Add the method to the interface and the class under `app/Application/{Domain}/Usecases/`. The method accepts that one command and returns the model, `PaginatedResult`, `MapResult`, array, or null the controller needs.
+
+```php
+public function suggest(SuggestScammersCommand $command): array
+{
+    return $this->scammers->suggest($command->query);
+}
+```
+
+Type-hint repository interfaces in the constructor. Wrap multi-write work in `DB::transaction`, as `createContact` does. Map domain exceptions to HTTP only in the controller.
+
+A new aggregate also needs `{Name}UsecaseInterface`, `{Name}Usecase`, and this binding in `app/Providers/AppServiceProvider.php`:
+
+```php
+$this->app->bind(SeoUsecaseInterface::class, SeoUsecase::class);
+```
+
+## 5. Repository
+
+Add the read or write to the aggregate repository interface and its Eloquent implementation in `app/Repositories/{Domain}/`. Search cards stay on `*CardRepository`, not on the aggregate repository.
+
+```php
+public function suggest(string $query): array
+{
+    $query = trim($query);
+
+    if (mb_strlen($query) < 2 || mb_strlen($query) > 100) {
+        return [];
+    }
+
+    return Cache::remember(/* key, ttl, query */);
+}
+```
+
+Pivot attaches go through that repository. `SearchCache` invalidation for attach-only writes stays inside the repository. A new repository interface gets a `bind` next to the others in `AppServiceProvider`.
+
+External systems get a port interface in `Application` and an implementation in `Infrastructure`. Image storage goes through `TemporaryImageStorageInterface`.
+
+## 6. OpenAPI
+
+Add the path to `openapi.yaml`. Paths are relative to the `/api` server. Reuse `#/components/parameters/ScammerId` and `#/components/responses/RateLimited`. Put reusable bodies in `schemas/` and reference them with `$ref: ./schemas/Scammer.yaml`. `OpenApiDocument` bundles those files; there is no separate registration step.
+
+`/public/scammers/suggest` uses `operationId: suggestScammerNames`, documents the `q` query param, and returns a string array capped at 5. Update the `info.description` when the new operation changes a public rule.
+
+## 7. Tests
+
+Add a feature test beside the controller's existing test, `tests/Feature/PublicScammerControllerTest.php`. Hit the real URL. Cover the success body, validation, not-found, and empty or boundary input. `test_suggest_scammer_names_by_partial_case_insensitive_query` is the success case: it creates scammers with factories and asserts the exact JSON.
+
+Run inside the worktree's PHP container, in this order: `php artisan test`, `composer analyse`, `composer check:architecture`. See `running-tests.mdc`.
+
+## New aggregate checklist
+
+- `app/Domain/{Aggregate}/` for entities, enums, and value objects this operation needs.
+- Model, factory, and migration when the table is new.
+- Repository interface, Eloquent implementation, and provider binding.
+- Use case interface, use case, command, and provider binding.
+- Controller, route, resource or `FormRequest`, OpenAPI path, and feature test.
+
+## Do not
+
+- Call a repository or a concrete use case from a controller.
+- Pass a raw request array into a use case.
+- Put HTTP status codes or `FormRequest` classes in `Application`.
+- Depend on `App\Http` or `App\Infrastructure` from a use case, or on anything outside `App\Domain` and vendor from the domain.
+- Add a use case for health, readiness, OpenAPI, or the local admin token route.
