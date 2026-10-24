@@ -19,6 +19,9 @@ info:
     `POST /public/scammers/{id}/payment-methods` adds a payment method to an active scammer.
     `POST /public/organizations/{id}/payment-methods` adds a payment method to an active organization.
     Each body sends a reference. A payment method already linked to that record is rejected.
+    `POST /public/organizations/{id}/scammers` adds a scammer to an active organization.
+    The body sends a name. A scammer with the same name is reused, and a trashed match is restored.
+    Attaching an existing link again leaves that link unchanged.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -747,6 +750,57 @@ paths:
                 message: Organization scammers not found
         "429":
           $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [Organizations]
+      operationId: createOrganizationScammer
+      summary: Add a scammer to an organization
+      description: |
+        Attaches a scammer to an active organization. The body sends a name.
+        A scammer that already exists with the same name, ignoring case, is reused,
+        and a trashed match is restored. Attaching an existing link again leaves that link unchanged.
+        A new scammer is stored active. `is_active` and `profile_picture_path` are not accepted.
+        The name is trimmed.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganizationScammerRequest"
+            example:
+              name: Jane Doe
+      responses:
+        "201":
+          description: The scammer was created or reused and attached to the organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationScammer"
+              example:
+                id: 1
+                name: Jane Doe
+                created_at: "2026-08-24"
+        "400":
+          description: The organization ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid organization ID
+        "404":
+          description: No active organization exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Organization not found
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}/calendar/{year}:
     get:
       tags: [Organizations]
@@ -1231,6 +1285,15 @@ components:
           maxLength: 255
           description: Phone number, email, URL, profile, username, or other handle. The platform is inferred from this value.
           example: "+52 55 1111 2222"
+    CreateOrganizationScammerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Display name of the scammer. Matching ignores case.
+          example: Jane Doe
     CreateOrganizationContactRequest:
       type: object
       required: [reference]

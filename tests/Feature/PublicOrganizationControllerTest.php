@@ -1041,4 +1041,165 @@ class PublicOrganizationControllerTest extends TestCase
 
         $this->assertTrue(PaymentMethod::query()->first()->is_active);
     }
+
+    public function test_create_scammer_for_an_active_organization(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => '  Jane Doe  ',
+        ]);
+
+        $scammer = Scammer::query()->first();
+        $this->assertNotNull($scammer);
+        $this->assertSame('Jane Doe', $scammer->name);
+        $this->assertTrue($scammer->is_active);
+        $this->assertNull($scammer->profile_picture_path);
+        $this->assertTrue($organization->scammers()->whereKey($scammer->id)->exists());
+
+        $response->assertCreated();
+        $response->assertExactJson(OrganizationScammerResource::make($scammer)->resolve());
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $scammer->id)
+            ->assertJsonPath('data.0.name', 'Jane Doe');
+    }
+
+    public function test_create_scammer_reuses_an_existing_scammer_and_reattaches(): void
+    {
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create([
+            'name' => 'Jane Doe',
+        ]);
+        $organization->scammers()->attach($scammer);
+
+        $payload = [
+            'name' => '  jane doe  ',
+        ];
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", $payload)
+            ->assertCreated()
+            ->assertJsonPath('id', $scammer->id)
+            ->assertJsonPath('name', 'Jane Doe');
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", $payload)
+            ->assertCreated()
+            ->assertJsonPath('id', $scammer->id);
+
+        $this->assertSame(1, Scammer::query()->count());
+        $this->assertSame(1, $organization->scammers()->count());
+    }
+
+    public function test_create_scammer_restores_a_trashed_scammer(): void
+    {
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create([
+            'name' => 'Jane Doe',
+        ]);
+        $scammer->delete();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+        ])->assertCreated()
+            ->assertJsonPath('id', $scammer->id);
+
+        $this->assertNull($scammer->fresh()->deleted_at);
+        $this->assertTrue($organization->scammers()->whereKey($scammer->id)->exists());
+        $this->assertSame(1, Scammer::withTrashed()->count());
+    }
+
+    public function test_create_scammer_reuses_an_inactive_scammer(): void
+    {
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->inactive()->create([
+            'name' => 'Jane Doe',
+        ]);
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+        ])->assertCreated()
+            ->assertJsonPath('id', $scammer->id);
+
+        $this->assertFalse($scammer->fresh()->is_active);
+        $this->assertTrue($organization->scammers()->whereKey($scammer->id)->exists());
+
+        $this->getJson("/api/public/organizations/{$organization->id}/scammers")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+    }
+
+    public function test_create_scammer_returns_404_when_organization_is_missing_inactive_or_trashed(): void
+    {
+        $payload = [
+            'name' => 'Jane Doe',
+        ];
+
+        $this->postJson('/api/public/organizations/0/scammers', $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $inactive = Organization::factory()->inactive()->create();
+
+        $this->postJson("/api/public/organizations/{$inactive->id}/scammers", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $trashed = Organization::factory()->create();
+        $trashed->delete();
+
+        $this->postJson("/api/public/organizations/{$trashed->id}/scammers", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Organization not found']);
+
+        $this->assertSame(0, Scammer::query()->count());
+    }
+
+    public function test_create_scammer_returns_400_for_an_invalid_organization_id(): void
+    {
+        $this->postJson('/api/public/organizations/not-an-id/scammers', [
+            'name' => 'Jane Doe',
+        ])->assertBadRequest()
+            ->assertExactJson(['message' => 'Invalid organization ID']);
+    }
+
+    public function test_create_scammer_validates_name(): void
+    {
+        $organization = Organization::factory()->create();
+        $url = "/api/public/organizations/{$organization->id}/scammers";
+
+        $this->postJson($url, [])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['name']]]);
+
+        $this->postJson($url, [
+            'name' => '   ',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.details.name.0', 'The name field is required.');
+
+        $this->postJson($url, [
+            'name' => str_repeat('a', 101),
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['name']]]);
+
+        $this->assertSame(0, Scammer::query()->count());
+    }
+
+    public function test_create_scammer_ignores_is_active(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'is_active' => false,
+        ])->assertCreated();
+
+        $this->assertTrue(Scammer::query()->first()->is_active);
+    }
 }
