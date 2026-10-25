@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\Edge;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
@@ -15,6 +16,7 @@ use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Report;
 use App\Models\Scammer;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -1201,5 +1203,129 @@ class PublicOrganizationControllerTest extends TestCase
         ])->assertCreated();
 
         $this->assertTrue(Scammer::query()->first()->is_active);
+    }
+
+    public function test_create_scammer_stores_a_profile_picture(): void
+    {
+        Storage::fake('public');
+        $organization = Organization::factory()->create();
+        $picture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'profile_picture_path' => $picture,
+        ])->assertCreated();
+
+        $scammer = Scammer::query()->first();
+        $this->assertNotNull($scammer);
+        $this->assertStringStartsWith('reports/scammers/profiles/', $scammer->profile_picture_path);
+        $this->assertSame('avatar', Storage::disk('public')->get($scammer->profile_picture_path));
+        $this->assertTrue($organization->scammers()->whereKey($scammer->id)->exists());
+    }
+
+    public function test_create_scammer_accepts_a_null_profile_picture_path(): void
+    {
+        $organization = Organization::factory()->create();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'profile_picture_path' => null,
+        ])->assertCreated();
+
+        $this->assertNull(Scammer::query()->first()->profile_picture_path);
+    }
+
+    public function test_create_scammer_keeps_an_existing_profile_picture(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('reports/scammers/profiles/kept.jpg', 'kept');
+        $organization = Organization::factory()->create();
+        $existing = Scammer::factory()->create([
+            'name' => 'Jane Doe',
+            'profile_picture_path' => 'reports/scammers/profiles/kept.jpg',
+        ]);
+        $unused = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'unused.jpg', 'unused');
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => '  jane doe  ',
+            'profile_picture_path' => $unused,
+        ])->assertCreated()
+            ->assertJsonPath('id', $existing->id);
+
+        $this->assertSame('reports/scammers/profiles/kept.jpg', $existing->fresh()->profile_picture_path);
+        $this->assertSame('kept', Storage::disk('public')->get('reports/scammers/profiles/kept.jpg'));
+        $this->assertSame(
+            ['reports/scammers/profiles/kept.jpg'],
+            collect(Storage::disk('public')->allFiles())
+                ->filter(fn (string $path): bool => str_starts_with($path, 'reports/scammers/profiles/'))
+                ->sort()
+                ->values()
+                ->all(),
+        );
+    }
+
+    public function test_create_scammer_restores_a_trashed_scammer_and_keeps_its_picture(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('reports/scammers/profiles/kept.jpg', 'kept');
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create([
+            'name' => 'Jane Doe',
+            'profile_picture_path' => 'reports/scammers/profiles/kept.jpg',
+        ]);
+        $scammer->delete();
+        $unused = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'unused.jpg', 'unused');
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'profile_picture_path' => $unused,
+        ])->assertCreated()
+            ->assertJsonPath('id', $scammer->id);
+
+        $restored = $scammer->fresh();
+        $this->assertNull($restored->deleted_at);
+        $this->assertSame('reports/scammers/profiles/kept.jpg', $restored->profile_picture_path);
+        $this->assertSame(
+            ['reports/scammers/profiles/kept.jpg'],
+            collect(Storage::disk('public')->allFiles())
+                ->filter(fn (string $path): bool => str_starts_with($path, 'reports/scammers/profiles/'))
+                ->sort()
+                ->values()
+                ->all(),
+        );
+    }
+
+    public function test_create_scammer_rejects_a_profile_picture_outside_the_temporary_directory(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('other/avatar.jpg', 'avatar');
+        $organization = Organization::factory()->create();
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('profile_picture_path', $response->json('error.details'));
+        $this->assertSame(0, Scammer::query()->count());
+        $this->assertSame(0, $organization->scammers()->count());
+        $this->assertSame(['other/avatar.jpg'], Storage::disk('public')->allFiles());
+    }
+
+    private function publishTemporary(string $directory, string $filename, string $contents): string
+    {
+        $relative = $directory.'/'.$filename;
+        Storage::disk('public')->put($relative, $contents);
+
+        return $this->storagePath($relative);
+    }
+
+    private function storagePath(string $relative): string
+    {
+        $urlPath = parse_url((string) config('filesystems.disks.public.url'), PHP_URL_PATH);
+
+        return rtrim(is_string($urlPath) ? $urlPath : '', '/').'/'.$relative;
     }
 }

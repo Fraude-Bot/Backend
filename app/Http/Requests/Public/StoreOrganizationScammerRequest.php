@@ -15,6 +15,7 @@ class StoreOrganizationScammerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:100'],
+            'profile_picture_path' => ['sometimes', 'nullable', 'string'],
         ];
     }
 }
