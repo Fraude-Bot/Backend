@@ -57,7 +57,7 @@ Examples:
 
 ## Creating the Pull Request
 
-We have to use `gh` command to create the pull request.
+We have to use `gh` command to create the pull request. **IMPORTANT** the environment variable `GITHUB_TOKEN` is already set, you don't need to manually sign in.
 
 ```bash
 gh pr create --fill -B <target-branch> -H <head-branch>
@@ -67,11 +67,9 @@ Where `<target-branch>` is the branch where the changes will be merged and `<hea
 The response would be the following:
 
 ```bash
-Warning: 1 uncommitted change
+Creating pull request for <head-branch> into <target-branch> in Fraude-Bot/Backend
 
-Creating pull request for feature/add-scammer-to-organization into main in Fraude-Bot/Backend
-
-https://github.com/Fraude-Bot/Backend/pull/45
+https://github.com/Fraude-Bot/Backend/pull/#
 ```
 
 Return the pull request url.
