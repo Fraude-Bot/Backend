@@ -1,5 +1,5 @@
 ---
-name: new-worktree
+name: create-worktree
 description: >-
   Asks for the new branch name, then starts Fraudebot backend Docker containers
   for a Cursor Agent worktree using the main worktree's environment. Use when
