@@ -20,6 +20,8 @@ Ask for the new branch name and wait for the answer. Skip the question only when
 
 The container slug is the branch name after the last `/`. It must be kebab-case. If it is not, ask again.
 
+Rename this chat to the branch name, exactly as given (feature/support-tab).
+
 ## Use the checkout Cursor created
 
 Cursor creates the Git worktree and chooses its directory. Leave that path alone. Do not run `git worktree add`, and do not create a `worktrees/` directory inside the repository.
