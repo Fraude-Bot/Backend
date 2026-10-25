@@ -1,0 +1,79 @@
+---
+description: How to commit changes made in the codebase and create a pull request. Use when Cursor is trying to commit, pushing changes or creating a pull request to Github. Using the button to create a commit and creating the PR from Cursor.
+alwaysApply: false
+---
+
+# Publishing the changes to Github
+
+Whenever we want to publish the changes we've done in the Worktree.
+
+## Comitting
+
+Identify the files you've made changes, sometimes there will be modifications in some files that are related to each other, for this you have to commit those files under a single commit. 
+
+**IMPORTANT** We use emojis to represent features, fixes and work in progress. For example: 
+
+- ✅ feat: new API service ...
+- 🛠️ fix: Public/OrganizationController wasn't working
+- 💻 wip: adding new authentication token
+
+**IMPORTANT**, you have to add the model as Co-Author, appending `-m "Co-Authored-By: <Company> <Model> <email>"` to the `git commit ...` command.
+
+Use the value that matches the model making the commit. Put the model version in the name. Keep that vendor's email.
+
+Cursor (`cursoragent@cursor.com`):
+
+- Grok 4.7: `Cursor Grok 4.7 <cursoragent@cursor.com>`
+- Grok 4.6: `Cursor Grok 4.6 <cursoragent@cursor.com>`
+- Grok 4.5: `Cursor Grok 4.5 <cursoragent@cursor.com>`
+- Composer 2.5: `Cursor Composer 2.5 <cursoragent@cursor.com>`
+
+Claude (`noreply@anthropic.com`):
+
+- Opus 4.6: `Claude Opus 4.6 <noreply@anthropic.com>`
+- Sonnet 4.6: `Claude Sonnet 4.6 <noreply@anthropic.com>`
+- Haiku 4.5: `Claude Haiku 4.5 <noreply@anthropic.com>`
+
+OpenAI (`noreply@openai.com`):
+
+- GPT 5.4: `GPT 5.4 <noreply@openai.com>`
+- Codex: `Codex <noreply@openai.com>`
+
+Gemini (`218195315+gemini-cli@users.noreply.github.com`):
+
+- Gemini 2.5 Pro: `Gemini 2.5 Pro <218195315+gemini-cli@users.noreply.github.com>`
+
+GitHub Copilot (`copilot@github.com`):
+
+- Copilot: `Copilot <copilot@github.com>`
+
+Finally, after every change was committed, you have to push the Git Worktree `git push -u origin HEAD`
+
+Examples:
+
+- `git commit -m "✅ feat: new API service Public/OrganizationController@createScammer" -m "Co-Authored-By: Cursor Grok 4.7 <cursoragent@cursor.com>`
+- `git commit -m "🛠️ fix: service Admin/OrganizationController@deleteOrganization wasn't working" -m "Co-Authored-By: Cursor Grok 4.7 <cursoragent@cursor.com>`
+- `git commit -m "💻 wip: new architecture improvement along Clean Architecture" -m "Co-Authored-By: Cursor Grok 4.7 <cursoragent@cursor.com>`
+
+## Creating the Pull Request
+
+We have to use `gh` command to create the pull request.
+
+```bash
+gh pr create --fill -B <target-branch> -H <head-branch>
+```
+
+Where `<target-branch>` is the branch where the changes will be merged and `<head-branch>` the branch we are currently.
+The response would be the following:
+
+```bash
+Warning: 1 uncommitted change
+
+Creating pull request for feature/add-scammer-to-organization into main in Fraude-Bot/Backend
+
+https://github.com/Fraude-Bot/Backend/pull/45
+```
+
+Return the pull request url.
+
+
