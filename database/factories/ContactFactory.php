@@ -30,8 +30,8 @@ class ContactFactory extends Factory
             PlatformType::EMAIL => $this->faker->unique()->safeEmail(),
             PlatformType::CELLPHONE, PlatformType::WHATSAPP => $this->faker->unique()->numerify('+55##########'),
             PlatformType::URL => $this->faker->unique()->url(),
-            PlatformType::YOUTUBE => '@' . $this->faker->unique()->userName(),
-            PlatformType::TIKTOK => '@' . $this->faker->unique()->userName(),
+            PlatformType::YOUTUBE => '@'.$this->faker->unique()->userName(),
+            PlatformType::TIKTOK => '@'.$this->faker->unique()->userName(),
             PlatformType::FACEBOOK, PlatformType::INSTAGRAM, PlatformType::TELEGRAM => $this->faker->unique()->userName(),
             PlatformType::OTHER => $this->faker->unique()->bothify('????-########'),
         };
