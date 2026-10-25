@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
+use App\Application\Scammer\Commands\CreateScammerOrganizationCommand;
 use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\ListPublicScammerOrganizationsCommand;
@@ -18,6 +19,7 @@ use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StorePaymentMethodRequest;
 use App\Http\Requests\Public\StoreScammerContactRequest;
+use App\Http\Requests\Public\StoreScammerOrganizationRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
@@ -255,6 +257,26 @@ class ScammerController extends Controller
             'page' => (int) $page,
             'count' => (int) $count,
         ]);
+    }
+
+    public function createOrganization(StoreScammerOrganizationRequest $request, string $id)
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid scammer ID'], 400);
+        }
+
+        $scammer = $this->scammers->show(new ShowScammerCommand((int) $id));
+
+        if (! $scammer) {
+            return response()->json(['message' => 'Scammer not found'], 404);
+        }
+
+        $organization = $this->scammers->createOrganization(CreateScammerOrganizationCommand::fromValidated(
+            $scammer,
+            $request->validated(),
+        ));
+
+        return response()->json((new ScammerOrganizationResource($organization))->resolve(), 201);
     }
 
     public function map(Request $request, string $id)

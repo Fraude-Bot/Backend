@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Resources\Public\ContactResource;
@@ -14,6 +15,7 @@ use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Report;
 use App\Models\Scammer;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -976,5 +978,290 @@ class PublicScammerControllerTest extends TestCase
             ->assertJsonPath('is_active', true);
 
         $this->assertTrue(PaymentMethod::query()->first()->is_active);
+    }
+
+    public function test_create_organization_for_an_active_scammer(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $response = $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => '  Acme Payments  ',
+        ]);
+
+        $organization = Organization::query()->first();
+        $this->assertNotNull($organization);
+        $this->assertSame('Acme Payments', $organization->name);
+        $this->assertTrue($organization->is_active);
+        $this->assertNull($organization->profile_picture_path);
+        $this->assertTrue($scammer->organizations()->whereKey($organization->id)->exists());
+
+        $response->assertCreated();
+        $response->assertExactJson(ScammerOrganizationResource::make($organization)->resolve());
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $organization->id)
+            ->assertJsonPath('data.0.name', 'Acme Payments');
+    }
+
+    public function test_create_organization_reuses_an_existing_organization_and_reattaches(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $organization = Organization::factory()->create([
+            'name' => 'Acme Payments',
+        ]);
+        $scammer->organizations()->attach($organization);
+
+        $payload = [
+            'name' => '  acme payments  ',
+        ];
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", $payload)
+            ->assertCreated()
+            ->assertJsonPath('id', $organization->id)
+            ->assertJsonPath('name', 'Acme Payments');
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", $payload)
+            ->assertCreated()
+            ->assertJsonPath('id', $organization->id);
+
+        $this->assertSame(1, Organization::query()->count());
+        $this->assertSame(1, $scammer->organizations()->count());
+    }
+
+    public function test_create_organization_restores_a_trashed_organization(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $organization = Organization::factory()->create([
+            'name' => 'Acme Payments',
+        ]);
+        $organization->delete();
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+        ])->assertCreated()
+            ->assertJsonPath('id', $organization->id);
+
+        $this->assertNull($organization->fresh()->deleted_at);
+        $this->assertTrue($scammer->organizations()->whereKey($organization->id)->exists());
+        $this->assertSame(1, Organization::withTrashed()->count());
+    }
+
+    public function test_create_organization_reuses_an_inactive_organization(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $organization = Organization::factory()->inactive()->create([
+            'name' => 'Acme Payments',
+        ]);
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+        ])->assertCreated()
+            ->assertJsonPath('id', $organization->id);
+
+        $this->assertFalse($organization->fresh()->is_active);
+        $this->assertTrue($scammer->organizations()->whereKey($organization->id)->exists());
+
+        $this->getJson("/api/public/scammers/{$scammer->id}/organizations")
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+    }
+
+    public function test_create_organization_returns_404_when_scammer_is_missing_inactive_or_trashed(): void
+    {
+        $payload = [
+            'name' => 'Acme Payments',
+        ];
+
+        $this->postJson('/api/public/scammers/0/organizations', $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+
+        $inactive = Scammer::factory()->inactive()->create();
+
+        $this->postJson("/api/public/scammers/{$inactive->id}/organizations", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+
+        $trashed = Scammer::factory()->create();
+        $trashed->delete();
+
+        $this->postJson("/api/public/scammers/{$trashed->id}/organizations", $payload)
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+
+        $this->assertSame(0, Organization::query()->count());
+    }
+
+    public function test_create_organization_returns_400_for_an_invalid_scammer_id(): void
+    {
+        $this->postJson('/api/public/scammers/not-an-id/organizations', [
+            'name' => 'Acme Payments',
+        ])->assertBadRequest()
+            ->assertExactJson(['message' => 'Invalid scammer ID']);
+    }
+
+    public function test_create_organization_validates_name(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $url = "/api/public/scammers/{$scammer->id}/organizations";
+
+        $this->postJson($url, [])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['name']]]);
+
+        $this->postJson($url, [
+            'name' => '   ',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.details.name.0', 'The name field is required.');
+
+        $this->postJson($url, [
+            'name' => str_repeat('a', 101),
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['name']]]);
+
+        $this->assertSame(0, Organization::query()->count());
+    }
+
+    public function test_create_organization_ignores_is_active(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+            'is_active' => false,
+        ])->assertCreated();
+
+        $this->assertTrue(Organization::query()->first()->is_active);
+    }
+
+    public function test_create_organization_stores_a_profile_picture(): void
+    {
+        Storage::fake('public');
+        $scammer = Scammer::factory()->create();
+        $picture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+            'profile_picture_path' => $picture,
+        ])->assertCreated();
+
+        $organization = Organization::query()->first();
+        $this->assertNotNull($organization);
+        $this->assertStringStartsWith('reports/organizations/profiles/', $organization->profile_picture_path);
+        $this->assertSame('avatar', Storage::disk('public')->get($organization->profile_picture_path));
+        $this->assertTrue($scammer->organizations()->whereKey($organization->id)->exists());
+    }
+
+    public function test_create_organization_accepts_a_null_profile_picture_path(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+            'profile_picture_path' => null,
+        ])->assertCreated();
+
+        $this->assertNull(Organization::query()->first()->profile_picture_path);
+    }
+
+    public function test_create_organization_keeps_an_existing_profile_picture(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('reports/organizations/profiles/kept.jpg', 'kept');
+        $scammer = Scammer::factory()->create();
+        $existing = Organization::factory()->create([
+            'name' => 'Acme Payments',
+            'profile_picture_path' => 'reports/organizations/profiles/kept.jpg',
+        ]);
+        $unused = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'unused.jpg', 'unused');
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => '  acme payments  ',
+            'profile_picture_path' => $unused,
+        ])->assertCreated()
+            ->assertJsonPath('id', $existing->id);
+
+        $this->assertSame('reports/organizations/profiles/kept.jpg', $existing->fresh()->profile_picture_path);
+        $this->assertSame('kept', Storage::disk('public')->get('reports/organizations/profiles/kept.jpg'));
+        $this->assertSame(
+            ['reports/organizations/profiles/kept.jpg'],
+            collect(Storage::disk('public')->allFiles())
+                ->filter(fn (string $path): bool => str_starts_with($path, 'reports/organizations/profiles/'))
+                ->sort()
+                ->values()
+                ->all(),
+        );
+    }
+
+    public function test_create_organization_restores_a_trashed_organization_and_keeps_its_picture(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('reports/organizations/profiles/kept.jpg', 'kept');
+        $scammer = Scammer::factory()->create();
+        $organization = Organization::factory()->create([
+            'name' => 'Acme Payments',
+            'profile_picture_path' => 'reports/organizations/profiles/kept.jpg',
+        ]);
+        $organization->delete();
+        $unused = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'unused.jpg', 'unused');
+
+        $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+            'profile_picture_path' => $unused,
+        ])->assertCreated()
+            ->assertJsonPath('id', $organization->id);
+
+        $restored = $organization->fresh();
+        $this->assertNull($restored->deleted_at);
+        $this->assertSame('reports/organizations/profiles/kept.jpg', $restored->profile_picture_path);
+        $this->assertSame(
+            ['reports/organizations/profiles/kept.jpg'],
+            collect(Storage::disk('public')->allFiles())
+                ->filter(fn (string $path): bool => str_starts_with($path, 'reports/organizations/profiles/'))
+                ->sort()
+                ->values()
+                ->all(),
+        );
+    }
+
+    public function test_create_organization_rejects_a_profile_picture_outside_the_temporary_directory(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('other/avatar.jpg', 'avatar');
+        $scammer = Scammer::factory()->create();
+
+        $response = $this->postJson("/api/public/scammers/{$scammer->id}/organizations", [
+            'name' => 'Acme Payments',
+            'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('profile_picture_path', $response->json('error.details'));
+        $this->assertSame(0, Organization::query()->count());
+        $this->assertSame(0, $scammer->organizations()->count());
+        $this->assertSame(['other/avatar.jpg'], Storage::disk('public')->allFiles());
+    }
+
+    private function publishTemporary(string $directory, string $filename, string $contents): string
+    {
+        $relative = $directory.'/'.$filename;
+        Storage::disk('public')->put($relative, $contents);
+
+        return $this->storagePath($relative);
+    }
+
+    private function storagePath(string $relative): string
+    {
+        $urlPath = parse_url((string) config('filesystems.disks.public.url'), PHP_URL_PATH);
+
+        return rtrim(is_string($urlPath) ? $urlPath : '', '/').'/'.$relative;
     }
 }
