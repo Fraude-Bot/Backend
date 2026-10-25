@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Public;
 
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
-use App\Application\Scammer\Commands\ListPublicScammerOrganizationsCommand;
 use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
+use App\Application\Scammer\Commands\ListPublicScammerOrganizationsCommand;
 use App\Application\Scammer\Commands\ListScammerContactsCommand;
 use App\Application\Scammer\Commands\ListScammerPaymentMethodsCommand;
 use App\Application\Scammer\Commands\ListScammerReportsCommand;
