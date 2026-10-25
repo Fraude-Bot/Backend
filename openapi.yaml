@@ -818,7 +818,10 @@ paths:
         Attaches a scammer to an active organization. The body sends a name.
         A scammer that already exists with the same name, ignoring case, is reused,
         and a trashed match is restored. Attaching an existing link again leaves that link unchanged.
-        A new scammer is stored active. `is_active` and `profile_picture_path` are not accepted.
+        A new scammer is stored active. `is_active` is not accepted.
+        `profile_picture_path` is an optional public URL or `/storage` path of a file under
+        `tmp/reports/profiles`. A new scammer stores a copy of that file. An existing
+        scammer keeps its current picture, and the unused copy is removed.
         The name is trimmed.
       parameters:
         - $ref: "#/components/parameters/OrganizationId"
@@ -830,6 +833,7 @@ paths:
               $ref: "#/components/schemas/CreateOrganizationScammerRequest"
             example:
               name: Jane Doe
+              profile_picture_path: /storage/tmp/reports/profiles/8f3c1a.jpg
       responses:
         "201":
           description: The scammer was created or reused and attached to the organization.
@@ -1354,6 +1358,12 @@ components:
           maxLength: 100
           description: Display name of the scammer. Matching ignores case.
           example: Jane Doe
+        profile_picture_path:
+          type:
+            - string
+            - "null"
+          description: Public URL or `/storage` path of a file under `tmp/reports/profiles`. Omitted or null stores no picture on a new scammer.
+          example: /storage/tmp/reports/profiles/8f3c1a.jpg
     CreateScammerOrganizationRequest:
       type: object
       required: [name]

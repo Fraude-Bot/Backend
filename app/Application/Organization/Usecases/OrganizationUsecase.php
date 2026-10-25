@@ -2,6 +2,7 @@
 
 namespace App\Application\Organization\Usecases;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Application\Organization\Commands\AddOrganizationScammerCommand;
 use App\Application\Organization\Commands\CreateOrganizationCommand;
 use App\Application\Organization\Commands\CreateOrganizationContactCommand;
@@ -35,14 +36,20 @@ use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
 use App\Repositories\Scammer\ScammerRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
+use Throwable;
 
 class OrganizationUsecase implements OrganizationUsecaseInterface
 {
+    private const string SCAMMER_PROFILE_DIRECTORY = 'reports/scammers/profiles';
+
     public function __construct(
         private OrganizationRepositoryInterface $organizations,
         private PaymentMethodRepositoryInterface $paymentMethods,
         private ScammerRepositoryInterface $scammers,
         private ContactRepositoryInterface $contacts,
+        private TemporaryImageStorageInterface $images,
     ) {}
 
     public function show(ShowOrganizationCommand $command): ?Organization
@@ -168,11 +175,60 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
 
     public function createScammer(CreateOrganizationScammerCommand $command): Scammer
     {
-        return DB::transaction(function () use ($command): Scammer {
-            $scammer = $this->scammers->firstOrCreate($command->name, null);
-            $this->organizations->attachScammer($command->organization, $scammer);
+        $copied = [];
 
-            return $scammer;
-        });
+        try {
+            $avatarPath = null;
+
+            if (is_string($command->profilePicturePath) && $command->profilePicturePath !== '') {
+                $avatarPath = $this->copyTemporaryProfilePicture($command->profilePicturePath);
+                $copied[] = $avatarPath;
+            }
+
+            return DB::transaction(function () use ($command, $avatarPath, &$copied): Scammer {
+                $scammer = $this->scammers->firstOrCreate($command->name, $avatarPath);
+                $this->discardUnusedAvatar($avatarPath, $scammer->profile_picture_path, $copied);
+                $this->organizations->attachScammer($command->organization, $scammer);
+
+                return $scammer;
+            });
+        } catch (Throwable $exception) {
+            foreach ($copied as $path) {
+                $this->images->deletePublished($path);
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function copyTemporaryProfilePicture(string $location): string
+    {
+        try {
+            return $this->images->copyPublishedTemporary(
+                $location,
+                TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
+                self::SCAMMER_PROFILE_DIRECTORY,
+            );
+        } catch (InvalidArgumentException) {
+            throw ValidationException::withMessages([
+                'profile_picture_path' => ['The image is not a published temporary file.'],
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<string>  $copied
+     */
+    private function discardUnusedAvatar(?string $copiedPath, ?string $storedPath, array &$copied): void
+    {
+        if (! is_string($copiedPath) || $copiedPath === $storedPath) {
+            return;
+        }
+
+        $this->images->deletePublished($copiedPath);
+        $copied = array_values(array_filter(
+            $copied,
+            fn (string $path): bool => $path !== $copiedPath,
+        ));
     }
 }
