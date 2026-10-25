@@ -341,6 +341,12 @@ class ScammerRepository implements ScammerRepositoryInterface
         SearchCache::invalidate();
     }
 
+    public function attachOrganization(Scammer $scammer, Organization $organization): void
+    {
+        $scammer->organizations()->syncWithoutDetaching([$organization->id]);
+        SearchCache::invalidate();
+    }
+
     public function hasContact(Scammer $scammer, Contact $contact): bool
     {
         return $scammer->contacts()->whereKey($contact->id)->exists();

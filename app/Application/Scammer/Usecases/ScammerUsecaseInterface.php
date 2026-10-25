@@ -3,6 +3,7 @@
 namespace App\Application\Scammer\Usecases;
 
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
+use App\Application\Scammer\Commands\CreateScammerOrganizationCommand;
 use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\DeleteScammerCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
@@ -23,6 +24,7 @@ use App\Application\Scammer\Commands\UpdateScammerContactCommand;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
+use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Scammer;
 use Illuminate\Support\Collection;
@@ -67,4 +69,6 @@ interface ScammerUsecaseInterface
     public function hasPaymentMethod(HasScammerPaymentMethodCommand $command): bool;
 
     public function createPaymentMethod(CreateScammerPaymentMethodCommand $command): PaymentMethod;
+
+    public function createOrganization(CreateScammerOrganizationCommand $command): Organization;
 }
