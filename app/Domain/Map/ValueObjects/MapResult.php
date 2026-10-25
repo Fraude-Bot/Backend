@@ -9,8 +9,7 @@ final class MapResult
     public function __construct(
         public readonly Collection $nodes,
         public readonly Collection $edges
-    ) {
-    }
+    ) {}
 
     public static function empty(): self
     {

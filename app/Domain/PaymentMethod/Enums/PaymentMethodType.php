@@ -2,13 +2,13 @@
 
 namespace App\Domain\PaymentMethod\Enums;
 
+use function ctype_digit;
 use function is_int;
 use function is_string;
-use function ctype_digit;
 use function preg_match;
 use function preg_replace;
-use function strlen;
 use function strcasecmp;
+use function strlen;
 use function trim;
 
 enum PaymentMethodType: int
@@ -25,7 +25,7 @@ enum PaymentMethodType: int
             return self::tryFrom((int) $value);
         }
 
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return null;
         }
 
