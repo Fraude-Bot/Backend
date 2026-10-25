@@ -52,7 +52,7 @@ final class Edge implements JsonSerializable
     private static function make(int $sequence, Node $source, Node $target, EdgeKinds $kind): self
     {
         return new self(
-            'e' . $sequence,
+            'e'.$sequence,
             $source->graphId(),
             $target->graphId(),
             $kind,

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/pint-on-stop.sh",
+        "timeout": 10
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/pint-on-stop.sh",
+        "timeout": 180
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": ".cursor/hooks/pint-on-stop.sh",
+        "timeout": 180
+      }
+    ]
+  }
+}
