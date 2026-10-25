@@ -1,5 +1,5 @@
 ---
-name: test-runners
+name: execute-tests
 model: composer-2.5[fast=false]
 description: Executes the available test suites in Fraudebot Backend. It runs PHPUnit tests, architecture check and PHP static analysis tool in Docker. Execute this subagent whenever a file was edited in the codebase.
 ---
