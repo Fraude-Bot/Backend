@@ -5,6 +5,7 @@ namespace App\Repositories\Scammer;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
+use App\Models\Organization;
 use App\Models\Scammer;
 use Illuminate\Support\Collection;
 
@@ -56,6 +57,8 @@ interface ScammerRepositoryInterface
     public function attachContact(Scammer $scammer, int $contactId): void;
 
     public function attachPaymentMethod(Scammer $scammer, int $paymentMethodId): void;
+
+    public function attachOrganization(Scammer $scammer, Organization $organization): void;
 
     public function hasContact(Scammer $scammer, Contact $contact): bool;
 }

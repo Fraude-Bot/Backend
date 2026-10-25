@@ -2,7 +2,9 @@
 
 namespace App\Application\Scammer\Usecases;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
+use App\Application\Scammer\Commands\CreateScammerOrganizationCommand;
 use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
 use App\Application\Scammer\Commands\DeleteScammerCommand;
 use App\Application\Scammer\Commands\HasScammerPaymentMethodCommand;
@@ -25,20 +27,29 @@ use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
+use App\Models\Organization;
 use App\Models\PaymentMethod;
 use App\Models\Scammer;
 use App\Repositories\Contact\ContactRepositoryInterface;
+use App\Repositories\Organization\OrganizationRepositoryInterface;
 use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
 use App\Repositories\Scammer\ScammerRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
+use Throwable;
 
 class ScammerUsecase implements ScammerUsecaseInterface
 {
+    private const string ORGANIZATION_PROFILE_DIRECTORY = 'reports/organizations/profiles';
+
     public function __construct(
         private ScammerRepositoryInterface $scammers,
         private ContactRepositoryInterface $contacts,
         private PaymentMethodRepositoryInterface $paymentMethods,
+        private OrganizationRepositoryInterface $organizations,
+        private TemporaryImageStorageInterface $images,
     ) {}
 
     public function show(ShowScammerCommand $command): ?Scammer
@@ -148,7 +159,7 @@ class ScammerUsecase implements ScammerUsecaseInterface
         }
 
         if (! $platform instanceof PlatformType) {
-            throw new \InvalidArgumentException('Platform cannot be empty');
+            throw new InvalidArgumentException('Platform cannot be empty');
         }
 
         $entity = new ContactEntity(
@@ -178,5 +189,64 @@ class ScammerUsecase implements ScammerUsecaseInterface
 
             return $paymentMethod;
         });
+    }
+
+    public function createOrganization(CreateScammerOrganizationCommand $command): Organization
+    {
+        $copied = [];
+
+        try {
+            $avatarPath = null;
+
+            if (is_string($command->profilePicturePath) && $command->profilePicturePath !== '') {
+                $avatarPath = $this->copyTemporaryProfilePicture($command->profilePicturePath);
+                $copied[] = $avatarPath;
+            }
+
+            return DB::transaction(function () use ($command, $avatarPath, &$copied): Organization {
+                $organization = $this->organizations->firstOrCreate($command->name, $avatarPath);
+                $this->discardUnusedAvatar($avatarPath, $organization->profile_picture_path, $copied);
+                $this->scammers->attachOrganization($command->scammer, $organization);
+
+                return $organization;
+            });
+        } catch (Throwable $exception) {
+            foreach ($copied as $path) {
+                $this->images->deletePublished($path);
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function copyTemporaryProfilePicture(string $location): string
+    {
+        try {
+            return $this->images->copyPublishedTemporary(
+                $location,
+                TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
+                self::ORGANIZATION_PROFILE_DIRECTORY,
+            );
+        } catch (InvalidArgumentException) {
+            throw ValidationException::withMessages([
+                'profile_picture_path' => ['The image is not a published temporary file.'],
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<string>  $copied
+     */
+    private function discardUnusedAvatar(?string $copiedPath, ?string $storedPath, array &$copied): void
+    {
+        if (! is_string($copiedPath) || $copiedPath === $storedPath) {
+            return;
+        }
+
+        $this->images->deletePublished($copiedPath);
+        $copied = array_values(array_filter(
+            $copied,
+            fn (string $path): bool => $path !== $copiedPath,
+        ));
     }
 }
