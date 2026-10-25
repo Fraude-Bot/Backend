@@ -22,6 +22,11 @@ info:
     `POST /public/organizations/{id}/scammers` adds a scammer to an active organization.
     The body sends a name. A scammer with the same name is reused, and a trashed match is restored.
     Attaching an existing link again leaves that link unchanged.
+    `POST /public/scammers/{id}/organizations` adds an organization to an active scammer.
+    The body sends a name and an optional profile picture path.
+    An organization with the same name is reused, and a trashed match is restored.
+    An existing organization keeps its profile picture.
+    Attaching an existing link again leaves that link unchanged.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -377,6 +382,61 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Scammer organizations not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [Scammers]
+      operationId: createScammerOrganization
+      summary: Add an organization to a scammer
+      description: |
+        Attaches an organization to an active scammer. The body sends a name.
+        An organization that already exists with the same name, ignoring case, is reused,
+        and a trashed match is restored. Attaching an existing link again leaves that link unchanged.
+        A new organization is stored active. `is_active` is not accepted.
+        `profile_picture_path` is an optional public URL or `/storage` path of a file under
+        `tmp/reports/profiles`. A new organization stores a copy of that file. An existing
+        organization keeps its current picture, and the unused copy is removed.
+        The name is trimmed.
+      parameters:
+        - $ref: "#/components/parameters/ScammerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScammerOrganizationRequest"
+            example:
+              name: Acme Payments
+              profile_picture_path: /storage/tmp/reports/profiles/8f3c1a.jpg
+      responses:
+        "201":
+          description: The organization was created or reused and attached to the scammer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScammerOrganization"
+              example:
+                id: 1
+                name: Acme Payments
+                created_at: "2026-08-24"
+        "400":
+          description: The scammer ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid scammer ID
+        "404":
+          description: No active scammer exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Scammer not found
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/scammers/{id}/calendar/{year}:
@@ -1303,6 +1363,21 @@ components:
             - string
             - "null"
           description: Public URL or `/storage` path of a file under `tmp/reports/profiles`. Omitted or null stores no picture on a new scammer.
+          example: /storage/tmp/reports/profiles/8f3c1a.jpg
+    CreateScammerOrganizationRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Display name of the organization. Matching ignores case.
+          example: Acme Payments
+        profile_picture_path:
+          type:
+            - string
+            - "null"
+          description: Public URL or `/storage` path of a file under `tmp/reports/profiles`. Omitted or null stores no picture on a new organization.
           example: /storage/tmp/reports/profiles/8f3c1a.jpg
     CreateOrganizationContactRequest:
       type: object

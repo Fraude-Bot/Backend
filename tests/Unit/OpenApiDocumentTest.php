@@ -73,6 +73,7 @@ YAML);
         $this->assertSame('createScammerPaymentMethod', $document['paths']['/public/scammers/{id}/payment-methods']['post']['operationId']);
         $this->assertSame('listScammerReports', $document['paths']['/public/scammers/{id}/reports']['get']['operationId']);
         $this->assertSame('listScammerOrganizations', $document['paths']['/public/scammers/{id}/organizations']['get']['operationId']);
+        $this->assertSame('createScammerOrganization', $document['paths']['/public/scammers/{id}/organizations']['post']['operationId']);
         $this->assertSame('listOrganizationPaymentMethods', $document['paths']['/public/organizations/{id}/payment-methods']['get']['operationId']);
         $this->assertSame('createOrganizationPaymentMethod', $document['paths']['/public/organizations/{id}/payment-methods']['post']['operationId']);
         $this->assertSame('createOrganizationContact', $document['paths']['/public/organizations/{id}/contacts']['post']['operationId']);
