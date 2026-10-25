@@ -1,5 +1,6 @@
 ---
-name: cursor-rules-reviewer
+name: project-code-reviewer
+model: grok-4.7[context=256k,reasoning_effort=high,fast=false]
 description: Reviews recent Fraudebot backend changes against the Cursor rules in .cursor/rules/. Use proactively after an agent adds or changes an API service, controller, command, use case, repository, OpenAPI path, or test.
 ---
 
