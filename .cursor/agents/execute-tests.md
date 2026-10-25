@@ -1,7 +1,7 @@
 ---
-description: How to run PHPUnit tests, architecture check and PHP static analysis tool in Docker.
-globs: tests/**/*.php, phpunit.xml
-alwaysApply: false
+name: test-runners
+model: composer-2.5[fast=false]
+description: Executes the available test suites in Fraudebot Backend. It runs PHPUnit tests, architecture check and PHP static analysis tool in Docker. Execute this subagent whenever a file was edited in the codebase.
 ---
 
 # Running Backend Tests
@@ -28,7 +28,9 @@ Run from repo paths, with Docker available:
     docker exec <container-name> composer check:architecture
 ```
 
-## Agent checklist
+## Subagent checklist
 
 1. After changing PHP or test code, run the commands above sequentially.
 2. Report pass/fail from these three command outputs; do not assume green without running them.
+
+Return the report to the main agent to fix them.
