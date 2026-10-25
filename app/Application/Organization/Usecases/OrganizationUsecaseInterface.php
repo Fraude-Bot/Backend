@@ -6,6 +6,7 @@ use App\Application\Organization\Commands\AddOrganizationScammerCommand;
 use App\Application\Organization\Commands\CreateOrganizationCommand;
 use App\Application\Organization\Commands\CreateOrganizationContactCommand;
 use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
+use App\Application\Organization\Commands\CreateOrganizationScammerCommand;
 use App\Application\Organization\Commands\DeleteOrganizationCommand;
 use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\ListOrganizationContactsCommand;
@@ -26,6 +27,7 @@ use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\PaymentMethod;
+use App\Models\Scammer;
 use Illuminate\Support\Collection;
 
 interface OrganizationUsecaseInterface
@@ -70,4 +72,6 @@ interface OrganizationUsecaseInterface
     public function createPaymentMethod(CreateOrganizationPaymentMethodCommand $command): PaymentMethod;
 
     public function createContact(CreateOrganizationContactCommand $command): Contact;
+
+    public function createScammer(CreateOrganizationScammerCommand $command): Scammer;
 }

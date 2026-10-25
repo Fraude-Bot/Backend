@@ -6,6 +6,7 @@ use App\Application\Organization\Commands\AddOrganizationScammerCommand;
 use App\Application\Organization\Commands\CreateOrganizationCommand;
 use App\Application\Organization\Commands\CreateOrganizationContactCommand;
 use App\Application\Organization\Commands\CreateOrganizationPaymentMethodCommand;
+use App\Application\Organization\Commands\CreateOrganizationScammerCommand;
 use App\Application\Organization\Commands\DeleteOrganizationCommand;
 use App\Application\Organization\Commands\HasOrganizationPaymentMethodCommand;
 use App\Application\Organization\Commands\ListOrganizationContactsCommand;
@@ -27,6 +28,7 @@ use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\PaymentMethod;
+use App\Models\Scammer;
 use App\Repositories\Contact\ContactRepositoryInterface;
 use App\Repositories\Organization\OrganizationRepositoryInterface;
 use App\Repositories\PaymentMethod\PaymentMethodRepositoryInterface;
@@ -161,6 +163,16 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
             $this->organizations->attachContact($command->organization, $contact->id);
 
             return $contact;
+        });
+    }
+
+    public function createScammer(CreateOrganizationScammerCommand $command): Scammer
+    {
+        return DB::transaction(function () use ($command): Scammer {
+            $scammer = $this->scammers->firstOrCreate($command->name, null);
+            $this->organizations->attachScammer($command->organization, $scammer);
+
+            return $scammer;
         });
     }
 }
