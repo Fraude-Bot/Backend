@@ -1314,6 +1314,176 @@ class PublicOrganizationControllerTest extends TestCase
         $this->assertSame(['other/avatar.jpg'], Storage::disk('public')->allFiles());
     }
 
+    public function test_create_scammer_attaches_contacts_and_payment_methods(): void
+    {
+        $organization = Organization::factory()->create();
+        $trashedContact = Contact::factory()->create([
+            'platform' => PlatformType::CELLPHONE,
+            'reference' => '525511112222',
+            'is_active' => false,
+        ]);
+        $trashedContact->delete();
+        $existingPayment = PaymentMethod::factory()->create([
+            'type' => PaymentMethodType::CLABE,
+            'reference' => '032180000118359719',
+        ]);
+
+        $response = $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'contacts' => [
+                ['reference' => '+52 55 1111 2222', 'is_active' => false],
+                ['reference' => 'caja@example.com'],
+            ],
+            'payment_methods' => [
+                ['reference' => '032 180 000118359719', 'is_active' => false],
+                ['reference' => '4152 3412 5132 1531'],
+            ],
+        ]);
+
+        $scammer = Scammer::query()->first();
+        $this->assertNotNull($scammer);
+
+        $response->assertCreated();
+        $response->assertExactJson(OrganizationScammerResource::make($scammer)->resolve());
+
+        $contacts = $scammer->contacts()->orderBy('contacts.id')->get();
+        $this->assertCount(2, $contacts);
+        $this->assertSame($trashedContact->id, $contacts[0]->id);
+        $this->assertNull($contacts[0]->deleted_at);
+        $this->assertFalse($contacts[0]->is_active);
+        $this->assertSame(PlatformType::CELLPHONE, $contacts[0]->platform);
+        $this->assertSame('525511112222', $contacts[0]->reference);
+        $this->assertSame(PlatformType::OTHER, $contacts[1]->platform);
+        $this->assertSame('caja@example.com', $contacts[1]->reference);
+        $this->assertTrue($contacts[1]->is_active);
+
+        $paymentMethods = $scammer->paymentMethods()->orderBy('payment_methods.id')->get();
+        $this->assertCount(2, $paymentMethods);
+        $this->assertSame($existingPayment->id, $paymentMethods[0]->id);
+        $this->assertSame(PaymentMethodType::CLABE, $paymentMethods[0]->type);
+        $this->assertSame('032180000118359719', $paymentMethods[0]->reference);
+        $this->assertSame(PaymentMethodType::CARD_NUMBER, $paymentMethods[1]->type);
+        $this->assertSame('4152341251321531', $paymentMethods[1]->reference);
+        $this->assertTrue($paymentMethods[1]->is_active);
+
+        $this->assertSame(0, $organization->contacts()->count());
+        $this->assertSame(0, $organization->paymentMethods()->count());
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'jane doe',
+            'contacts' => [
+                ['reference' => '+52 55 1111 2222'],
+                ['reference' => 'caja@example.com'],
+            ],
+            'payment_methods' => [
+                ['reference' => '032180000118359719'],
+                ['reference' => '4152341251321531'],
+            ],
+        ])->assertCreated()
+            ->assertJsonPath('id', $scammer->id);
+
+        $this->assertSame(1, Scammer::query()->count());
+        $this->assertSame(1, $organization->scammers()->count());
+        $this->assertSame(2, $scammer->contacts()->count());
+        $this->assertSame(2, $scammer->paymentMethods()->count());
+        $this->assertSame(2, Contact::withTrashed()->count());
+        $this->assertSame(2, PaymentMethod::query()->count());
+    }
+
+    public function test_create_scammer_attaches_contacts_when_reusing_a_trashed_scammer(): void
+    {
+        $organization = Organization::factory()->create();
+        $scammer = Scammer::factory()->create([
+            'name' => 'Jane Doe',
+        ]);
+        $scammer->delete();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'contacts' => [
+                ['reference' => 'caja@example.com'],
+            ],
+            'payment_methods' => [],
+        ])->assertCreated()
+            ->assertJsonPath('id', $scammer->id);
+
+        $restored = $scammer->fresh();
+        $this->assertNull($restored->deleted_at);
+        $this->assertSame(['caja@example.com'], $restored->contacts()->pluck('reference')->all());
+        $this->assertSame(0, $restored->paymentMethods()->count());
+        $this->assertSame(0, $organization->contacts()->count());
+        $this->assertTrue($organization->scammers()->whereKey($scammer->id)->exists());
+    }
+
+    public function test_create_scammer_validates_contacts_and_payment_methods(): void
+    {
+        $organization = Organization::factory()->create();
+        $url = "/api/public/organizations/{$organization->id}/scammers";
+        $payload = [
+            'name' => 'Jane Doe',
+        ];
+
+        $missingReference = $this->postJson($url, [
+            ...$payload,
+            'contacts' => [['name' => 'Caja']],
+            'payment_methods' => [[]],
+        ]);
+        $missingReference->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('contacts.0.reference', $missingReference->json('error.details'));
+        $this->assertArrayHasKey('payment_methods.0.reference', $missingReference->json('error.details'));
+
+        $prohibited = $this->postJson($url, [
+            ...$payload,
+            'contacts' => [
+                ['platform' => 'email', 'reference' => 'caja@example.com'],
+            ],
+            'payment_methods' => [
+                ['type' => 'clabe', 'reference' => '032180000118359719'],
+            ],
+        ]);
+        $prohibited->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('contacts.0.platform', $prohibited->json('error.details'));
+        $this->assertArrayHasKey('payment_methods.0.type', $prohibited->json('error.details'));
+
+        $this->postJson($url, [
+            ...$payload,
+            'contacts' => [
+                ['reference' => str_repeat('a', 256)],
+            ],
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['error' => ['details' => ['contacts.0.reference']]]);
+
+        $this->assertSame(0, Scammer::query()->count());
+        $this->assertSame(0, Contact::query()->count());
+        $this->assertSame(0, PaymentMethod::query()->count());
+        $this->assertSame(0, $organization->scammers()->count());
+    }
+
+    public function test_create_scammer_does_not_store_contacts_when_the_picture_is_rejected(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('other/avatar.jpg', 'avatar');
+        $organization = Organization::factory()->create();
+
+        $this->postJson("/api/public/organizations/{$organization->id}/scammers", [
+            'name' => 'Jane Doe',
+            'profile_picture_path' => $this->storagePath('other/avatar.jpg'),
+            'contacts' => [
+                ['reference' => 'caja@example.com'],
+            ],
+            'payment_methods' => [
+                ['reference' => '032180000118359719'],
+            ],
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+
+        $this->assertSame(0, Scammer::query()->count());
+        $this->assertSame(0, Contact::query()->count());
+        $this->assertSame(0, PaymentMethod::query()->count());
+    }
+
     private function publishTemporary(string $directory, string $filename, string $contents): string
     {
         $relative = $directory.'/'.$filename;

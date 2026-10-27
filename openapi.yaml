@@ -20,7 +20,10 @@ info:
     `POST /public/organizations/{id}/payment-methods` adds a payment method to an active organization.
     Each body sends a reference. A payment method already linked to that record is rejected.
     `POST /public/organizations/{id}/scammers` adds a scammer to an active organization.
-    The body sends a name. A scammer with the same name is reused, and a trashed match is restored.
+    The body sends a name, an optional profile picture path, and optional contacts and payment methods.
+    A scammer with the same name is reused, and a trashed match is restored.
+    An existing scammer keeps its profile picture.
+    Contacts and payment methods are attached to that scammer. A reference that already exists is reused.
     Attaching an existing link again leaves that link unchanged.
     `POST /public/scammers/{id}/organizations` adds an organization to an active scammer.
     The body sends a name, an optional profile picture path, and optional contacts and payment methods.
@@ -832,6 +835,11 @@ paths:
         `profile_picture_path` is an optional public URL or `/storage` path of a file under
         `tmp/reports/profiles`. A new scammer stores a copy of that file. An existing
         scammer keeps its current picture, and the unused copy is removed.
+        Optional `contacts` and `payment_methods` are attached to the scammer, including
+        one that was reused or restored. Each item sends a `reference`. `platform` and `type`
+        are inferred from that reference and are rejected when sent. A matching contact or
+        payment method is reused, and a trashed match is restored. Sending the same link again
+        leaves it unchanged. These records are not attached to the organization.
         The name is trimmed.
       parameters:
         - $ref: "#/components/parameters/OrganizationId"
@@ -844,6 +852,10 @@ paths:
             example:
               name: Jane Doe
               profile_picture_path: /storage/tmp/reports/profiles/8f3c1a.jpg
+              contacts:
+                - reference: "+52 55 1111 2222"
+              payment_methods:
+                - reference: "032180000118359719"
       responses:
         "201":
           description: The scammer was created or reused and attached to the organization.
@@ -1374,6 +1386,30 @@ components:
             - "null"
           description: Public URL or `/storage` path of a file under `tmp/reports/profiles`. Omitted or null stores no picture on a new scammer.
           example: /storage/tmp/reports/profiles/8f3c1a.jpg
+        contacts:
+          type: array
+          description: Optional contacts to create or reuse and attach to the scammer. The platform is inferred from each reference.
+          items:
+            type: object
+            required: [reference]
+            properties:
+              reference:
+                type: string
+                maxLength: 255
+                description: Phone number, email, URL, profile, username, or other handle. The platform is inferred from this value.
+                example: "+52 55 1111 2222"
+        payment_methods:
+          type: array
+          description: Optional payment methods to create or reuse and attach to the scammer. The type is inferred from each reference.
+          items:
+            type: object
+            required: [reference]
+            properties:
+              reference:
+                type: string
+                maxLength: 255
+                description: Card number, CLABE, account number, wallet address, or other reference. The type is inferred from this value.
+                example: "032180000118359719"
     CreateScammerOrganizationRequest:
       type: object
       required: [name]

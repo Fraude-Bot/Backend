@@ -15,6 +15,7 @@ use App\Application\Organization\Commands\OrganizationMapCommand;
 use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
+use App\Domain\Organization\Exceptions\InvalidScammerReferenceException;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationContactRequest;
@@ -273,10 +274,16 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
-        $scammer = $this->organizations->createScammer(CreateOrganizationScammerCommand::fromValidated(
-            $organization,
-            $request->validated(),
-        ));
+        try {
+            $scammer = $this->organizations->createScammer(CreateOrganizationScammerCommand::fromValidated(
+                $organization,
+                $request->validated(),
+            ));
+        } catch (InvalidScammerReferenceException $exception) {
+            throw ValidationException::withMessages([
+                $exception->attribute => [$exception->getMessage()],
+            ]);
+        }
 
         return response()->json((new OrganizationScammerResource($scammer))->resolve(), 201);
     }
