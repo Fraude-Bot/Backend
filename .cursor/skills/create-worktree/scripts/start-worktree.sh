@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Start backend containers for a Cursor Agent worktree.
-# Uses the main worktree's Laravel .env and docker/php/.env.php.
-# Usage: start-worktree.sh [worktree-dir]
+# Uses the main worktree's Laravel .env and fraudebot-docker/php/.env.php.
+# Usage: start-worktree.sh [worktree-dir] [port]
 set -euo pipefail
 
 ROOT="${FRAUDEBOT_ROOT:-/home/cedano/projects/fraudebot}"
-DOCKER_DIR="${ROOT}/docker"
+DOCKER_DIR="${FRAUDEBOT_DOCKER_DIR:-${ROOT}/fraudebot-docker}"
 MAIN_API_NETWORK="fraudebot_fraudebot-api-network"
 
 port_forbidden() {
@@ -29,6 +29,11 @@ port_in_use() {
   return 1
 }
 
+port_holder() {
+  local port="$1"
+  docker ps --format '{{.Names}} {{.Ports}}' | grep -E "(^|[^0-9])${port}->" | awk '{print $1}' | head -n 1
+}
+
 next_free() {
   local port="$1"
   while port_in_use "${port}"; do
@@ -49,12 +54,49 @@ require_absent() {
   fi
 }
 
-if (($# > 1)); then
-  echo "Usage: start-worktree.sh [worktree-dir]" >&2
+# Some addresses on the shared API bridge answer ARP and then drop TCP.
+# A container that lands on one of them cannot reach MySQL or Redis until it
+# moves to another address. A brand-new container on a free address still works.
+dependencies_open() {
+  docker exec "${backend_name}" php -r 'foreach ([["db", 3306], ["cache", 6379]] as [$host, $port]) { $socket = @fsockopen($host, $port, $error_number, $error, 3); if ($socket === false) { fwrite(STDERR, "$host:$port $error\n"); exit(1); } fclose($socket); }'
+}
+
+address_taken() {
+  local ip="$1"
+  docker network inspect "${MAIN_API_NETWORK}" --format '{{range .Containers}}{{.IPv4Address}} {{end}}' | grep -Fq "${ip}/"
+}
+
+attach_with_working_address() {
+  docker network connect "${MAIN_API_NETWORK}" "${backend_name}"
+  if dependencies_open; then
+    return 0
+  fi
+  docker network disconnect "${MAIN_API_NETWORK}" "${backend_name}"
+  local host ip
+  for host in $(seq 10 50); do
+    ip="172.24.0.${host}"
+    if address_taken "${ip}"; then
+      continue
+    fi
+    if ! docker network connect --ip "${ip}" "${MAIN_API_NETWORK}" "${backend_name}"; then
+      continue
+    fi
+    if dependencies_open; then
+      echo "PHP is using ${ip} on ${MAIN_API_NETWORK}."
+      return 0
+    fi
+    docker network disconnect "${MAIN_API_NETWORK}" "${backend_name}"
+  done
+  return 1
+}
+
+if (($# > 2)); then
+  echo "Usage: start-worktree.sh [worktree-dir] [port]" >&2
   exit 1
 fi
 
 worktree_dir="$(cd "${1:-.}" && pwd)"
+requested_port="${2:-}"
 
 if [[ ! -f "${worktree_dir}/artisan" ]]; then
   echo "Missing ${worktree_dir}/artisan. Run this from the backend worktree Cursor created." >&2
@@ -91,7 +133,28 @@ worktree_network="fraudebot-worktree-${slug}"
 require_absent "${backend_name}"
 require_absent "${web_name}"
 
-backend_port="$(next_free 9001)"
+if [[ -n "${requested_port}" ]]; then
+  if [[ ! "${requested_port}" =~ ^[0-9]+$ ]] || ((requested_port < 1024 || requested_port > 65535)); then
+    echo "Port must be an integer from 1024 to 65535." >&2
+    exit 1
+  fi
+  if port_forbidden "${requested_port}"; then
+    echo "Port ${requested_port} is reserved for the main stack." >&2
+    exit 1
+  fi
+  if port_in_use "${requested_port}"; then
+    holder="$(port_holder "${requested_port}" || true)"
+    if [[ -n "${holder}" ]]; then
+      echo "Port ${requested_port} is already published by ${holder}. Leave that container running." >&2
+    else
+      echo "Port ${requested_port} is already in use. Leave the process that holds it running." >&2
+    fi
+    exit 1
+  fi
+  backend_port="${requested_port}"
+else
+  backend_port="$(next_free 9001)"
+fi
 
 if [[ ! -f "${DOCKER_DIR}/php/.env.php" ]]; then
   echo "Missing ${DOCKER_DIR}/php/.env.php. The main backend service loads this file." >&2
@@ -106,10 +169,6 @@ if [[ ! -f "${worktree_dir}/.env" ]]; then
   cp "${main_worktree}/.env" "${worktree_dir}/.env"
   echo "Copied .env from ${main_worktree}/.env"
 fi
-
-# shellcheck source=/dev/null
-source "${DOCKER_DIR}/scripts/common.sh"
-prepare_backend "${worktree_dir}"
 
 if grep -q '^APP_URL=' "${worktree_dir}/.env"; then
   sed -i "s|^APP_URL=.*|APP_URL=http://localhost:${backend_port}|" "${worktree_dir}/.env"
@@ -135,7 +194,11 @@ docker run --detach \
   -w /var/www/backend \
   laravel-clean-app
 
-docker network connect "${MAIN_API_NETWORK}" "${backend_name}"
+if ! attach_with_working_address; then
+  docker rm -f "${backend_name}" >/dev/null
+  echo "PHP could not open MySQL or Redis on ${MAIN_API_NETWORK}." >&2
+  exit 1
+fi
 
 docker run --detach \
   --name "${web_name}" \
@@ -151,6 +214,19 @@ docker exec -w /var/www/backend "${backend_name}" \
   composer install --no-interaction --prefer-dist
 docker exec -w /var/www/backend "${backend_name}" \
   composer dump-autoload
+
+ready=0
+for _ in 1 2 3 4 5; do
+  if curl -fsS -m 8 "http://127.0.0.1:${backend_port}/api/public/healthcheck" | grep -q '"status":"ok"'; then
+    ready=1
+    break
+  fi
+  sleep 1
+done
+if ((ready != 1)); then
+  echo "API did not return status ok on port ${backend_port}. Follow docker logs ${backend_name}." >&2
+  exit 1
+fi
 
 echo "API: http://localhost:${backend_port}"
 echo "Branch: ${branch}"
