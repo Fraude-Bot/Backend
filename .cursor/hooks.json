@@ -18,6 +18,13 @@
         "command": ".cursor/hooks/pint-on-stop.sh",
         "timeout": 180
       }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/reattach-db-network.sh",
+        "matcher": "start-worktree",
+        "timeout": 30
+      }
     ]
   }
 }
