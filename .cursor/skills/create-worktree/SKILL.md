@@ -6,6 +6,7 @@ description: >-
   Cursor creates a Git worktree with the worktree button, when an Agent session
   starts in a new worktree, or when the user runs /worktree.
 disable-model-invocation: true
+icon: git-branch
 ---
 
 # Cursor agent worktrees
