@@ -3,6 +3,7 @@
 namespace App\Application\Scammer\Usecases;
 
 use App\Application\Media\TemporaryImageStorageInterface;
+use App\Application\Scammer\Commands\ContactInput;
 use App\Application\Scammer\Commands\CreateScammerContactCommand;
 use App\Application\Scammer\Commands\CreateScammerOrganizationCommand;
 use App\Application\Scammer\Commands\CreateScammerPaymentMethodCommand;
@@ -14,6 +15,7 @@ use App\Application\Scammer\Commands\ListScammerPaymentMethodsCommand;
 use App\Application\Scammer\Commands\ListScammerReportsCommand;
 use App\Application\Scammer\Commands\ListScammersCommand;
 use App\Application\Scammer\Commands\LoadScammerCommand;
+use App\Application\Scammer\Commands\PaymentMethodInput;
 use App\Application\Scammer\Commands\RestoreScammerCommand;
 use App\Application\Scammer\Commands\ScammerCalendarCommand;
 use App\Application\Scammer\Commands\ScammerMapCommand;
@@ -25,6 +27,12 @@ use App\Application\Scammer\Commands\UpdateScammerContactCommand;
 use App\Domain\Contact\Entities\ContactEntity;
 use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\MapResult;
+use App\Domain\PaymentMethod\Enums\PaymentMethodType;
+use App\Domain\PaymentMethod\ValueObjects\AccountNumber;
+use App\Domain\PaymentMethod\ValueObjects\CardNumber;
+use App\Domain\PaymentMethod\ValueObjects\Clabe;
+use App\Domain\PaymentMethod\ValueObjects\Reference;
+use App\Domain\Scammer\Exceptions\InvalidOrganizationReferenceException;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
 use App\Models\Organization;
@@ -193,6 +201,8 @@ class ScammerUsecase implements ScammerUsecaseInterface
 
     public function createOrganization(CreateScammerOrganizationCommand $command): Organization
     {
+        $contacts = $this->normalizeContacts($command->contacts);
+        $paymentMethods = $this->normalizePaymentMethods($command->paymentMethods);
         $copied = [];
 
         try {
@@ -203,10 +213,28 @@ class ScammerUsecase implements ScammerUsecaseInterface
                 $copied[] = $avatarPath;
             }
 
-            return DB::transaction(function () use ($command, $avatarPath, &$copied): Organization {
+            return DB::transaction(function () use ($command, $avatarPath, &$copied, $contacts, $paymentMethods): Organization {
                 $organization = $this->organizations->firstOrCreate($command->name, $avatarPath);
                 $this->discardUnusedAvatar($avatarPath, $organization->profile_picture_path, $copied);
                 $this->scammers->attachOrganization($command->scammer, $organization);
+
+                foreach ($contacts as $contact) {
+                    $model = $this->contacts->firstOrCreate(
+                        $contact['platform'],
+                        $contact['reference'],
+                        true,
+                    );
+                    $this->organizations->attachContact($organization, $model->id);
+                }
+
+                foreach ($paymentMethods as $paymentMethod) {
+                    $model = $this->paymentMethods->firstOrCreate(
+                        $paymentMethod['type'],
+                        $paymentMethod['reference'],
+                        true,
+                    );
+                    $this->organizations->attachPaymentMethod($organization, $model->id);
+                }
 
                 return $organization;
             });
@@ -217,6 +245,76 @@ class ScammerUsecase implements ScammerUsecaseInterface
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param  list<ContactInput>  $contacts
+     * @return list<array{platform: PlatformType, reference: string}>
+     */
+    private function normalizeContacts(array $contacts): array
+    {
+        $normalized = [];
+
+        foreach ($contacts as $index => $contact) {
+            try {
+                $entity = new ContactEntity(
+                    id: null,
+                    platformType: $contact->platform,
+                    reference: $contact->reference,
+                    isActive: true,
+                );
+            } catch (InvalidArgumentException $exception) {
+                throw new InvalidOrganizationReferenceException(
+                    "contacts.{$index}.reference",
+                    $exception->getMessage(),
+                );
+            }
+
+            $values = $entity->toArray();
+            $normalized[] = [
+                'platform' => $values['platform'],
+                'reference' => $values['reference'],
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  list<PaymentMethodInput>  $paymentMethods
+     * @return list<array{type: PaymentMethodType, reference: string}>
+     */
+    private function normalizePaymentMethods(array $paymentMethods): array
+    {
+        $normalized = [];
+
+        foreach ($paymentMethods as $index => $paymentMethod) {
+            try {
+                $reference = $this->normalizePaymentReference($paymentMethod->type, $paymentMethod->reference);
+            } catch (InvalidArgumentException $exception) {
+                throw new InvalidOrganizationReferenceException(
+                    "payment_methods.{$index}.reference",
+                    $exception->getMessage(),
+                );
+            }
+
+            $normalized[] = [
+                'type' => $paymentMethod->type,
+                'reference' => $reference,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function normalizePaymentReference(PaymentMethodType $type, string $reference): string
+    {
+        return match ($type) {
+            PaymentMethodType::CARD_NUMBER => (string) new CardNumber($reference),
+            PaymentMethodType::CLABE => (string) new Clabe($reference),
+            PaymentMethodType::ACCOUNT_NUMBER => (string) new AccountNumber($reference),
+            PaymentMethodType::WALLET, PaymentMethodType::OTHER => (string) new Reference($reference),
+        };
     }
 
     private function copyTemporaryProfilePicture(string $location): string

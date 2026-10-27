@@ -23,9 +23,10 @@ info:
     The body sends a name. A scammer with the same name is reused, and a trashed match is restored.
     Attaching an existing link again leaves that link unchanged.
     `POST /public/scammers/{id}/organizations` adds an organization to an active scammer.
-    The body sends a name and an optional profile picture path.
+    The body sends a name, an optional profile picture path, and optional contacts and payment methods.
     An organization with the same name is reused, and a trashed match is restored.
     An existing organization keeps its profile picture.
+    Contacts and payment methods are attached to that organization. A reference that already exists is reused.
     Attaching an existing link again leaves that link unchanged.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
@@ -396,6 +397,11 @@ paths:
         `profile_picture_path` is an optional public URL or `/storage` path of a file under
         `tmp/reports/profiles`. A new organization stores a copy of that file. An existing
         organization keeps its current picture, and the unused copy is removed.
+        Optional `contacts` and `payment_methods` are attached to the organization, including
+        one that was reused or restored. Each item sends a `reference`. `platform` and `type`
+        are inferred from that reference and are rejected when sent. A matching contact or
+        payment method is reused, and a trashed match is restored. Sending the same link again
+        leaves it unchanged. These records are not attached to the scammer.
         The name is trimmed.
       parameters:
         - $ref: "#/components/parameters/ScammerId"
@@ -408,6 +414,10 @@ paths:
             example:
               name: Acme Payments
               profile_picture_path: /storage/tmp/reports/profiles/8f3c1a.jpg
+              contacts:
+                - reference: "+52 55 1111 2222"
+              payment_methods:
+                - reference: "032180000118359719"
       responses:
         "201":
           description: The organization was created or reused and attached to the scammer.
@@ -1379,6 +1389,30 @@ components:
             - "null"
           description: Public URL or `/storage` path of a file under `tmp/reports/profiles`. Omitted or null stores no picture on a new organization.
           example: /storage/tmp/reports/profiles/8f3c1a.jpg
+        contacts:
+          type: array
+          description: Optional contacts to create or reuse and attach to the organization. The platform is inferred from each reference.
+          items:
+            type: object
+            required: [reference]
+            properties:
+              reference:
+                type: string
+                maxLength: 255
+                description: Phone number, email, URL, profile, username, or other handle. The platform is inferred from this value.
+                example: "+52 55 1111 2222"
+        payment_methods:
+          type: array
+          description: Optional payment methods to create or reuse and attach to the organization. The type is inferred from each reference.
+          items:
+            type: object
+            required: [reference]
+            properties:
+              reference:
+                type: string
+                maxLength: 255
+                description: Card number, CLABE, account number, wallet address, or other reference. The type is inferred from this value.
+                example: "032180000118359719"
     CreateOrganizationContactRequest:
       type: object
       required: [reference]
