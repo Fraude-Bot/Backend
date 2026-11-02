@@ -1,11 +1,11 @@
 ---
-description: Step-by-step for adding an HTTP API operation in this Laravel backend.
+description: Use when adding or changing one HTTP API operation: route, controller, command, use case, repository, OpenAPI, and feature test.
 alwaysApply: true
 ---
 
-# Creating a new API service
+# API Guidelines
 
-Read `architecture.mdc` and `running-tests.mdc` before changing code. One **API service** is one HTTP operation. Add it to an existing controller when the aggregate already has one. Create a controller only for a new aggregate.
+Read `architecture.mdc` before changing code. One **API service** is one HTTP operation. Add it to an existing controller when the aggregate already has one. Create a controller only for a new aggregate.
 
 Health, readiness, OpenAPI, and the local admin token route are closures. They are not domain use cases.
 
@@ -119,7 +119,7 @@ Add the path to `openapi.yaml`. Paths are relative to the `/api` server. Reuse `
 
 Add a feature test beside the controller's existing test, `tests/Feature/PublicScammerControllerTest.php`. Hit the real URL. Cover the success body, validation, not-found, and empty or boundary input. `test_suggest_scammer_names_by_partial_case_insensitive_query` is the success case: it creates scammers with factories and asserts the exact JSON.
 
-Run inside the worktree's PHP container, in this order: `php artisan test`, `composer analyse`, `composer check:architecture`. See `running-tests.mdc`.
+Run inside the worktree's PHP container, in this order: `php artisan test`, `composer analyse`, `composer check:architecture`.
 
 ## New aggregate checklist
 

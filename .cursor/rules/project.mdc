@@ -1,5 +1,5 @@
 ---
-description: Fraudebot project explanation
+description: Product context: what Fraudebot is, who it is for, and its objectives.
 alwaysApply: true
 ---
 
@@ -13,7 +13,7 @@ this project presents a solution for this by allowing all users to search throug
 
 # Objectives
 
-- **Report Form**: Allow users to submit reports to scammers/organizations. More about this in domain/reports.mdc
+- **Report Form**: Allow users to submit reports to scammers/organizations. More about this in reports.mdc
 - **View Scammer/Organization page**: Allow users to view the information of a scammer/organization that was reported before by other users.
 - **Whatsapp Bot**: This is an upcoming project, but we will allow users to search information about scammers/organizations on Whatsapp.
 

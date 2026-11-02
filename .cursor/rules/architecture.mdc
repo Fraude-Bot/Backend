@@ -1,5 +1,5 @@
 ---
-description: Fraudebot Backend Architecture explanation.
+description: Laravel stack, directory map, and clean-architecture dependency rules.
 alwaysApply: true
 ---
 

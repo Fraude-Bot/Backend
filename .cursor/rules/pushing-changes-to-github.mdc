@@ -1,5 +1,5 @@
 ---
-description: How to commit changes made in the codebase and create a pull request. Use when Cursor is trying to commit, pushing changes or creating a pull request to Github. Using the button to create a commit and creating the PR from Cursor.
+description: Use when committing, pushing, or opening a GitHub pull request. Covers emoji commit prefixes, Co-Authored-By trailers, and gh pr create.
 alwaysApply: false
 ---
 

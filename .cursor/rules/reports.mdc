@@ -1,4 +1,5 @@
 ---
+description: Use when creating or changing scam reports: profile photo, title, description, proofs, contacts, payment methods, and the linked scammer or organization.
 alwaysApply: false
 ---
 # Reports

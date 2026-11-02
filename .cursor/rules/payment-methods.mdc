@@ -1,5 +1,5 @@
 ---
-description: Fraudebot's internal search engine can query by many different data related to the source where the funds will be received by the scammer/organization. In this rule we'll explain each of them.
+description: Use when validating, storing, or searching payment identifiers: card numbers, Mexican CLABE, bank account numbers, and crypto wallets.
 alwaysApply: false
 ---
 
