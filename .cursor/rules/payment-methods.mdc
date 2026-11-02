@@ -3,32 +3,38 @@ description: Use when validating, storing, or searching payment identifiers: car
 alwaysApply: false
 ---
 
-# Payment Methods
+# Payment methods
 
-Payment Methods are those elements where a scammer/organization will receive the funds from. This data is so important to take care and store, because it is the only way which a user
-can search by to know if the person/company is talking to is legit or not. payment methods such as **card numbers**, **clabe** and **account numbers** are methods that can be hard to change for an individual (ask to the bank to change the number, go to the bank, etc), therefore, it is normal that a scammer/organization can change their usernames, emails, entities but can't change those numbers, which can be a great way to identify them easily. This last part is different when we are talking about **crypto wallets**, where they can change the public wallet identifier with no problem.
+A payment method is the identifier where the money was sent: a card, a Mexican CLABE, a bank account number, or a crypto wallet. Callers send `reference` only. `type` is prohibited on `StorePaymentMethodRequest`, `PaymentMethodRequest`, and on report payment-method objects. `PaymentMethodType::fromReference` chooses the type. The matching value object then accepts or rejects the value.
 
-## Card numbers
+`reference` is a required string, max 255, trimmed before the rules run.
 
-Card numbers are composed with 16 numbers. We don't care if they're credit or debit. We should ignore the white spaces, usually they would be stripped out.
+## How the type is chosen
 
-Example: 4152 3412 5132 1531 
+`App\Domain\PaymentMethod\Enums\PaymentMethodType`:
 
-## CLABE
+| Case | Value | When |
+| --- | --- | --- |
+| `CARD_NUMBER` | 1 | 16 digits after non-digits are removed |
+| `CLABE` | 2 | 18 digits after non-digits are removed |
+| `ACCOUNT_NUMBER` | 3 | 10 digits after non-digits are removed |
+| `WALLET` | 4 | the trimmed reference matches a wallet pattern below, checked before digit length |
+| `OTHER` | 5 | anything else, including an empty string |
 
-CLABE (Clave Bancaria Estandarizada) is a identifier number that targets a bank account. This number is used by banks operating in **Mexico**. Usually, white spaces would be stripped out.
+Wallet patterns, in `PaymentMethodType::isCryptoWallet`:
 
-Example: 032 180 000118359719
+- Ethereum: `0x` plus 40 hex digits.
+- Legacy Bitcoin: `1` or `3`, then 25–34 base58 characters.
+- Bech32 Bitcoin: `bc1` or `tb1`, then 25–87 alphanumeric characters.
+- Tron: `T` plus 33 base58 characters.
 
-## Account numbers
+## What is stored
 
-Account numbers are numbers used by the banks to identify their clients. They aren't shared between banks either public, usually the transfer of funds using this number works between accounts of the same bank.
+Value objects live in `App\Domain\PaymentMethod\ValueObjects`. Non-digits are stripped before the length check for card, CLABE, and account. The stored value is digits only.
 
-Example: 010 3215312
+- `CardNumber`: exactly 16 digits. Reject with `Card number must be 16 digits long.` Example input `4152 3412 5132 1531`.
+- `Clabe`: exactly 18 digits. Reject with `CLABE must be 18 digits long.` Example input `032 180 000118359719`.
+- `AccountNumber`: exactly 10 digits. Reject with `Account number must be exactly 10 digits long.` Example input `010 3215312`.
+- `Reference` (wallet and other): remove spaces, then store the rest. Example wallet `1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`.
 
-## Crypto wallets
-
-Crypto wallets are public hexadecimal addresses that represents a wallet of a blockchain (Bitcoin, Ethereum, Solana,...).
-These shouldn't have white spaces.
-
-Example: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+Persist with `PaymentMethodRepository::firstOrCreate`. Attach the row through the scammer or organization repository. Do not set `type` from the request body.

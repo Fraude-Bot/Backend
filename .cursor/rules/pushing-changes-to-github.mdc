@@ -1,16 +1,17 @@
 ---
 description: >-
-  Mandatory before any git commit, push, or gh pr create in this repository
-  (including "commit and create PR" actions). Overrides generic create-pull-request
-  templates. Use emoji commit titles, Co-Authored-By with the acting model, push
-  with git push -u origin HEAD, and gh pr create --fill only—never custom PR
-  bodies with Summary or Test plan unless the user explicitly asks.
+  Use when the user asks to commit, push, or open a pull request, including
+  "commit and create PR" actions. Do not commit or push unless they asked.
+  Overrides generic create-pull-request templates. Use emoji commit titles,
+  Co-Authored-By with the acting model, push with git push -u origin HEAD,
+  and gh pr create --fill only—never custom PR bodies with Summary or Test
+  plan unless the user explicitly asks.
 alwaysApply: false
 ---
 
 # Publishing the changes to Github
 
-Whenever we want to publish the changes we've done in the Worktree.
+Follow this only when the user asks to commit, push, or open a pull request. Do not commit or push on your own.
 
 ## Comitting
 
@@ -52,7 +53,7 @@ GitHub Copilot (`copilot@github.com`):
 
 - Copilot: `Copilot <copilot@github.com>`
 
-Finally, after every change was committed, you have to push the Git Worktree `git push -u origin HEAD`
+When the user asks to push, run `git push -u origin HEAD`.
 
 Examples:
 

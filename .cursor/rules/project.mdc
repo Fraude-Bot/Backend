@@ -5,15 +5,10 @@ alwaysApply: true
 
 # Fraudebot
 
-Fraudebot is a platform where users can search if the person they're talking to have reports made by other users, preventing them to be scammed.
-Users can use the implemented search engine to query by using the card number, CLABE (SPEI), crypto wallets, so on. The idea came from the abandoned project [Estafabot] (https://www.facebook.com/estafabotmx/), which featured a search engine along a Whatsapp Bot to search through the database.
-
-As I said earlier, **Estafabot** was abandoned, no reason at all, and lastly the scams about car sales, investments, crypto, loans, general sales, etc, have incremented exponentially on internet, so
-this project presents a solution for this by allowing all users to search through the database at no cost.
+Fraudebot lets people search reports other users have filed, so they can check a person or company before sending money. Search covers card numbers, Mexican CLABE, bank accounts, and crypto wallets. Search is free.
 
 # Objectives
 
-- **Report Form**: Allow users to submit reports to scammers/organizations. More about this in reports.mdc
-- **View Scammer/Organization page**: Allow users to view the information of a scammer/organization that was reported before by other users.
-- **Whatsapp Bot**: This is an upcoming project, but we will allow users to search information about scammers/organizations on Whatsapp.
-
+- **Report form**: Users submit a report about a scammer or an organization. Details are in `reports.mdc`.
+- **Scammer and organization pages**: Users open a profile that other people have already reported.
+- **WhatsApp bot**: Upcoming. Users will search the same data from WhatsApp.

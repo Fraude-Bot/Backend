@@ -2,27 +2,34 @@
 description: Use when creating or changing scam reports: profile photo, title, description, proofs, contacts, payment methods, and the linked scammer or organization.
 alwaysApply: false
 ---
+
 # Reports
 
-Fraudebot stores reports submitted by other users. Reports are the way where users can specify the individual/commpany who scammmed them and submit what happened and how. 
+A report is one user's account of a scam. `App\Models\Report` stores `user_id`, `title`, `description`, and `is_active`. Products, proofs, scammers, and organizations are related records.
 
-## Parts of a Report
+Public creates go through `StoreScammerReportRequest` or `StoreOrganizationReportRequest`, then `StoreScammerReportCommand` or `StoreOrganizationReportCommand`, then `ReportUsecase`. The request trims `title`, `email`, scammer and organization names, and title-cases each product name.
 
-A report is made up with the following parts:
+## Body
 
-- Profile Picture (JPG, PNG, WEBP)
-- Scammer/Organization name
-- Products
-- Title
-- Description
-- Proofs (JPG, PNG, WEBP)
-- Contacts
-- Payment Methods
-- Scammer (for organizations) or Organization (for scammers)
+- `title`: required string, max 50.
+- `description`: required string.
+- `email`: required, `email:rfc`, max 255.
+- `products`: required array, at least one item. Each item is a string, max 75.
+- `profile_picture`: optional string. It is a temporary public path, not the file upload.
+- `proofs`: optional array of temporary public paths.
+- `contacts` and `payment_methods`: each may be omitted. At least one of the two arrays must be non-empty. When both are empty, validation fails with `A contact or a payment method is required.` on `contacts` and on `payment_methods`.
+- `contacts.*.reference`: required string, max 255. `contacts.*.platform` is prohibited.
+- `payment_methods.*.reference`: required string, max 255. `payment_methods.*.type` is prohibited. Typing rules are in `payment-methods.mdc`.
+- Scammer report: `scammer.name` required, max 100. `organizations` optional.
+- Organization report: `organization.name` required, max 100. `scammers` optional.
 
-## Codebase
+A linked scammer or organization does not count as the required contact or payment method. That check reads only the top-level `contacts` and `payment_methods`.
 
-The following files are related to the reports.
+## Images
 
-@Report.php
+Upload the file before the report body.
 
+- Profile picture: `StoreProfilePictureRequest`, field `image`. One file, `jpg`, `jpeg`, or `png`, max 5120 KB. `ReportUsecase::storeTemporaryProfilePicture` stores it under `tmp/reports/profiles`.
+- Proofs: `StoreProofRequest`, field `images`. At least one file, same mime types and size. `ReportUsecase::storeTemporaryProofs` stores them under `tmp/reports/proofs`.
+
+`webp` is not an accepted upload type. The report body then passes those published temporary paths. `ReportUsecase` copies a profile into `reports/scammers/profiles` or `reports/organizations/profiles`, and proofs into `reports/scammers/proofs` or `reports/organizations/proofs`. A path that is not a published temporary file fails validation.

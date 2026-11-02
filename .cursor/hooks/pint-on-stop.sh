@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Format this checkout with Pint in fix mode after an agent or subagent stops,
+# Format dirty PHP files with Pint after the agent stops,
 # only when that run edited at least one PHP file.
 set -uo pipefail
 
@@ -57,7 +57,7 @@ if [[ "$event" == "afterFileEdit" ]]; then
   finish
 fi
 
-if [[ "$event" != "stop" && "$event" != "subagentStop" ]]; then
+if [[ "$event" != "stop" ]]; then
   finish
 fi
 
@@ -108,8 +108,34 @@ if command -v flock >/dev/null 2>&1; then
   flock 9
 fi
 
-echo "Pint hook: docker exec -w ${workdir} ${container} vendor/bin/pint" >&2
-if ! docker exec -w "$workdir" "$container" vendor/bin/pint >&2; then
+dirty_list="$(mktemp)"
+if ! {
+  git -C "$root" diff --name-only --diff-filter=ACMR -z HEAD &&
+    git -C "$root" ls-files --others --exclude-standard -z
+} >"$dirty_list"; then
+  rm -f "$dirty_list"
+  echo "Pint hook: git failed; running pint on the whole project." >&2
+  if ! docker exec -w "$workdir" "$container" vendor/bin/pint >&2; then
+    echo "Pint hook: Pint exited with an error in ${container}." >&2
+  fi
+  finish
+fi
+
+php_files=()
+while IFS= read -r -d '' path; do
+  [[ "${path,,}" == *.php ]] || continue
+  [[ -f "$root/$path" ]] || continue
+  php_files+=("$path")
+done <"$dirty_list"
+rm -f "$dirty_list"
+
+if ((${#php_files[@]} == 0)); then
+  echo "Pint hook: no dirty PHP files." >&2
+  finish
+fi
+
+echo "Pint hook: docker exec -w ${workdir} ${container} vendor/bin/pint (${#php_files[@]} files)" >&2
+if ! docker exec -w "$workdir" "$container" vendor/bin/pint "${php_files[@]}" >&2; then
   echo "Pint hook: Pint exited with an error in ${container}." >&2
 fi
 
