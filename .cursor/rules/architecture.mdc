@@ -1,9 +1,9 @@
 ---
-description: Laravel stack, directory map, and clean-architecture dependency rules.
+description: Laravel stack and clean-architecture dependency rules.
 alwaysApply: true
 ---
 
-## Specifications:
+## Specifications
 
 - Laravel 12
 - PHP 8.3 FPM
@@ -11,43 +11,16 @@ alwaysApply: true
 - Redis 8.10.2
 - Nginx 1.31.6
 
-## Key Directories
-
-These are under `app/` directory, which follow `Clean Architecture` guidelines.
-
-- `Console/`:  Folders/Files related to the creation of custom Laravel commands.
-- `Application/`: Use cases, commands, and application ports. One `{Name}UsecaseInterface` and `{Name}Usecase` per domain, under `Application/{Domain}/Usecases/`. One command per use-case method, under `Application/{Domain}/Commands/`. Controllers construct commands. Use cases accept them and do not take raw arrays. This layer may depend on `App\Domain`, itself, `App\Repositories`, `App\Models`, and vendor classes. It must not depend on `App\Http` or `App\Infrastructure`.
-- `Domain/`: Entities, value objects, enums, and domain exceptions. Entity classes live under `Domain/{Aggregate}/Entities/`. `App\Domain\Entity` remains the shared base. This layer may depend on itself and vendor classes. It must not depend on other `App` layers.
-- `Http/`: Folders/Files related to the HTTP service. Controllers, Middleware, Requests and Resources are managed here.
-- `Infrastructure/`: Folders/Files related to external services, such as Media Storage (S3, Mega, Cloud Storage), APIs, etc.
-- `Models/`: Folders/Files related to the creation of Eloquent Models
-- `OpenApi/`: Files related to OpenAPI specification in the project.
-- `Providers/`: Files related to Laravel Providers.
-- `Repositories/`: One repository interface and one implementation per domain. Implementations use Eloquent models. Search card repositories stay separate from the aggregate repositories.
-
-## Other Directories
-
-These sit at the project root, outside `app/`.
-
-- `bootstrap/`: Files related to application bootstrap (`app.php`, `providers.php`) and the framework cache.
-- `config/`: Files related to application configuration (database, cache, auth, queue, services, and similar).
-- `database/`: Folders/Files related to migrations, factories, seeders, and import data.
-- `public/`: Web server document root. Holds the front controller (`index.php`).
-- `resources/`: Folders/Files related to frontend assets and Blade views.
-- `routes/`: Files related to HTTP and console route definitions.
-- `schemas/`: OpenAPI component schemas referenced by the API specification.
-- `storage/`: Runtime files such as logs, framework cache, sessions, and compiled views.
-- `tests/`: Feature and unit tests.
-- `.github/`: CI workflow definitions.
-- `.cursor/`: Cursor rules for this repository.
-
 ## Layer rules
 
 Enforced by `phparkitect.php` (`composer check:architecture`).
 
+- One `{Name}UsecaseInterface` and `{Name}Usecase` per domain, under `Application/{Domain}/Usecases/`. One command per use-case method, under `Application/{Domain}/Commands/`. Controllers construct commands. Use cases accept them and do not take raw arrays.
+- `Application` may depend on `App\Domain`, itself, `App\Repositories`, `App\Models`, and vendor classes. It must not depend on `App\Http` or `App\Infrastructure`.
+- `Domain` may depend on itself and vendor classes. It must not depend on other `App` layers. Entity classes live under `Domain/{Aggregate}/Entities/`. `App\Domain\Entity` remains the shared base.
 - Controllers depend only on a use-case interface and on command classes. They keep HTTP validation, status codes, and API resources. They do not call repositories, Eloquent, or concrete use cases.
 - Use cases type-hint repository interfaces, not concrete repositories. Each use-case method accepts one command. They return the same models, `PaginatedResult`, `MapResult`, or null that the controller needs.
-- Each domain repository exposes reads and writes for that aggregate, including pivot attaches. `SearchCache` stays a repository and model-hook helper; attach-only writes invalidate it inside the repository.
+- Each domain repository exposes reads and writes for that aggregate, including pivot attaches. Search card repositories stay separate from the aggregate repositories. `SearchCache` stays a repository and model-hook helper; attach-only writes invalidate it inside the repository.
 - Ports for external systems stay in Application and are implemented in Infrastructure. Image storage goes through `TemporaryImageStorageInterface`.
 - Commands are readonly input objects in `Application/{Domain}/Commands/`. They may depend on `App\Domain`, other application commands and inputs, `App\Models`, and vendor classes. They must not depend on repositories, HTTP, or infrastructure.
 - Health, readiness, OpenAPI, and the local admin token route are not domain use cases.

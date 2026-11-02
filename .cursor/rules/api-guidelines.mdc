@@ -1,6 +1,6 @@
 ---
 description: Use when adding or changing one HTTP API operation: route, controller, command, use case, repository, OpenAPI, and feature test.
-alwaysApply: true
+alwaysApply: false
 ---
 
 # API Guidelines

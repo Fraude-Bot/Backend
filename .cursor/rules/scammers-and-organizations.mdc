@@ -1,11 +1,32 @@
 ---
-alwaysApply: true
+description: Use when creating or linking scammers and organizations, including which side a report names and how pivots attach.
+alwaysApply: false
 ---
 
-# Scammers
+# Scammers and organizations
 
+A scammer is a person (`App\Models\Scammer`). An organization is a company (`App\Models\Organization`). Both store `name` (max 100 characters), `profile_picture_path`, and `is_active`, and both use soft deletes.
 
-# Organizations
+They link through the `scammers_organizations` pivot. A scammer can belong to many organizations, and an organization can have many scammers. A report does not require the other side.
 
+## Which side the report names
 
-# Scammers and Organizations
+- A scammer report uses `StoreScammerReportRequest`. `scammer.name` is required. `organizations` is optional.
+- An organization report uses `StoreOrganizationReportRequest`. `organization.name` is required. `scammers` is optional.
+- The report still needs at least one contact or payment method on that primary subject. A linked organization or scammer does not satisfy that check. See `reports.mdc`.
+
+## Attaching the other side later
+
+- Scammer to organization: `StoreScammerOrganizationRequest`.
+- Organization to scammer: `StoreOrganizationScammerRequest`.
+
+`name` is required. `profile_picture_path`, `contacts`, and `payment_methods` are optional. `contacts.*.platform` and `payment_methods.*.type` are prohibited. Infer the platform with `PlatformType::fromReference` and the payment type with `PaymentMethodType::fromReference`.
+
+## Pivots
+
+Do not attach these from a controller. The scammer and organization repositories own the writes.
+
+- Scammer: `scammers_contacts`, `scammers_payment_methods`, `scammers_reports`, `scammers_organizations`.
+- Organization: `organizations_contacts`, `organizations_payment_methods`, `organizations_reports`, and the same `scammers_organizations` pivot.
+
+Deleting a scammer or organization soft-deletes its contact, payment-method, and report pivot rows. Restoring the model restores those rows.

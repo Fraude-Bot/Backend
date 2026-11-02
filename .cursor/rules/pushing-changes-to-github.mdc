@@ -1,11 +1,11 @@
 ---
-description: Use when committing, pushing, or opening a GitHub pull request. Covers emoji commit prefixes, Co-Authored-By trailers, and gh pr create.
+description: Use when the user asks to commit, push, or open a GitHub pull request. Covers emoji commit prefixes, Co-Authored-By trailers, and gh pr create.
 alwaysApply: false
 ---
 
 # Publishing the changes to Github
 
-Whenever we want to publish the changes we've done in the Worktree.
+Follow this only when the user asks to commit, push, or open a pull request. Do not commit or push on your own.
 
 ## Comitting
 
@@ -47,7 +47,7 @@ GitHub Copilot (`copilot@github.com`):
 
 - Copilot: `Copilot <copilot@github.com>`
 
-Finally, after every change was committed, you have to push the Git Worktree `git push -u origin HEAD`
+When the user asks to push, run `git push -u origin HEAD`.
 
 Examples:
 

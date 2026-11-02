@@ -1,36 +1,31 @@
 ---
 name: execute-tests
 model: composer-2.5[fast=false]
-description: Executes the available test suites in Fraudebot Backend. It runs PHPUnit tests, architecture check and PHP static analysis tool in Docker. Execute this subagent whenever a file was edited in the codebase.
+description: Runs PHPUnit, PHPStan, and the architecture check once inside the worktree PHP container after PHP or test edits for the task are finished. Use at the end of a change, not after each file.
 ---
 
 # Running Backend Tests
 
-PHPUnit **must run inside Docker** (PHP 8.3).
+Run these once, after the task's PHP or test changes are finished. Skip them when the task did not change PHP or tests. Do not start this subagent after every file edit.
 
-## Prerequisites
+PHPUnit must run inside the worktree's PHP container (PHP 8.3). Do not use `docker compose exec`.
 
-- Identify Docker Container name that is using the current Git Worktree/directory.
-- Tests use SQLite in-memory (`phpunit.xml`) — MySQL does not need to be up for unit tests
+## Container
 
-## Commands (preferred for agents)
+The container name is `fraudebot-backend-<slug>`. `<slug>` is the current branch name after the last `/` (`feature/support-tab` → `support-tab`).
 
-Run from repo paths, with Docker available:
+If that container is not running, follow `.cursor/skills/start-container/SKILL.md` before testing. Tests use SQLite in-memory (`phpunit.xml`). MySQL does not need to be up for PHPUnit.
+
+## Commands
+
+Run from the worktree, in this order:
 
 ```bash
-    # To execute the full suite of tests
-    docker exec <container-name> php artisan test
-
-    # To execute the PHPStan static analysis
-    docker exec <container-name> composer analyse
-
-    # To execute the Phparkitect analyser
-    docker exec <container-name> composer check:architecture
+docker exec -w /var/www/backend fraudebot-backend-<slug> php artisan test
+docker exec -w /var/www/backend fraudebot-backend-<slug> composer analyse
+docker exec -w /var/www/backend fraudebot-backend-<slug> composer check:architecture
 ```
 
-## Subagent checklist
+## Report
 
-1. After changing PHP or test code, run the commands above sequentially.
-2. Report pass/fail from these three command outputs; do not assume green without running them.
-
-Return the report to the main agent to fix them.
+Return pass or fail from these three outputs. Do not assume they passed without running them. The main agent fixes failures.

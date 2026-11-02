@@ -57,7 +57,7 @@ bash .cursor/skills/create-worktree/scripts/start-worktree.sh "$(pwd)" 9002
 
 Omit the port when the user did not name one. The script publishes the next free port from 9001 upward.
 
-Keep `start-worktree` in the command. A repo hook looks for that text and reattaches MySQL to the shared API network before the script runs.
+Keep `start-worktree` in the command. A repo hook looks for that text and reattaches MySQL to the shared API network before the script runs. That hook disconnects `fraudebot-db-1` from `fraudebot_fraudebot-api-network` and connects it again. The blip hits every checkout on that database, including the main stack on port 9000. Do not start two worktrees at the same time.
 
 The script copies the main worktree's Laravel `.env` when this checkout does not have one. `APP_URL` is the only value it changes. It refuses host ports **80**, **9000**, **3306**, and **6379**. It does not `docker compose up`, and it does not stop `fraudebot-web-1`, `fraudebot-backend-1`, `fraudebot-frontend-1`, `fraudebot-db-1`, or `fraudebot-cache-1`.
 
