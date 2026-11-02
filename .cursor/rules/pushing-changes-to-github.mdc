@@ -1,5 +1,10 @@
 ---
-description: Use when committing, pushing, or opening a GitHub pull request. Covers emoji commit prefixes, Co-Authored-By trailers, and gh pr create.
+description: >-
+  Mandatory before any git commit, push, or gh pr create in this repository
+  (including "commit and create PR" actions). Overrides generic create-pull-request
+  templates. Use emoji commit titles, Co-Authored-By with the acting model, push
+  with git push -u origin HEAD, and gh pr create --fill only—never custom PR
+  bodies with Summary or Test plan unless the user explicitly asks.
 alwaysApply: false
 ---
 
@@ -59,11 +64,15 @@ Examples:
 
 We have to use `gh` command to create the pull request. **IMPORTANT** the environment variable `GITHUB_TOKEN` is already set, you don't need to manually sign in.
 
+Use **`--fill` only**. Title and body come from the commit message you already wrote. Do not pass `--body` with Summary / Test plan sections, and do not follow global PR templates when this rule applies.
+
 ```bash
 gh pr create --fill -B <target-branch> -H <head-branch>
 ```
 
 Where `<target-branch>` is the branch where the changes will be merged and `<head-branch>` the branch we are currently.
+
+Add `--draft` only when the user asks for a draft pull request.
 The response would be the following:
 
 ```bash
