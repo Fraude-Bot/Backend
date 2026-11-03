@@ -1419,6 +1419,82 @@ class PublicScammerControllerTest extends TestCase
         $this->assertSame(0, PaymentMethod::query()->count());
     }
 
+    public function test_update_scammer_profile_stores_a_profile_picture(): void
+    {
+        $scammer = Scammer::factory()->create();
+        $picture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $response = $this->patchJson("/api/public/scammers/{$scammer->id}/profiles", [
+            'profile_picture' => $picture,
+        ]);
+
+        $response->assertOk();
+        $stored = $scammer->fresh()->profile_picture_path;
+        $this->assertIsString($stored);
+        $this->assertStringStartsWith('reports/scammers/profiles/', $stored);
+        $this->assertSame('avatar', Storage::disk('public')->get($stored));
+        $response->assertExactJson([
+            'profile_picture_path' => rtrim((string) config('filesystems.disks.public.url'), '/').'/'.$stored,
+        ]);
+    }
+
+    public function test_update_scammer_profile_replaces_the_previous_picture(): void
+    {
+        Storage::disk('public')->put('reports/scammers/profiles/kept.jpg', 'kept');
+        $scammer = Scammer::factory()->create([
+            'profile_picture_path' => 'reports/scammers/profiles/kept.jpg',
+        ]);
+        $picture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'new.jpg', 'new');
+
+        $this->patchJson("/api/public/scammers/{$scammer->id}/profiles", [
+            'profile_picture' => $picture,
+        ])->assertOk();
+
+        $stored = $scammer->fresh()->profile_picture_path;
+        $this->assertNotSame('reports/scammers/profiles/kept.jpg', $stored);
+        $this->assertFalse(Storage::disk('public')->exists('reports/scammers/profiles/kept.jpg'));
+        $this->assertSame('new', Storage::disk('public')->get($stored));
+    }
+
+    public function test_update_scammer_profile_returns404_when_scammer_is_missing(): void
+    {
+        $picture = $this->publishTemporary(TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY, 'avatar.jpg', 'avatar');
+
+        $this->patchJson('/api/public/scammers/999999/profiles', [
+            'profile_picture' => $picture,
+        ])->assertNotFound()
+            ->assertExactJson(['message' => 'Scammer not found']);
+    }
+
+    public function test_update_scammer_profile_returns400_for_invalid_id(): void
+    {
+        $this->patchJson('/api/public/scammers/not-an-id/profiles', [
+            'profile_picture' => '/storage/tmp/reports/profiles/avatar.jpg',
+        ])->assertBadRequest()
+            ->assertExactJson(['message' => 'Invalid scammer ID']);
+    }
+
+    public function test_update_scammer_profile_rejects_a_picture_outside_the_temporary_directory(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->patchJson("/api/public/scammers/{$scammer->id}/profiles", [
+            'profile_picture' => $this->storagePath('other/avatar.jpg'),
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['profile_picture']]]);
+    }
+
+    public function test_update_scammer_profile_requires_profile_picture(): void
+    {
+        $scammer = Scammer::factory()->create();
+
+        $this->patchJson("/api/public/scammers/{$scammer->id}/profiles", [])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure(['error' => ['details' => ['profile_picture']]]);
+    }
+
     private function publishTemporary(string $directory, string $filename, string $contents): string
     {
         $relative = $directory.'/'.$filename;

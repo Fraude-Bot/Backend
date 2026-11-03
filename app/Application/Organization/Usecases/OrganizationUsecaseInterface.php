@@ -22,6 +22,7 @@ use App\Application\Organization\Commands\RestoreOrganizationCommand;
 use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Commands\UpdateOrganizationCommand;
+use App\Application\Organization\Commands\UpdateOrganizationProfileCommand;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
@@ -74,4 +75,6 @@ interface OrganizationUsecaseInterface
     public function createContact(CreateOrganizationContactCommand $command): Contact;
 
     public function createScammer(CreateOrganizationScammerCommand $command): Scammer;
+
+    public function updateProfile(UpdateOrganizationProfileCommand $command): ?string;
 }

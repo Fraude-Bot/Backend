@@ -24,6 +24,7 @@ use App\Application\Scammer\Commands\StoreScammerCommand;
 use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Commands\UpdateScammerCommand;
 use App\Application\Scammer\Commands\UpdateScammerContactCommand;
+use App\Application\Scammer\Commands\UpdateScammerProfileCommand;
 use App\Domain\Contact\Entities\ContactEntity;
 use App\Domain\Contact\Enums\PlatformType;
 use App\Domain\Map\ValueObjects\MapResult;
@@ -50,6 +51,8 @@ use Throwable;
 
 class ScammerUsecase implements ScammerUsecaseInterface
 {
+    private const string SCAMMER_PROFILE_DIRECTORY = 'reports/scammers/profiles';
+
     private const string ORGANIZATION_PROFILE_DIRECTORY = 'reports/organizations/profiles';
 
     public function __construct(
@@ -247,6 +250,31 @@ class ScammerUsecase implements ScammerUsecaseInterface
         }
     }
 
+    public function updateProfile(UpdateScammerProfileCommand $command): ?string
+    {
+        $scammer = $this->scammers->findScammerById($command->scammerId);
+
+        if ($scammer === null) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($scammer, $command): string {
+            $relative = $this->copyTemporaryProfilePicture(
+                $command->profilePicture,
+                self::SCAMMER_PROFILE_DIRECTORY,
+                'profile_picture',
+            );
+            $previous = $scammer->profile_picture_path;
+            $this->scammers->update($scammer, ['profile_picture_path' => $relative]);
+
+            if (is_string($previous) && $previous !== $relative) {
+                $this->images->deletePublished($previous);
+            }
+
+            return rtrim((string) config('filesystems.disks.public.url'), '/').'/'.ltrim($relative, '/');
+        });
+    }
+
     /**
      * @param  list<ContactInput>  $contacts
      * @return list<array{platform: PlatformType, reference: string}>
@@ -317,17 +345,20 @@ class ScammerUsecase implements ScammerUsecaseInterface
         };
     }
 
-    private function copyTemporaryProfilePicture(string $location): string
-    {
+    private function copyTemporaryProfilePicture(
+        string $location,
+        string $destinationDirectory = self::ORGANIZATION_PROFILE_DIRECTORY,
+        string $errorAttribute = 'profile_picture_path',
+    ): string {
         try {
             return $this->images->copyPublishedTemporary(
                 $location,
                 TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
-                self::ORGANIZATION_PROFILE_DIRECTORY,
+                $destinationDirectory,
             );
         } catch (InvalidArgumentException) {
             throw ValidationException::withMessages([
-                'profile_picture_path' => ['The image is not a published temporary file.'],
+                $errorAttribute => ['The image is not a published temporary file.'],
             ]);
         }
     }

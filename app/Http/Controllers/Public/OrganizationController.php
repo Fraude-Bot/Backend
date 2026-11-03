@@ -14,6 +14,7 @@ use App\Application\Organization\Commands\OrganizationCalendarCommand;
 use App\Application\Organization\Commands\OrganizationMapCommand;
 use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
+use App\Application\Organization\Commands\UpdateOrganizationProfileCommand;
 use App\Application\Organization\Usecases\OrganizationUsecaseInterface;
 use App\Domain\Organization\Exceptions\InvalidScammerReferenceException;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
@@ -21,11 +22,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationContactRequest;
 use App\Http\Requests\Public\StoreOrganizationScammerRequest;
 use App\Http\Requests\Public\StorePaymentMethodRequest;
+use App\Http\Requests\Public\UpdateProfilePictureRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\OrganizationResource;
 use App\Http\Resources\Public\OrganizationScammerResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -286,6 +289,24 @@ class OrganizationController extends Controller
         }
 
         return response()->json((new OrganizationScammerResource($scammer))->resolve(), 201);
+    }
+
+    public function updateProfile(UpdateProfilePictureRequest $request, string $id): JsonResponse
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid organization ID'], 400);
+        }
+
+        $profilePicturePath = $this->organizations->updateProfile(UpdateOrganizationProfileCommand::fromValidated(
+            (int) $id,
+            $request->validated(),
+        ));
+
+        if ($profilePicturePath === null) {
+            return response()->json(['message' => 'Organization not found'], 404);
+        }
+
+        return response()->json(['profile_picture_path' => $profilePicturePath]);
     }
 
     public function map(Request $request, string $id)

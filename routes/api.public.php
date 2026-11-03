@@ -15,6 +15,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
 
     Route::get('organizations/suggest', [OrganizationController::class, 'suggest']);
     Route::get('organizations/{id}', [OrganizationController::class, 'show']);
+    Route::patch('organizations/{id}/profiles', [OrganizationController::class, 'updateProfile']);
     Route::get('organizations/{id}/calendar/{year}', [OrganizationController::class, 'calendar']);
     Route::get('organizations/{id}/contacts', [OrganizationController::class, 'contacts']);
     Route::post('organizations/{id}/contacts', [OrganizationController::class, 'createContact']);
@@ -27,6 +28,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
 
     Route::get('scammers/suggest', [ScammerController::class, 'suggest']);
     Route::get('scammers/{id}', [ScammerController::class, 'show']);
+    Route::patch('scammers/{id}/profiles', [ScammerController::class, 'updateProfile']);
     Route::get('scammers/{id}/calendar/{year}', [ScammerController::class, 'calendar']);
     Route::get('scammers/{id}/contacts', [ScammerController::class, 'contacts']);
     Route::post('scammers/{id}/contacts', [ScammerController::class, 'createContact']);

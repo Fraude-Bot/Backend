@@ -31,6 +31,11 @@ info:
     An existing organization keeps its profile picture.
     Contacts and payment methods are attached to that organization. A reference that already exists is reused.
     Attaching an existing link again leaves that link unchanged.
+    `PATCH /public/scammers/{id}/profiles` replaces an active scammer profile picture.
+    `PATCH /public/organizations/{id}/profiles` replaces an active organization profile picture.
+    Each body sends a public URL or `/storage` path of a file under `tmp/reports/profiles`.
+    The service stores a copy under `reports/scammers/profiles` or `reports/organizations/profiles`
+    and returns the public URL of the stored file.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -116,6 +121,54 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Scammer not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/scammers/{id}/profiles:
+    patch:
+      tags: [Scammers]
+      operationId: updateScammerProfilePicture
+      summary: Update a scammer profile picture
+      description: |
+        Copies a published temporary profile picture into permanent storage for an active scammer,
+        updates `profile_picture_path`, and returns the public URL of the new file.
+        The previous picture file is removed when it was stored under `reports/`.
+      parameters:
+        - $ref: "#/components/parameters/ScammerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfilePictureRequest"
+            example:
+              profile_picture: /storage/tmp/reports/profiles/8f3c1a.jpg
+      responses:
+        "200":
+          description: The profile picture was stored and the scammer was updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProfilePictureResponse"
+              example:
+                profile_picture_path: http://localhost:9000/storage/reports/scammers/profiles/8f3c1a.jpg
+        "400":
+          description: The scammer ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid scammer ID
+        "404":
+          description: No active scammer exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Scammer not found
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/scammers/{id}/contacts:
@@ -551,6 +604,54 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Organization not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /public/organizations/{id}/profiles:
+    patch:
+      tags: [Organizations]
+      operationId: updateOrganizationProfilePicture
+      summary: Update an organization profile picture
+      description: |
+        Copies a published temporary profile picture into permanent storage for an active organization,
+        updates `profile_picture_path`, and returns the public URL of the new file.
+        The previous picture file is removed when it was stored under `reports/`.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfilePictureRequest"
+            example:
+              profile_picture: /storage/tmp/reports/profiles/8f3c1a.jpg
+      responses:
+        "200":
+          description: The profile picture was stored and the organization was updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProfilePictureResponse"
+              example:
+                profile_picture_path: http://localhost:9000/storage/reports/organizations/profiles/8f3c1a.jpg
+        "400":
+          description: The organization ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid organization ID
+        "404":
+          description: No active organization exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Organization not found
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}/contacts:
@@ -1745,6 +1846,23 @@ components:
           items:
             type: integer
             minimum: 1
+    UpdateProfilePictureRequest:
+      type: object
+      required: [profile_picture]
+      properties:
+        profile_picture:
+          type: string
+          description: Public URL or `/storage` path of a file under `tmp/reports/profiles`.
+          example: /storage/tmp/reports/profiles/8f3c1a.jpg
+    UpdateProfilePictureResponse:
+      type: object
+      required: [profile_picture_path]
+      properties:
+        profile_picture_path:
+          type: string
+          format: uri
+          description: Public URL of the stored profile picture.
+          example: http://localhost:9000/storage/reports/scammers/profiles/8f3c1a.jpg
     ErrorMessage:
       $ref: ./schemas/ErrorMessage.yaml
     HttpError:

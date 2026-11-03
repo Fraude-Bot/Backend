@@ -21,6 +21,7 @@ use App\Application\Scammer\Commands\StoreScammerCommand;
 use App\Application\Scammer\Commands\SuggestScammersCommand;
 use App\Application\Scammer\Commands\UpdateScammerCommand;
 use App\Application\Scammer\Commands\UpdateScammerContactCommand;
+use App\Application\Scammer\Commands\UpdateScammerProfileCommand;
 use App\Domain\Map\ValueObjects\MapResult;
 use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Contact;
@@ -71,4 +72,6 @@ interface ScammerUsecaseInterface
     public function createPaymentMethod(CreateScammerPaymentMethodCommand $command): PaymentMethod;
 
     public function createOrganization(CreateScammerOrganizationCommand $command): Organization;
+
+    public function updateProfile(UpdateScammerProfileCommand $command): ?string;
 }
