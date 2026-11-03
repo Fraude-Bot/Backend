@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\OrganizationController;
 use App\Http\Controllers\Public\ReportController;
 use App\Http\Controllers\Public\ScammerController;
@@ -43,7 +44,7 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
         ->middleware(['throttle:public-search', AuditApiRequest::class])
         ->name('public.reports.search');
 
-    Route::post('reports/media/profiles', [ReportController::class, 'storeTemporaryProfilePicture']);
+    Route::post('media/profiles', [MediaController::class, 'storeProfilePicture']);
     Route::post('reports/media/proofs', [ReportController::class, 'storeTemporaryProof']);
 
     Route::post('reports/organizations', [ReportController::class, 'storeOrganization']);

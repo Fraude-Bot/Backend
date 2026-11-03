@@ -29,7 +29,7 @@ A linked scammer or organization does not count as the required contact or payme
 
 Upload the file before the report body.
 
-- Profile picture: `StoreProfilePictureRequest`, field `image`. One file, `jpg`, `jpeg`, or `png`, max 5120 KB. `ReportUsecase::storeTemporaryProfilePicture` stores it under `tmp/reports/profiles`.
+- Profile picture: `POST /api/public/media/profiles` with `StoreProfilePictureRequest`, field `image`. One file, `jpg`, `jpeg`, or `png`, max 5120 KB. `MediaUsecase::storeTemporaryProfilePicture` stores it under `tmp/reports/profiles`.
 - Proofs: `StoreProofRequest`, field `images`. At least one file, same mime types and size. `ReportUsecase::storeTemporaryProofs` stores them under `tmp/reports/proofs`.
 
 `webp` is not an accepted upload type. The report body then passes those published temporary paths. `ReportUsecase` copies a profile into `reports/scammers/profiles` or `reports/organizations/profiles`, and proofs into `reports/scammers/proofs` or `reports/organizations/proofs`. A path that is not a published temporary file fails validation.

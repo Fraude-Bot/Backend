@@ -5,15 +5,12 @@ namespace App\Application\Report\Usecases;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
-use App\Application\Report\Commands\StoreTemporaryProfilePictureCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Domain\Search\ValueObjects\CardSearchResult;
 
 interface ReportUsecaseInterface
 {
     public function search(SearchReportsCommand $command): CardSearchResult;
-
-    public function storeTemporaryProfilePicture(StoreTemporaryProfilePictureCommand $command): string;
 
     /**
      * @return list<string>

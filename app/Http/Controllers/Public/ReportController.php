@@ -5,19 +5,16 @@ namespace App\Http\Controllers\Public;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
-use App\Application\Report\Commands\StoreTemporaryProfilePictureCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Application\Report\Usecases\ReportUsecaseInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreOrganizationReportRequest;
-use App\Http\Requests\Public\StoreProfilePictureRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Requests\Public\StoreScammerReportRequest;
 use App\Http\Resources\Public\ReportCardResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 
 class ReportController extends Controller
 {
@@ -39,19 +36,6 @@ class ReportController extends Controller
             'page' => $page,
             'count' => $count,
         ]);
-    }
-
-    public function storeTemporaryProfilePicture(StoreProfilePictureRequest $request): JsonResponse
-    {
-        $image = $request->file('image');
-
-        if (! $image instanceof UploadedFile) {
-            abort(422, 'The request data is invalid.');
-        }
-
-        $path = $this->reports->storeTemporaryProfilePicture(new StoreTemporaryProfilePictureCommand($image));
-
-        return response()->json(['path' => $path], 201);
     }
 
     public function storeTemporaryProof(StoreProofRequest $request): JsonResponse

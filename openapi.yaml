@@ -36,6 +36,7 @@ info:
     Each body sends a public URL or `/storage` path of a file under `tmp/reports/profiles`.
     The service stores a copy under `reports/scammers/profiles` or `reports/organizations/profiles`
     and returns the public URL of the stored file.
+    `POST /public/media/profiles` uploads a temporary profile picture for reports and profile updates.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -51,6 +52,8 @@ tags:
     description: Cached index of active scammer and organization profiles.
   - name: Reports
     description: Public report uploads.
+  - name: Media
+    description: Temporary profile pictures and other shared uploads.
   - name: Health
     description: Liveness and readiness checks.
   - name: Documentation
@@ -1022,9 +1025,9 @@ paths:
                 message: Organization not found
         "429":
           $ref: "#/components/responses/RateLimited"
-  /public/reports/media/profiles:
+  /public/media/profiles:
     post:
-      tags: [Reports]
+      tags: [Media]
       operationId: storeTemporaryProfilePicture
       summary: Upload a temporary profile picture
       description: |
@@ -1035,6 +1038,7 @@ paths:
         existing URL while the file is still present. A rejected image is moved
         to quarantine and the response does not include its path; it responds
         with 422 and error code `image_rejected`.
+        Use this URL when submitting a report or updating a scammer or organization profile picture.
       requestBody:
         required: true
         content:
@@ -1118,7 +1122,7 @@ paths:
         The stored spelling is kept.
         Every field is required except `proofs`.
         `profile_picture` and `proofs` are public-disk paths previously returned by
-        the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
+        `POST /public/media/profiles` or `POST /public/reports/media/proofs`, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
         The report belongs to the user for that email and is active.
         A user is created when the email is new, and an existing user is reused.
@@ -1178,7 +1182,7 @@ paths:
         The stored spelling is kept.
         Every field is required except `proofs`.
         `profile_picture` and `proofs` are public-disk paths previously returned by
-        the temporary media endpoints, such as `/storage/tmp/reports/profiles/file.jpg`,
+        `POST /public/media/profiles` or `POST /public/reports/media/proofs`, such as `/storage/tmp/reports/profiles/file.jpg`,
         and the files must still be present.
         The report belongs to the user for that email and is active.
         A user is created when the email is new, and an existing user is reused.
