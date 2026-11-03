@@ -3,6 +3,7 @@
 namespace App\Application\Media\Usecases;
 
 use App\Application\Media\Commands\DeleteTemporaryMediaCommand;
+use App\Application\Media\Commands\StoreTemporaryProfilePictureCommand;
 use App\Application\Media\TemporaryImageStorageInterface;
 use Closure;
 use Illuminate\Cache\ArrayStore;
@@ -16,6 +17,15 @@ use RuntimeException;
 
 class MediaUsecase implements MediaUsecaseInterface
 {
+    public function __construct(
+        private TemporaryImageStorageInterface $images,
+    ) {}
+
+    public function storeTemporaryProfilePicture(StoreTemporaryProfilePictureCommand $command): string
+    {
+        return $this->images->uploadProfilePicture($command->file);
+    }
+
     public function __invoke(DeleteTemporaryMediaCommand $command): void
     {
         $this->deleteTemporaryFiles();

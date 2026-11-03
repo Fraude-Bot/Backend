@@ -10,7 +10,6 @@ use App\Application\Report\Commands\ScammerReportOrganizationInput;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
-use App\Application\Report\Commands\StoreTemporaryProfilePictureCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Domain\Contact\Entities\ContactEntity;
 use App\Domain\Contact\Enums\PlatformType;
@@ -61,11 +60,6 @@ class ReportUsecase implements ReportUsecaseInterface
     public function search(SearchReportsCommand $command): CardSearchResult
     {
         return $this->search->find($command->clue, $command->page, $command->count);
-    }
-
-    public function storeTemporaryProfilePicture(StoreTemporaryProfilePictureCommand $command): string
-    {
-        return $this->images->uploadProfilePicture($command->file);
     }
 
     public function storeTemporaryProofs(StoreTemporaryProofsCommand $command): array

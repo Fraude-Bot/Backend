@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Application\Report\Commands;
+namespace App\Application\Media\Commands;
 
 use Illuminate\Http\UploadedFile;
 
