@@ -23,6 +23,7 @@ use App\Application\Organization\Commands\RestoreOrganizationCommand;
 use App\Application\Organization\Commands\ShowOrganizationCommand;
 use App\Application\Organization\Commands\SuggestOrganizationsCommand;
 use App\Application\Organization\Commands\UpdateOrganizationCommand;
+use App\Application\Organization\Commands\UpdateOrganizationProfileCommand;
 use App\Application\Scammer\Commands\ContactInput;
 use App\Application\Scammer\Commands\PaymentMethodInput;
 use App\Domain\Contact\Entities\ContactEntity;
@@ -51,6 +52,8 @@ use Throwable;
 
 class OrganizationUsecase implements OrganizationUsecaseInterface
 {
+    private const string ORGANIZATION_PROFILE_DIRECTORY = 'reports/organizations/profiles';
+
     private const string SCAMMER_PROFILE_DIRECTORY = 'reports/scammers/profiles';
 
     public function __construct(
@@ -230,6 +233,31 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
         }
     }
 
+    public function updateProfile(UpdateOrganizationProfileCommand $command): ?string
+    {
+        $organization = $this->organizations->findOrganizationById($command->organizationId);
+
+        if ($organization === null) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($organization, $command): string {
+            $relative = $this->copyTemporaryProfilePicture(
+                $command->profilePicture,
+                self::ORGANIZATION_PROFILE_DIRECTORY,
+                'profile_picture',
+            );
+            $previous = $organization->profile_picture_path;
+            $this->organizations->update($organization, ['profile_picture_path' => $relative]);
+
+            if (is_string($previous) && $previous !== $relative) {
+                $this->images->deletePublished($previous);
+            }
+
+            return rtrim((string) config('filesystems.disks.public.url'), '/').'/'.ltrim($relative, '/');
+        });
+    }
+
     /**
      * @param  list<ContactInput>  $contacts
      * @return list<array{platform: PlatformType, reference: string}>
@@ -300,17 +328,20 @@ class OrganizationUsecase implements OrganizationUsecaseInterface
         };
     }
 
-    private function copyTemporaryProfilePicture(string $location): string
-    {
+    private function copyTemporaryProfilePicture(
+        string $location,
+        string $destinationDirectory = self::SCAMMER_PROFILE_DIRECTORY,
+        string $errorAttribute = 'profile_picture_path',
+    ): string {
         try {
             return $this->images->copyPublishedTemporary(
                 $location,
                 TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY,
-                self::SCAMMER_PROFILE_DIRECTORY,
+                $destinationDirectory,
             );
         } catch (InvalidArgumentException) {
             throw ValidationException::withMessages([
-                'profile_picture_path' => ['The image is not a published temporary file.'],
+                $errorAttribute => ['The image is not a published temporary file.'],
             ]);
         }
     }

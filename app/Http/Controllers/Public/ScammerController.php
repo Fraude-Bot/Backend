@@ -14,6 +14,7 @@ use App\Application\Scammer\Commands\ScammerCalendarCommand;
 use App\Application\Scammer\Commands\ScammerMapCommand;
 use App\Application\Scammer\Commands\ShowScammerCommand;
 use App\Application\Scammer\Commands\SuggestScammersCommand;
+use App\Application\Scammer\Commands\UpdateScammerProfileCommand;
 use App\Application\Scammer\Usecases\ScammerUsecaseInterface;
 use App\Domain\PaymentMethod\Enums\PaymentMethodType;
 use App\Domain\Scammer\Exceptions\InvalidOrganizationReferenceException;
@@ -21,11 +22,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StorePaymentMethodRequest;
 use App\Http\Requests\Public\StoreScammerContactRequest;
 use App\Http\Requests\Public\StoreScammerOrganizationRequest;
+use App\Http\Requests\Public\UpdateProfilePictureRequest;
 use App\Http\Resources\Public\ContactResource;
 use App\Http\Resources\Public\PaymentMethodResource;
 use App\Http\Resources\Public\ReportResource;
 use App\Http\Resources\Public\ScammerOrganizationResource;
 use App\Http\Resources\Public\ScammerResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -284,6 +287,24 @@ class ScammerController extends Controller
         }
 
         return response()->json((new ScammerOrganizationResource($organization))->resolve(), 201);
+    }
+
+    public function updateProfile(UpdateProfilePictureRequest $request, string $id): JsonResponse
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid scammer ID'], 400);
+        }
+
+        $profilePicturePath = $this->scammers->updateProfile(UpdateScammerProfileCommand::fromValidated(
+            (int) $id,
+            $request->validated(),
+        ));
+
+        if ($profilePicturePath === null) {
+            return response()->json(['message' => 'Scammer not found'], 404);
+        }
+
+        return response()->json(['profile_picture_path' => $profilePicturePath]);
     }
 
     public function map(Request $request, string $id)
