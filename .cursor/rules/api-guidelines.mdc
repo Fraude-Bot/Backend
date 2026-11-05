@@ -1,5 +1,5 @@
 ---
-description: Use when adding or changing one HTTP API operation: route, controller, command, use case, repository, OpenAPI, and feature test.
+description: Use when adding or changing one HTTP API operation: route, controller, command, use case, repository, IP activity registration, OpenAPI, and feature test.
 alwaysApply: false
 ---
 
@@ -25,7 +25,9 @@ Route::get('scammers/suggest', [ScammerController::class, 'suggest']);
 
 Declare static paths (`scammers/suggest`) before `scammers/{id}`.
 
-Admin routes live in `routes/api.admin.php`. Keep the existing group middleware: `auth:sanctum`, `EnsureUserIsActive`, `abilities:admin:write`, `can:manage-fraud-data`, `throttle:admin`, `AuditApiRequest`. Auth routes live in `routes/api.auth.php`.
+Admin routes live in `routes/api.admin.php`. Keep the existing group middleware: `auth:sanctum`, `EnsureUserIsActive`, `abilities:admin:write`, `can:manage-fraud-data`, `throttle:admin`, `AuditApiRequest`, `LogIpActivity`. Auth routes live in `routes/api.auth.php`.
+
+Mutating public writes that should appear in the IP activity log attach `LogIpActivity::class` on the route (admin already has it on the group). Reads, health, readiness, OpenAPI, temporary media uploads, and auth logout do not.
 
 ## 2. Controller
 
@@ -109,13 +111,31 @@ Pivot attaches go through that repository. `SearchCache` invalidation for attach
 
 External systems get a port interface in `Application` and an implementation in `Infrastructure`. Image storage goes through `TemporaryImageStorageInterface`.
 
-## 6. OpenAPI
+## 6. IP activity
+
+Successful mutating requests (not `GET`/`HEAD`, status 2xx) that run `LogIpActivity` persist a row in `ip_activities`: client IP, stable `action`, `subject_type`, `subject_id`, and optional `actor_id` when Sanctum authenticated the caller.
+
+Register every new mutating API service in `LogIpActivity::activity()` using the controller action name Laravel exposes on the route (`ControllerClass@method`). Add a `describe(...)` entry with:
+
+- **`action`** — dotted name (`scammer.contact.created`, `report.created`). Match existing public/admin verbs.
+- **`subject_type`** — `scammer`, `organization`, or `report` (the entity the operation targets).
+- **`source`** — `route` when the subject id is a route parameter (`id`, `scammer`, or `organization`); `response` when the created id is only in the JSON body (`id` on `201`/`200`).
+
+Example for a new public scammer write:
+
+```php
+PublicScammerController::class.'@createContact' => $this->describe('scammer.contact.created', 'scammer', 'route'),
+```
+
+Attach the middleware on the route if it is public. Extend `tests/Feature/IpActivityTest.php` (or the controller’s feature test) so a successful call creates one row with the expected `action`, `subject_id`, and IP; failed responses must not insert a row.
+
+## 7. OpenAPI
 
 Add the path to `openapi.yaml`. Paths are relative to the `/api` server. Reuse `#/components/parameters/ScammerId` and `#/components/responses/RateLimited`. Put reusable bodies in `schemas/` and reference them with `$ref: ./schemas/Scammer.yaml`. `OpenApiDocument` bundles those files; there is no separate registration step.
 
 `/public/scammers/suggest` uses `operationId: suggestScammerNames`, documents the `q` query param, and returns a string array capped at 5. Update the `info.description` when the new operation changes a public rule.
 
-## 7. Tests
+## 8. Tests
 
 Add a feature test beside the controller's existing test, `tests/Feature/PublicScammerControllerTest.php`. Hit the real URL. Cover the success body, validation, not-found, and empty or boundary input. `test_suggest_scammer_names_by_partial_case_insensitive_query` is the success case: it creates scammers with factories and asserts the exact JSON.
 
@@ -128,6 +148,7 @@ Run inside the worktree's PHP container, in this order: `php artisan test`, `com
 - Repository interface, Eloquent implementation, and provider binding.
 - Use case interface, use case, command, and provider binding.
 - Controller, route, resource or `FormRequest`, OpenAPI path, and feature test.
+- For mutating writes: `LogIpActivity` on the route (public) or covered by the admin group, a matching entry in `LogIpActivity::activity()`, and an IP activity assertion in tests when behavior is non-obvious.
 
 ## Do not
 
