@@ -5,8 +5,9 @@ use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ScammerController;
 use App\Http\Middleware\AuditApiRequest;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\LogIpActivity;
 
-Route::prefix('admin')->middleware(['auth:sanctum', EnsureUserIsActive::class, 'abilities:admin:write', 'can:manage-fraud-data', 'throttle:admin', AuditApiRequest::class])->group(function () {
+Route::prefix('admin')->middleware(['auth:sanctum', EnsureUserIsActive::class, 'abilities:admin:write', 'can:manage-fraud-data', 'throttle:admin', AuditApiRequest::class, LogIpActivity::class])->group(function () {
     Route::get('organizations/{organization}/scammers', [OrganizationController::class, 'getScammers']);
     Route::post('organizations/{organization}/scammers', [OrganizationController::class, 'addScammer']);
     Route::post('organizations/{organization}/payment-methods', [OrganizationController::class, 'createPaymentMethod']);
