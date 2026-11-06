@@ -1,6 +1,6 @@
 ---
 name: execute-tests
-model: composer-2.5[fast=false]
+model: composer-2.5[fast=true]
 description: Runs PHPUnit, PHPStan, and the architecture check once inside the worktree PHP container after PHP or test edits for the task are finished. Use at the end of a change, not after each file.
 ---
 
