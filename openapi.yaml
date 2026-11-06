@@ -37,6 +37,12 @@ info:
     The service stores a copy under `reports/scammers/profiles` or `reports/organizations/profiles`
     and returns the public URL of the stored file.
     `POST /public/media/profiles` uploads a temporary profile picture for reports and profile updates.
+    `POST /public/scammers/{id}/reports` files a report against an active scammer.
+    `POST /public/organizations/{id}/reports` files a report against an active organization.
+    Each body sends a title, description, email, and at least one product. Proofs are optional
+    public-disk paths from `POST /public/reports/media/proofs`.
+    The report belongs to the user for that email. A user is created when the email is new,
+    and an existing user is reused. The scammer or organization is left unchanged.
 
     Dates use `YYYY-MM-DD`. The SEO profile index returns `updatedAt` as a UTC timestamp
     (`YYYY-MM-DDTHH:MM:SSZ`) and is cached for 7 days.
@@ -407,6 +413,68 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Scammer reports not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [Scammers]
+      operationId: createScammerReport
+      summary: File a report against an existing scammer
+      description: |
+        Creates a report and attaches it to an active scammer. The scammer is not created or changed.
+        A missing, inactive, or soft-deleted scammer is not found.
+        `title`, `description`, `email`, and `products` are required. `proofs` is optional.
+        Each product name is title-cased before it is created or reused: the first letter of each word is capitalized and the rest is lowercase.
+        A product whose name already exists is reused, including a difference in letter case. The stored spelling is kept.
+        `proofs` are public-disk paths previously returned by `POST /public/reports/media/proofs`,
+        such as `/storage/tmp/reports/proofs/file.jpg`, and the files must still be present.
+        The report belongs to the user for that email and is active.
+        A user is created when the email is new, and an existing user is reused.
+      parameters:
+        - $ref: "#/components/parameters/ScammerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAttachedReportRequest"
+            example:
+              email: reporter@example.com
+              title: Called me about a prize
+              description: They asked for a transfer to release the prize.
+              proofs:
+                - /storage/tmp/reports/proofs/8f3c1a.jpg
+              products:
+                - Crypto
+      responses:
+        "201":
+          description: The report was created and attached to the scammer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScammerAttachedReportCreated"
+              example:
+                id: 1
+                scammer_id: 2
+                product_ids: [8]
+                report_proof_ids: [6]
+        "400":
+          description: The scammer ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid scammer ID
+        "404":
+          description: No active scammer exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Scammer not found
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/scammers/{id}/organizations:
@@ -890,6 +958,68 @@ paths:
                 $ref: "#/components/schemas/ErrorMessage"
               example:
                 message: Organization reports not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [Organizations]
+      operationId: createOrganizationReport
+      summary: File a report against an existing organization
+      description: |
+        Creates a report and attaches it to an active organization. The organization is not created or changed.
+        A missing, inactive, or soft-deleted organization is not found.
+        `title`, `description`, `email`, and `products` are required. `proofs` is optional.
+        Each product name is title-cased before it is created or reused: the first letter of each word is capitalized and the rest is lowercase.
+        A product whose name already exists is reused, including a difference in letter case. The stored spelling is kept.
+        `proofs` are public-disk paths previously returned by `POST /public/reports/media/proofs`,
+        such as `/storage/tmp/reports/proofs/file.jpg`, and the files must still be present.
+        The report belongs to the user for that email and is active.
+        A user is created when the email is new, and an existing user is reused.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAttachedReportRequest"
+            example:
+              email: reporter@example.com
+              title: Fake store took my money
+              description: They never shipped the order.
+              proofs:
+                - /storage/tmp/reports/proofs/8f3c1a.jpg
+              products:
+                - Crypto
+      responses:
+        "201":
+          description: The report was created and attached to the organization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationAttachedReportCreated"
+              example:
+                id: 1
+                organization_id: 2
+                product_ids: [8]
+                report_proof_ids: [6]
+        "400":
+          description: The organization ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid organization ID
+        "404":
+          description: No active organization exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Organization not found
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
         "429":
           $ref: "#/components/responses/RateLimited"
   /public/organizations/{id}/scammers:
@@ -1812,6 +1942,82 @@ components:
                       type: string
                       maxLength: 255
                       description: The type is inferred from this value.
+    CreateAttachedReportRequest:
+      type: object
+      required: [email, title, description, products]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: reporter@example.com
+        title:
+          type: string
+          maxLength: 50
+          example: Called me about a prize
+        description:
+          type: string
+          example: They asked for a transfer to release the prize.
+        proofs:
+          type: array
+          items:
+            type: string
+            description: Public-disk path of a file under `tmp/reports/proofs`.
+            example: /storage/tmp/reports/proofs/8f3c1a.jpg
+        products:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            maxLength: 75
+            example: Crypto
+          description: Product names to create or reuse and attach to the report. Each name is title-cased before matching, and an existing match keeps its stored spelling.
+    ScammerAttachedReportCreated:
+      type: object
+      required: [id, scammer_id, product_ids, report_proof_ids]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: Created report ID.
+          example: 1
+        scammer_id:
+          type: integer
+          minimum: 1
+          example: 2
+        product_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        report_proof_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+    OrganizationAttachedReportCreated:
+      type: object
+      required: [id, organization_id, product_ids, report_proof_ids]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          description: Created report ID.
+          example: 1
+        organization_id:
+          type: integer
+          minimum: 1
+          example: 2
+        product_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        report_proof_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
     ScammerReportCreated:
       type: object
       required: [id, scammer_id, contact_ids, payment_method_ids, product_ids, organization_ids, report_proof_ids]

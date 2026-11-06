@@ -25,6 +25,20 @@ Public creates go through `StoreScammerReportRequest` or `StoreOrganizationRepor
 
 A linked scammer or organization does not count as the required contact or payment method. That check reads only the top-level `contacts` and `payment_methods`.
 
+## Report against an existing record
+
+`POST /api/public/scammers/{id}/reports` and `POST /api/public/organizations/{id}/reports` file a report against an active scammer or organization. They do not create or rename that record. A missing, inactive, or soft-deleted id is not found.
+
+These creates go through `StoreAttachedReportRequest`, then `StoreReportForScammerCommand` or `StoreReportForOrganizationCommand`, then `ReportUsecase`. The request trims `title` and `email`, and title-cases each product name.
+
+- `title`: required string, max 50.
+- `description`: required string.
+- `email`: required, `email:rfc`, max 255.
+- `products`: required array, at least one item. Each item is a string, max 75.
+- `proofs`: optional array of temporary public paths. The same temporary-file check and copy used by a new report applies. Scammer proofs are stored under `reports/scammers/proofs`. Organization proofs are stored under `reports/organizations/proofs`.
+
+These bodies do not accept contacts, payment methods, or a profile picture. An invalid id is `400`.
+
 ## Images
 
 Upload the file before the report body.

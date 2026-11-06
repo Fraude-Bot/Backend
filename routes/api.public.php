@@ -27,6 +27,8 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::post('organizations/{id}/payment-methods', [OrganizationController::class, 'createPaymentMethod'])
         ->middleware(LogIpActivity::class);
     Route::get('organizations/{id}/reports', [OrganizationController::class, 'reports']);
+    Route::post('organizations/{id}/reports', [ReportController::class, 'storeForOrganization'])
+        ->middleware(LogIpActivity::class);
     Route::get('organizations/{id}/scammers', [OrganizationController::class, 'scammers']);
     Route::post('organizations/{id}/scammers', [OrganizationController::class, 'createScammer'])
         ->middleware(LogIpActivity::class);
@@ -44,6 +46,8 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
     Route::post('scammers/{id}/payment-methods', [ScammerController::class, 'createPaymentMethod'])
         ->middleware(LogIpActivity::class);
     Route::get('scammers/{id}/reports', [ScammerController::class, 'reports']);
+    Route::post('scammers/{id}/reports', [ReportController::class, 'storeForScammer'])
+        ->middleware(LogIpActivity::class);
     Route::get('scammers/{id}/organizations', [ScammerController::class, 'organizations']);
     Route::post('scammers/{id}/organizations', [ScammerController::class, 'createOrganization'])
         ->middleware(LogIpActivity::class);
