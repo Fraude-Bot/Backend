@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-model: composer-2.5[fast=false]
+model: composer-2.5[fast=true]
 description: Reviews recent Fraudebot backend changes against the Cursor rules in .cursor/rules/. Use after an agent adds or changes an API service, controller, command, use case, repository, OpenAPI path, or test.
 ---
 
