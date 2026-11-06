@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Public;
 
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
+use App\Application\Report\Commands\StoreReportForOrganizationCommand;
+use App\Application\Report\Commands\StoreReportForScammerCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Application\Report\Usecases\ReportUsecaseInterface;
 use App\Domain\Scammer\ValueObjects\Clue;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreAttachedReportRequest;
 use App\Http\Requests\Public\StoreOrganizationReportRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Requests\Public\StoreScammerReportRequest;
@@ -59,5 +62,39 @@ class ReportController extends Controller
     public function storeScammer(StoreScammerReportRequest $request): JsonResponse
     {
         return response()->json($this->reports->storeScammer(StoreScammerReportCommand::fromValidated($request->validated())), 201);
+    }
+
+    public function storeForScammer(StoreAttachedReportRequest $request, string $id): JsonResponse
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid scammer ID'], 400);
+        }
+
+        $created = $this->reports->storeForScammer(
+            StoreReportForScammerCommand::fromValidated((int) $id, $request->validated()),
+        );
+
+        if ($created === null) {
+            return response()->json(['message' => 'Scammer not found'], 404);
+        }
+
+        return response()->json($created, 201);
+    }
+
+    public function storeForOrganization(StoreAttachedReportRequest $request, string $id): JsonResponse
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid organization ID'], 400);
+        }
+
+        $created = $this->reports->storeForOrganization(
+            StoreReportForOrganizationCommand::fromValidated((int) $id, $request->validated()),
+        );
+
+        if ($created === null) {
+            return response()->json(['message' => 'Organization not found'], 404);
+        }
+
+        return response()->json($created, 201);
     }
 }

@@ -9,6 +9,8 @@ use App\Application\Report\Commands\PaymentMethodInput;
 use App\Application\Report\Commands\ScammerReportOrganizationInput;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
+use App\Application\Report\Commands\StoreReportForOrganizationCommand;
+use App\Application\Report\Commands\StoreReportForScammerCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Domain\Contact\Entities\ContactEntity;
@@ -30,6 +32,7 @@ use App\Repositories\Report\ReportRepositoryInterface;
 use App\Repositories\Scammer\ScammerRepositoryInterface;
 use App\Repositories\Search\SearchRepositoryInterface;
 use App\Repositories\User\UserRepositoryInterface;
+use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -270,6 +273,128 @@ class ReportUsecase implements ReportUsecaseInterface
                     'payment_method_ids' => $paymentMethodIds,
                     'product_ids' => $productIds,
                     'organization_ids' => $organizationIds,
+                    'report_proof_ids' => $proofIds,
+                ];
+            });
+        } catch (Throwable $exception) {
+            foreach ($copied as $path) {
+                $this->images->deletePublished($path);
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @return array{id: int, scammer_id: int, product_ids: list<int>, report_proof_ids: list<int>}|null
+     */
+    public function storeForScammer(StoreReportForScammerCommand $command): ?array
+    {
+        $scammer = $this->scammers->findScammerById($command->scammerId);
+
+        if ($scammer === null) {
+            return null;
+        }
+
+        $created = $this->createAttachedReport(
+            $command->title,
+            $command->description,
+            $command->email,
+            $command->proofs,
+            $command->productNames,
+            self::SCAMMER_PROOF_DIRECTORY,
+            fn (Report $report) => $this->reports->attachToScammer($scammer, $report),
+        );
+
+        return [
+            'id' => $created['id'],
+            'scammer_id' => $scammer->id,
+            'product_ids' => $created['product_ids'],
+            'report_proof_ids' => $created['report_proof_ids'],
+        ];
+    }
+
+    /**
+     * @return array{id: int, organization_id: int, product_ids: list<int>, report_proof_ids: list<int>}|null
+     */
+    public function storeForOrganization(StoreReportForOrganizationCommand $command): ?array
+    {
+        $organization = $this->organizations->findOrganizationById($command->organizationId);
+
+        if ($organization === null) {
+            return null;
+        }
+
+        $created = $this->createAttachedReport(
+            $command->title,
+            $command->description,
+            $command->email,
+            $command->proofs,
+            $command->productNames,
+            self::ORGANIZATION_PROOF_DIRECTORY,
+            fn (Report $report) => $this->reports->attachToOrganization($organization, $report),
+        );
+
+        return [
+            'id' => $created['id'],
+            'organization_id' => $organization->id,
+            'product_ids' => $created['product_ids'],
+            'report_proof_ids' => $created['report_proof_ids'],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $proofs
+     * @param  list<string>  $productNames
+     * @param  Closure(Report): void  $attach
+     * @return array{id: int, product_ids: list<int>, report_proof_ids: list<int>}
+     */
+    private function createAttachedReport(
+        string $title,
+        string $description,
+        string $email,
+        array $proofs,
+        array $productNames,
+        string $proofDirectory,
+        Closure $attach,
+    ): array {
+        $copied = [];
+
+        try {
+            $proofPaths = [];
+
+            foreach ($proofs as $index => $url) {
+                $path = $this->copyTemporary(
+                    $url,
+                    TemporaryImageStorageInterface::PROOF_DIRECTORY,
+                    $proofDirectory,
+                    'proofs.'.$index,
+                );
+                $copied[] = $path;
+                $proofPaths[] = $path;
+            }
+
+            return DB::transaction(function () use (
+                $title,
+                $description,
+                $email,
+                $productNames,
+                $proofPaths,
+                $attach,
+            ): array {
+                $user = $this->users->findByEmail($email) ?? $this->users->createReporter($email);
+                $report = $this->reports->create($title, $description, $user->id);
+                $attach($report);
+                $productIds = $this->attachProducts($report, $productNames);
+                $proofIds = [];
+
+                foreach ($proofPaths as $path) {
+                    $proofIds[] = $this->reports->addProof($report, $path);
+                }
+
+                return [
+                    'id' => $report->id,
+                    'product_ids' => $productIds,
                     'report_proof_ids' => $proofIds,
                 ];
             });

@@ -14,6 +14,7 @@ They link through the `scammers_organizations` pivot. A scammer can belong to ma
 - A scammer report uses `StoreScammerReportRequest`. `scammer.name` is required. `organizations` is optional.
 - An organization report uses `StoreOrganizationReportRequest`. `organization.name` is required. `scammers` is optional.
 - The report still needs at least one contact or payment method on that primary subject. A linked organization or scammer does not satisfy that check. See `reports.mdc`.
+- A report filed against an existing scammer or organization by id does not send contacts or payment methods. See `reports.mdc`.
 
 ## Attaching the other side later
 
