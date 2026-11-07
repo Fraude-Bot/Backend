@@ -15,7 +15,7 @@ class StoreProofRequest extends FormRequest
     {
         return [
             'images' => ['required', 'array', 'min:1'],
-            'images.*' => ['required', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'images.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 }
