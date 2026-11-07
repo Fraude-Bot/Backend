@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Application\Report\Commands\SearchReportsByTitleCommand;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreReportForOrganizationCommand;
@@ -16,6 +17,7 @@ use App\Http\Requests\Public\StoreOrganizationReportRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Requests\Public\StoreScammerReportRequest;
 use App\Http\Resources\Public\ReportCardResource;
+use App\Http\Resources\Public\ReportResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,6 +40,39 @@ class ReportController extends Controller
             'total' => $result->total,
             'page' => $page,
             'count' => $count,
+        ]);
+    }
+
+    public function searchByTitle(Request $request): JsonResponse
+    {
+        $page = $request->input('p', 1);
+        $count = $request->input('c', 10);
+        $query = $request->input('q');
+
+        if (
+            filter_var($page, FILTER_VALIDATE_INT) === false ||
+            filter_var($count, FILTER_VALIDATE_INT) === false ||
+            (int) $page < 1 ||
+            (int) $page > 100000 ||
+            (int) $count < 1 ||
+            (int) $count > 100
+        ) {
+            return response()->json(['message' => 'Invalid page or count'], 400);
+        }
+
+        $trimmed = is_string($query) ? trim($query) : '';
+
+        $result = $this->reports->searchByTitle(new SearchReportsByTitleCommand(
+            $trimmed,
+            (int) $page,
+            (int) $count,
+        ));
+
+        return response()->json([
+            'data' => ReportResource::collection($result->items)->resolve(),
+            'total' => $result->total,
+            'page' => (int) $page,
+            'count' => (int) $count,
         ]);
     }
 

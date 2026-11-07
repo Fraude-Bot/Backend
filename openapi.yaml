@@ -1155,6 +1155,36 @@ paths:
                 message: Organization not found
         "429":
           $ref: "#/components/responses/RateLimited"
+  /public/reports/search-by-title:
+    get:
+      tags: [Reports]
+      operationId: searchReportsByTitle
+      summary: Search reports by title
+      description: |
+        Returns a paginated list of active reports whose title contains the query
+        string (case-insensitive substring match). Omit `q` or pass an empty string
+        to receive an empty first page.
+      parameters:
+        - $ref: "#/components/parameters/ReportTitleQuery"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Count"
+      responses:
+        "200":
+          description: Paginated reports matching the title search.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedReports"
+        "400":
+          description: The page or count is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid page or count
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/media/profiles:
     post:
       tags: [Media]
@@ -1505,6 +1535,15 @@ components:
         maximum: 100000
         default: 1
       example: 1
+    ReportTitleQuery:
+      name: q
+      in: query
+      required: false
+      description: Substring to match against report titles. Empty or omitted returns no rows.
+      schema:
+        type: string
+        default: ""
+      example: invoice
     Count:
       name: c
       in: query
