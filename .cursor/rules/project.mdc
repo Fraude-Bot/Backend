@@ -16,3 +16,5 @@ Fraudebot lets people search reports other users have filed, so they can check a
 # Git / GitHub
 
 When the user asks to commit, push, or open a pull request, follow `.cursor/rules/pushing-changes-to-github.mdc` exactly (emoji titles, Co-Authored-By, `git push -u origin HEAD`, `gh pr create --fill` only unless they ask otherwise).
+
+Agent workflows: `/commit` (logical multi-commit + push, `.cursor/agents/commit.md`) then `/publish` (GitHub PR, default base `main`, `.cursor/agents/create-pr.md`).
