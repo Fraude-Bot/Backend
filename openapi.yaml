@@ -1191,7 +1191,7 @@ paths:
       operationId: storeTemporaryProfilePicture
       summary: Upload a temporary profile picture
       description: |
-        Accepts a JPG or PNG image up to 5 MB. The original is stored on the raw
+        Accepts a JPG, PNG, or WebP image up to 5 MB. The original is stored on the raw
         disk and must pass image moderation before a 640×640 cover is published on
         the public disk under `tmp/reports/profiles`. The response path is
         the public URL of that file. Uploading the same image again returns the
@@ -1210,7 +1210,7 @@ paths:
                 image:
                   type: string
                   format: binary
-                  description: JPG or PNG image, 5 MB maximum.
+                  description: JPG, PNG, or WebP image, 5 MB maximum.
       responses:
         "201":
           description: The image was stored.
@@ -1230,7 +1230,7 @@ paths:
       operationId: storeTemporaryProof
       summary: Upload temporary proof images
       description: |
-        Accepts one or more JPG or PNG images, up to 5 MB each. Each original is
+        Accepts one or more JPG, PNG, or WebP images, up to 5 MB each. Each original is
         stored on the raw disk and must pass image moderation before it is published
         at its original size on the public disk under `tmp/reports/proofs`.
         Each response path is the public URL of that file. Uploading the same image
@@ -1251,7 +1251,7 @@ paths:
                   items:
                     type: string
                     format: binary
-                  description: JPG or PNG images, 5 MB maximum each.
+                  description: JPG, PNG, or WebP images, 5 MB maximum each.
       responses:
         "201":
           description: The images were stored.
@@ -1601,7 +1601,7 @@ components:
               message: The request data is invalid.
               details:
                 image:
-                  - The image field must be a file of type: jpg, jpeg, png.
+                  - The image field must be a file of type: jpg, jpeg, png, webp.
     RateLimited:
       description: Too many requests. Public routes allow 120 requests per minute per IP.
       content:
