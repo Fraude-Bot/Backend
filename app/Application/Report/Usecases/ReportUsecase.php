@@ -9,6 +9,7 @@ use App\Application\Report\Commands\PaymentMethodInput;
 use App\Application\Report\Commands\ScammerReportOrganizationInput;
 use App\Application\Report\Commands\SearchReportsByTitleCommand;
 use App\Application\Report\Commands\SearchReportsCommand;
+use App\Application\Report\Commands\ShowReportCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreReportForOrganizationCommand;
 use App\Application\Report\Commands\StoreReportForScammerCommand;
@@ -74,6 +75,11 @@ class ReportUsecase implements ReportUsecaseInterface
             $command->page,
             $command->count,
         );
+    }
+
+    public function show(ShowReportCommand $command): ?Report
+    {
+        return $this->reports->findActiveById($command->id);
     }
 
     public function storeTemporaryProofs(StoreTemporaryProofsCommand $command): array
