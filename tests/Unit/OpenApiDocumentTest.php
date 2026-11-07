@@ -100,6 +100,10 @@ YAML);
         $this->assertArrayNotHasKey('$ref', $document['components']['schemas']['PaginatedScammers']['properties']['data']['items']);
         $this->assertArrayNotHasKey('/public/reports', $document['paths']);
         $this->assertSame(
+            'searchReportsByTitle',
+            $document['paths']['/public/reports/search-by-title']['get']['operationId'],
+        );
+        $this->assertSame(
             'storeOrganizationReport',
             $document['paths']['/public/reports/organizations']['post']['operationId'],
         );

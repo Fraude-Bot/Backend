@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Report;
 
+use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Organization;
 use App\Models\Report;
 use App\Models\Scammer;
@@ -17,4 +18,6 @@ interface ReportRepositoryInterface
     public function addProof(Report $report, string $path): int;
 
     public function attachProduct(Report $report, int $productId): void;
+
+    public function findPaginatedByTitleSearch(string $query, int $page, int $count): PaginatedResult;
 }

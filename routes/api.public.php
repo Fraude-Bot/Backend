@@ -53,6 +53,10 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
         ->middleware(LogIpActivity::class);
     Route::get('scammers/{id}/map', [ScammerController::class, 'map']);
 
+    Route::get('reports/search-by-title', [ReportController::class, 'searchByTitle'])
+        ->middleware(['throttle:public-search', AuditApiRequest::class])
+        ->name('public.reports.search-by-title');
+
     Route::get('reports', [ReportController::class, 'index'])
         ->middleware(['throttle:public-search', AuditApiRequest::class])
         ->name('public.reports.search');

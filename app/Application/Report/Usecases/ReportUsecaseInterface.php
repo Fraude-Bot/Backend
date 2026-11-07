@@ -2,6 +2,7 @@
 
 namespace App\Application\Report\Usecases;
 
+use App\Application\Report\Commands\SearchReportsByTitleCommand;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreReportForOrganizationCommand;
@@ -9,10 +10,13 @@ use App\Application\Report\Commands\StoreReportForScammerCommand;
 use App\Application\Report\Commands\StoreScammerReportCommand;
 use App\Application\Report\Commands\StoreTemporaryProofsCommand;
 use App\Domain\Search\ValueObjects\CardSearchResult;
+use App\Domain\Search\ValueObjects\PaginatedResult;
 
 interface ReportUsecaseInterface
 {
     public function search(SearchReportsCommand $command): CardSearchResult;
+
+    public function searchByTitle(SearchReportsByTitleCommand $command): PaginatedResult;
 
     /**
      * @return list<string>

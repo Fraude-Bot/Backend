@@ -7,6 +7,7 @@ use App\Application\Report\Commands\ContactInput;
 use App\Application\Report\Commands\OrganizationReportScammerInput;
 use App\Application\Report\Commands\PaymentMethodInput;
 use App\Application\Report\Commands\ScammerReportOrganizationInput;
+use App\Application\Report\Commands\SearchReportsByTitleCommand;
 use App\Application\Report\Commands\SearchReportsCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreReportForOrganizationCommand;
@@ -21,6 +22,7 @@ use App\Domain\PaymentMethod\ValueObjects\CardNumber;
 use App\Domain\PaymentMethod\ValueObjects\Clabe;
 use App\Domain\PaymentMethod\ValueObjects\Reference;
 use App\Domain\Search\ValueObjects\CardSearchResult;
+use App\Domain\Search\ValueObjects\PaginatedResult;
 use App\Models\Organization;
 use App\Models\Report;
 use App\Models\Scammer;
@@ -63,6 +65,15 @@ class ReportUsecase implements ReportUsecaseInterface
     public function search(SearchReportsCommand $command): CardSearchResult
     {
         return $this->search->find($command->clue, $command->page, $command->count);
+    }
+
+    public function searchByTitle(SearchReportsByTitleCommand $command): PaginatedResult
+    {
+        return $this->reports->findPaginatedByTitleSearch(
+            $command->query,
+            $command->page,
+            $command->count,
+        );
     }
 
     public function storeTemporaryProofs(StoreTemporaryProofsCommand $command): array
