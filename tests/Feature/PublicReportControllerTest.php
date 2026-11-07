@@ -16,6 +16,7 @@ use App\Repositories\Scammer\ScammerCardRepositoryInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\WebpFixtures;
 use Tests\TestCase;
 
 class PublicReportControllerTest extends TestCase
@@ -29,12 +30,13 @@ class PublicReportControllerTest extends TestCase
         Storage::fake('quarantine');
     }
 
-    public function test_stores_jpg_and_png_proofs_at_their_original_size(): void
+    public function test_stores_jpg_png_and_webp_proofs_at_their_original_size(): void
     {
         $response = $this->post('/api/public/reports/media/proofs', [
             'images' => [
                 UploadedFile::fake()->createWithContent('proof.jpg', self::jpegBytes()),
                 UploadedFile::fake()->createWithContent('proof.png', self::pngBytes()),
+                UploadedFile::fake()->createWithContent('proof.webp', WebpFixtures::minimalBytes()),
             ],
         ]);
 
@@ -45,15 +47,20 @@ class PublicReportControllerTest extends TestCase
         $expected = [
             ['jpg', 1200, 800],
             ['png', 400, 900],
+            ['webp', 1, 1],
         ];
 
-        $this->assertCount(2, $paths);
+        $this->assertCount(3, $paths);
 
         foreach ($paths as $index => $url) {
             [$extension, $width, $height] = $expected[$index];
 
             $this->assertStringStartsWith($prefix, $url);
             $this->assertStringEndsWith('.'.$extension, $url);
+            $this->assertMatchesRegularExpression(
+                '#^'.preg_quote($prefix, '#').'[a-f0-9]{32}\.'.preg_quote($extension, '#').'$#',
+                $url,
+            );
 
             $relative = substr($url, strlen(config('filesystems.disks.public.url').'/'));
             $this->assertTrue(Storage::disk('public')->exists($relative));

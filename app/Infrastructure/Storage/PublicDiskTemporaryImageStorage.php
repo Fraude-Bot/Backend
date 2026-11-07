@@ -23,44 +23,50 @@ class PublicDiskTemporaryImageStorage implements TemporaryImageStorageInterface
             throw new InvalidArgumentException('Crop width and height must both be set or both be null.');
         }
 
-        $key = $this->cacheKey($file, $directory, $width, $height);
+        $directory = trim($directory, '/');
+        $extension = $this->normalizedExtension($file);
+        $original = $file->getContent();
+        $contentHash = md5($original);
+        $key = $this->cacheKey($directory, $width, $height, $contentHash);
         $cached = Cache::get($key);
 
         if (is_string($cached) && $this->storedFileExists($cached)) {
             return $cached;
         }
 
-        $filename = $file->hashName();
-        $path = trim($directory, '/').'/'.$filename;
-        $original = $file->getContent();
+        $stagingPath = $directory.'/'.Str::uuid()->toString().'.'.$extension;
 
-        if (Storage::disk('raw')->put($path, $original) === false) {
+        if (Storage::disk('raw')->put($stagingPath, $original) === false) {
             throw new RuntimeException('The image could not be stored.');
         }
 
         if (! $this->antiNsfwAnalyzer->passes($original)) {
-            if (Storage::disk('quarantine')->put($path, $original) === false) {
+            $quarantinePath = $directory.'/'.$this->safeOriginalFilename($file);
+
+            if (Storage::disk('quarantine')->put($quarantinePath, $original) === false) {
                 throw new RuntimeException('The image could not be stored.');
             }
 
-            Storage::disk('raw')->delete($path);
+            Storage::disk('raw')->delete($stagingPath);
 
             throw new ImageRejectedException;
         }
 
         try {
-            $contents = $width === null
-                ? $original
-                : (string) app(ImageManager::class)
-                    ->decodePath($file->getPathname())
-                    ->cover($width, $height)
-                    ->encodeUsingFileExtension(pathinfo($filename, PATHINFO_EXTENSION));
+            $image = app(ImageManager::class)->decodeBinary($original);
+
+            if ($width !== null) {
+                $image = $image->cover($width, $height);
+            }
+
+            $contents = (string) $image->encodeUsingFileExtension($extension);
+            $path = $directory.'/'.$contentHash.'.'.$extension;
 
             if (Storage::disk('public')->put($path, $contents) === false) {
                 throw new RuntimeException('The image could not be stored.');
             }
         } finally {
-            Storage::disk('raw')->delete($path);
+            Storage::disk('raw')->delete($stagingPath);
         }
 
         $url = config('filesystems.disks.public.url').'/'.$path;
@@ -110,11 +116,11 @@ class PublicDiskTemporaryImageStorage implements TemporaryImageStorageInterface
         Storage::disk('public')->delete($relativePath);
     }
 
-    private function cacheKey(UploadedFile $file, string $directory, ?int $width, ?int $height): string
+    private function cacheKey(string $directory, ?int $width, ?int $height, string $contentHash): string
     {
         $variant = $width === null ? 'original' : $width.'x'.$height;
 
-        return TemporaryImageStorageInterface::CACHE_KEY_PREFIX.md5(trim($directory, '/').':'.$variant.':'.$file->getContent());
+        return TemporaryImageStorageInterface::CACHE_KEY_PREFIX.$directory.':'.$variant.':'.$contentHash;
     }
 
     private function storedFileExists(string $url): bool
@@ -164,5 +170,33 @@ class PublicDiskTemporaryImageStorage implements TemporaryImageStorageInterface
         $name = substr($relative, strlen($prefix));
 
         return $name !== '' && ! str_contains($name, '/');
+    }
+
+    private function normalizedExtension(UploadedFile $file): string
+    {
+        $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+
+        if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            return $extension;
+        }
+
+        return match ($file->getMimeType()) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => throw new InvalidArgumentException('Unsupported image extension.'),
+        };
+    }
+
+    private function safeOriginalFilename(UploadedFile $file): string
+    {
+        $filename = basename($file->getClientOriginalName());
+        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename) ?? '';
+
+        if ($filename === '' || $filename === '.' || $filename === '..') {
+            return 'upload.'.$this->normalizedExtension($file);
+        }
+
+        return $filename;
     }
 }

@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Application\Media\TemporaryImageStorageInterface;
 use App\Infrastructure\Media\AntiNSFWAnalyzer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\WebpFixtures;
 use Tests\TestCase;
 
 class PublicMediaControllerTest extends TestCase
@@ -18,11 +20,12 @@ class PublicMediaControllerTest extends TestCase
         Storage::fake('quarantine');
     }
 
-    public function test_stores_jpg_and_png_profile_pictures_for_scammers_and_organizations(): void
+    public function test_stores_jpg_png_and_webp_profile_pictures_for_scammers_and_organizations(): void
     {
         foreach ([
             ['profile.jpg', self::jpegBytes()],
             ['profile.png', self::pngBytes()],
+            ['profile.webp', WebpFixtures::minimalBytes()],
         ] as [$filename, $contents]) {
             $response = $this->post('/api/public/media/profiles', [
                 'image' => UploadedFile::fake()->createWithContent($filename, $contents),
@@ -36,6 +39,10 @@ class PublicMediaControllerTest extends TestCase
 
             $this->assertStringStartsWith($prefix, $url);
             $this->assertStringEndsWith('.'.$extension, $url);
+            $this->assertMatchesRegularExpression(
+                '#^'.preg_quote($prefix, '#').'[a-f0-9]{32}\.'.preg_quote($extension, '#').'$#',
+                $url,
+            );
 
             $relative = substr($url, strlen(config('filesystems.disks.public.url').'/'));
             $this->assertTrue(Storage::disk('public')->exists($relative));
@@ -73,7 +80,7 @@ class PublicMediaControllerTest extends TestCase
         $contents = self::jpegBytes();
 
         $this->post('/api/public/media/profiles', [
-            'image' => UploadedFile::fake()->createWithContent('profile.jpg', $contents),
+            'image' => UploadedFile::fake()->createWithContent('oscar-cedano.jpg', $contents),
         ])
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'image_rejected')
@@ -82,7 +89,10 @@ class PublicMediaControllerTest extends TestCase
         $quarantined = Storage::disk('quarantine')->allFiles();
 
         $this->assertCount(1, $quarantined);
-        $this->assertStringStartsWith('tmp/reports/profiles/', $quarantined[0]);
+        $this->assertSame(
+            TemporaryImageStorageInterface::PROFILE_PICTURE_DIRECTORY.'/oscar-cedano.jpg',
+            $quarantined[0],
+        );
         $this->assertSame($contents, Storage::disk('quarantine')->get($quarantined[0]));
         $this->assertSame([], Storage::disk('public')->allFiles());
         $this->assertSame([], Storage::disk('raw')->allFiles());
@@ -106,7 +116,7 @@ class PublicMediaControllerTest extends TestCase
         $second->assertCreated();
 
         $secondRelative = substr($second->json('path'), strlen($prefix));
-        $this->assertNotSame($firstRelative, $secondRelative);
+        $this->assertSame($firstRelative, $secondRelative);
         $this->assertTrue(Storage::disk('public')->exists($secondRelative));
         $this->assertSame([], Storage::disk('raw')->allFiles());
     }
