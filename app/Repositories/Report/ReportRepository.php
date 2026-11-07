@@ -48,6 +48,21 @@ class ReportRepository implements ReportRepositoryInterface
         SearchCache::invalidate();
     }
 
+    public function findActiveById(int $id): ?Report
+    {
+        return Cache::remember(
+            SearchCache::key("public:report:{$id}"),
+            self::CACHE_TTL_SECONDS,
+            fn () => Report::query()
+                ->where('is_active', true)
+                ->with([
+                    'proofs' => fn ($query) => $query->orderBy('id'),
+                    'products' => fn ($query) => $query->orderBy('name'),
+                ])
+                ->find($id),
+        );
+    }
+
     public function findPaginatedByTitleSearch(string $query, int $page, int $count): PaginatedResult
     {
         if ($query === '') {

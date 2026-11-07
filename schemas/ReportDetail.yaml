@@ -1,0 +1,45 @@
+type: object
+description: Full public view of one active report.
+required:
+  - title
+  - description
+  - is_active
+  - proofs
+  - products
+  - created_at
+properties:
+  title:
+    type: string
+    description: Report title.
+    example: Scammed me while I was pregnant!
+  description:
+    type:
+      - string
+      - "null"
+    description: Full report description.
+    example: I'm devastated, this guy scammed me while I was pregnant.
+  is_active:
+    type: boolean
+    description: Whether the report is active. Public reads only return active reports.
+    example: true
+  proofs:
+    type: array
+    description: Public-disk paths of the report's proof images, ordered by proof id.
+    items:
+      type: string
+    example:
+      - reports/scammers/proofs/8f3c1a.jpg
+      - reports/scammers/proofs/9a4d2b.png
+  products:
+    type: array
+    description: Names of the products attached to the report, ordered by name. Soft-deleted links are omitted.
+    items:
+      type: string
+    example:
+      - Phone
+      - Watch
+  created_at:
+    type: string
+    format: date
+    description: Date the report was created (`YYYY-MM-DD`).
+    example: "2026-09-01"

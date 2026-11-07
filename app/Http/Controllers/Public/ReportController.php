@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Application\Report\Commands\SearchReportsByTitleCommand;
 use App\Application\Report\Commands\SearchReportsCommand;
+use App\Application\Report\Commands\ShowReportCommand;
 use App\Application\Report\Commands\StoreOrganizationReportCommand;
 use App\Application\Report\Commands\StoreReportForOrganizationCommand;
 use App\Application\Report\Commands\StoreReportForScammerCommand;
@@ -17,6 +18,7 @@ use App\Http\Requests\Public\StoreOrganizationReportRequest;
 use App\Http\Requests\Public\StoreProofRequest;
 use App\Http\Requests\Public\StoreScammerReportRequest;
 use App\Http\Resources\Public\ReportCardResource;
+use App\Http\Resources\Public\ReportDetailResource;
 use App\Http\Resources\Public\ReportResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,6 +76,21 @@ class ReportController extends Controller
             'page' => (int) $page,
             'count' => (int) $count,
         ]);
+    }
+
+    public function show(string $id): JsonResponse
+    {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return response()->json(['message' => 'Invalid report ID'], 400);
+        }
+
+        $report = $this->reports->show(new ShowReportCommand((int) $id));
+
+        if ($report === null) {
+            return response()->json(['message' => 'Report not found'], 404);
+        }
+
+        return response()->json((new ReportDetailResource($report))->resolve());
     }
 
     public function storeTemporaryProof(StoreProofRequest $request): JsonResponse

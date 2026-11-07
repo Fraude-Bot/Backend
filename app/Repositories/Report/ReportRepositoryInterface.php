@@ -19,5 +19,7 @@ interface ReportRepositoryInterface
 
     public function attachProduct(Report $report, int $productId): void;
 
+    public function findActiveById(int $id): ?Report;
+
     public function findPaginatedByTitleSearch(string $query, int $page, int $count): PaginatedResult;
 }

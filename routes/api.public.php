@@ -61,6 +61,8 @@ Route::prefix('public')->middleware('throttle:public-api')->group(function () {
         ->middleware(['throttle:public-search', AuditApiRequest::class])
         ->name('public.reports.search');
 
+    Route::get('reports/{id}', [ReportController::class, 'show']);
+
     Route::post('media/profiles', [MediaController::class, 'storeProfilePicture']);
     Route::post('reports/media/proofs', [ReportController::class, 'storeTemporaryProof']);
 

@@ -37,6 +37,7 @@ info:
     The service stores a copy under `reports/scammers/profiles` or `reports/organizations/profiles`
     and returns the public URL of the stored file.
     `POST /public/media/profiles` uploads a temporary profile picture for reports and profile updates.
+    `GET /public/reports/{id}` returns one active report, including its proof paths and product names.
     `POST /public/scammers/{id}/reports` files a report against an active scammer.
     `POST /public/organizations/{id}/reports` files a report against an active organization.
     Each body sends a title, description, email, and at least one product. Proofs are optional
@@ -1185,6 +1186,53 @@ paths:
                 message: Invalid page or count
         "429":
           $ref: "#/components/responses/RateLimited"
+  /public/reports/{id}:
+    get:
+      tags: [Reports]
+      operationId: getReport
+      summary: Get a report by ID
+      description: |
+        Returns the full public view of an active report: title, description, status,
+        proof paths, product names, and the creation date. An inactive or soft-deleted
+        report is not found.
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      responses:
+        "200":
+          description: Public report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportDetail"
+              example:
+                title: Scammed me while I was pregnant!
+                description: I'm devastated, this guy scammed me while I was pregnant.
+                is_active: true
+                proofs:
+                  - reports/scammers/proofs/8f3c1a.jpg
+                  - reports/scammers/proofs/9a4d2b.png
+                products:
+                  - Phone
+                  - Watch
+                created_at: "2026-09-01"
+        "400":
+          description: The report ID is not a valid integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Invalid report ID
+        "404":
+          description: No active report exists for this ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+              example:
+                message: Report not found
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /public/media/profiles:
     post:
       tags: [Media]
@@ -1534,6 +1582,15 @@ components:
         minimum: 1
         maximum: 100000
         default: 1
+      example: 1
+    ReportId:
+      name: id
+      in: path
+      required: true
+      description: Numeric ID of the report.
+      schema:
+        type: integer
+        minimum: 1
       example: 1
     ReportTitleQuery:
       name: q
@@ -2126,6 +2183,8 @@ components:
       $ref: ./schemas/PaginatedPaymentMethods.yaml
     Report:
       $ref: ./schemas/Report.yaml
+    ReportDetail:
+      $ref: ./schemas/ReportDetail.yaml
     PaginatedReports:
       $ref: ./schemas/PaginatedReports.yaml
     ScammerOrganization:
