@@ -34,6 +34,8 @@ docker compose exec -T -w /var/www/backend backend composer audit
 
 Tests use in-memory SQLite. The Code checks workflow runs PHPStan (`composer analyse`) and PHPArkitect (`composer check:architecture`) on every push and pull request.
 
+To publish agent work: `/commit` (logical multi-commit + push, `.cursor/agents/commit.md`) then `/publish` (GitHub PR, default base `main`, `.cursor/agents/create-pr.md`).
+
 ## API overview
 
 - `GET /api/public/reports` — search active fraud records.
